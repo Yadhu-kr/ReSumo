@@ -1,0 +1,588 @@
+/* ==========================================================================
+   AuthSwitch Sliding Card Design System
+   Silky smooth 60fps sliding transition + calibrated organic curves
+   ========================================================================== */
+
+.as-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  background: linear-gradient(135deg, #5b71e8 0%, #6f52c6 50%, #8c47b5 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Active Session Bar when user is already authenticated */
+.as-active-session-bar {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50px;
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.as-session-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.as-session-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+}
+
+.as-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.as-session-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: #ffffff;
+  color: #6452ce;
+  border: none;
+  border-radius: 50px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.as-session-btn-primary:hover {
+  background: #f5f3ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.as-session-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.as-session-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+
+/* Outer Floating Card */
+.as-card {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  height: 560px;
+  background-color: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 24px 65px -12px rgba(30, 10, 80, 0.38);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   FORMS LAYER (White Background)
+   ========================================================================== */
+
+/* Sign Up Form (positioned on left) */
+.as-form-signup-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 28px 24px 28px 48px;
+  box-sizing: border-box;
+  z-index: 5;
+  transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.45s ease-in-out;
+  will-change: transform, opacity;
+}
+
+/* Sign In Form (positioned on right) */
+.as-form-signin-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 48%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 28px 48px 28px 24px;
+  box-sizing: border-box;
+  z-index: 5;
+  transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.45s ease-in-out;
+  will-change: transform, opacity;
+}
+
+/* Active / Inactive States for Forms */
+.as-card.mode-signup .as-form-signup-container {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: all;
+  z-index: 20;
+}
+
+.as-card.mode-signup .as-form-signin-container {
+  transform: translateX(80px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.as-card.mode-signin .as-form-signup-container {
+  transform: translateX(-80px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.as-card.mode-signin .as-form-signin-container {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: all;
+  z-index: 20;
+}
+
+/* Form Inner Width */
+.as-form-content {
+  width: 100%;
+  max-width: 290px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Typography */
+.as-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #2c3437;
+  margin: 0 0 14px 0;
+  letter-spacing: -0.5px;
+  text-align: center;
+}
+
+/* Role Selector Segment */
+.as-role-selector {
+  display: flex;
+  background-color: #f1f3f6;
+  padding: 4px;
+  border-radius: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  gap: 4px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.as-role-btn {
+  flex: 1;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 50px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.as-role-btn:hover:not(.active) {
+  color: #334155 !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+.as-role-btn.active {
+  background: linear-gradient(135deg, #5995fd 0%, #4a80eb 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(89, 149, 253, 0.4) !important;
+}
+
+/* Input Fields */
+.as-input-group {
+  position: relative;
+  width: 100%;
+  margin-bottom: 11px;
+}
+
+.as-input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #8b96a5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.as-input {
+  width: 100% !important;
+  height: 44px !important;
+  background-color: #f0f2f5 !important;
+  border: 2px solid transparent !important;
+  border-radius: 50px !important;
+  padding: 0 16px 0 42px !important;
+  font-size: 13.5px !important;
+  color: #2c3437 !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.as-input:focus {
+  background-color: #e9ecf2 !important;
+  border-color: #5995fd !important;
+}
+
+.as-input::placeholder {
+  color: #a0aec0 !important;
+  font-weight: 400;
+}
+
+/* Primary Action Pill Button */
+.as-btn-primary {
+  width: 140px !important;
+  height: 42px !important;
+  background: #5995fd !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 50px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  margin: 12px auto 12px auto !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(89, 149, 253, 0.4) !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.as-btn-primary:hover:not(:disabled) {
+  background: #4a85ee !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(89, 149, 253, 0.5) !important;
+}
+
+.as-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.as-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Demo Helper & Autofill Shortcuts */
+.as-demo-helper {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.as-demo-label {
+  font-size: 11px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.as-demo-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.as-demo-fill-btn {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.as-demo-fill-btn:hover {
+  background: #5995fd !important;
+  color: #ffffff !important;
+  border-color: #5995fd !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(89, 149, 253, 0.25);
+}
+
+.as-demo-sep {
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.as-quick-chip:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+/* Error Banner */
+.as-error-box {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 11.5px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   SLIDING CURVED OVERLAY PANELS
+   ========================================================================== */
+
+/* Right Purple Panel (active in Sign Up mode) */
+.as-overlay-right {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.5s ease-in-out;
+  will-change: transform, opacity;
+}
+
+.as-card.mode-signup .as-overlay-right {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.as-card.mode-signin .as-overlay-right {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Left Purple Panel (active in Sign In mode) */
+.as-overlay-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.5s ease-in-out;
+  will-change: transform, opacity;
+}
+
+.as-card.mode-signin .as-overlay-left {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.as-card.mode-signup .as-overlay-left {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* SVG Waves inside overlay panels */
+.as-panel-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Content inside right panel ("One of us?") */
+.as-panel-content-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+  box-sizing: border-box;
+  color: #ffffff;
+  z-index: 15;
+  pointer-events: auto;
+}
+
+/* Content inside left panel ("New here?") */
+.as-panel-content-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+  box-sizing: border-box;
+  color: #ffffff;
+  z-index: 15;
+  pointer-events: auto;
+}
+
+.as-overlay-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+}
+
+.as-overlay-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin: 0 0 26px 0;
+  max-width: 240px;
+}
+
+.as-btn-outline {
+  background: transparent !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+  border-radius: 50px !important;
+  padding: 10px 36px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: all 0.25s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.as-btn-outline:hover {
+  background: #ffffff !important;
+  color: #5c4cc4 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ==========================================================================
+   RESPONSIVE (Mobile view)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .as-card {
+    height: auto;
+    min-height: auto;
+    max-width: 440px;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .as-overlay-right,
+  .as-overlay-left {
+    position: relative;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: all !important;
+    height: auto;
+    width: 100%;
+    background: linear-gradient(135deg, #6452ce 0%, #533eb6 100%);
+  }
+
+  .as-panel-svg {
+    display: none;
+  }
+
+  .as-panel-content-right,
+  .as-panel-content-left {
+    position: relative;
+    width: 100%;
+    padding: 36px 24px;
+  }
+
+  .as-form-signup-container,
+  .as-form-signin-container {
+    position: relative;
+    width: 100%;
+    transform: none !important;
+    padding: 36px 24px;
+  }
+
+  .as-card.mode-signup .as-form-signin-container,
+  .as-card.mode-signin .as-form-signup-container,
+  .as-card.mode-signup .as-overlay-left,
+  .as-card.mode-signin .as-overlay-right {
+    display: none;
+  }
+}
