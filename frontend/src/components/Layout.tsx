@@ -21,8 +21,8 @@ export const Layout: React.FC = () => {
       setBackendOnline(false);
     }
 
-    // 2. Refresh pending approvals if authenticated
-    if (isAuthenticated && (user?.role === "hr" || user?.role === "approver" || user?.role === "admin")) {
+    // 2. Refresh pending approvals if authenticated (only for roles with approval access)
+    if (isAuthenticated && (user?.role === "approver" || user?.role === "admin")) {
       try {
         const approvals = await api.listPendingApprovals();
         setPendingCount(approvals.length);
@@ -253,37 +253,39 @@ export const Layout: React.FC = () => {
                   Jobs & RAG Matching
                 </NavLink>
 
-                <NavLink
-                  to="/approvals"
-                  style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    transition: "all 0.15s ease",
-                  })}
-                >
-                  <span>Approval Queue</span>
-                  {pendingCount > 0 && (
-                    <span
-                      className="badge badge-pending"
-                      style={{
-                        fontSize: "10.5px",
-                        padding: "2px 7px",
-                        borderRadius: "50px",
-                      }}
-                    >
-                      {pendingCount}
-                    </span>
-                  )}
-                </NavLink>
+                {user?.role === "admin" && (
+                  <NavLink
+                    to="/approvals"
+                    style={({ isActive }) => ({
+                      padding: "7px 16px",
+                      borderRadius: "var(--radius-pill)",
+                      fontSize: "13px",
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                      backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                      border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.15s ease",
+                    })}
+                  >
+                    <span>Approval Queue</span>
+                    {pendingCount > 0 && (
+                      <span
+                        className="badge badge-pending"
+                        style={{
+                          fontSize: "10.5px",
+                          padding: "2px 7px",
+                          borderRadius: "50px",
+                        }}
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
+                  </NavLink>
+                )}
               </>
             )}
           </nav>

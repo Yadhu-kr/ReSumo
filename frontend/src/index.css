@@ -356,6 +356,12 @@ select {
   border-color: var(--status-neutral-border);
 }
 
+.badge-extraction-failed {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border-color: #ffedd5;
+}
+
 .badge-source-groq {
   background-color: var(--source-groq-bg);
   color: var(--source-groq-text);

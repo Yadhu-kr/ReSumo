@@ -22,6 +22,7 @@ interface OutletContextType {
 const LIFECYCLE_STAGES: { key: string; label: string; statuses: CandidateStatus[] }[] = [
   { key: "uploaded", label: "UPLOADED", statuses: ["uploaded"] },
   { key: "parsed", label: "PARSED", statuses: ["parsed"] },
+  { key: "extraction_failed", label: "EXTRACTION FAILED", statuses: ["extraction_failed"] },
   { key: "shortlisted", label: "SHORTLISTED", statuses: ["shortlisted"] },
   { key: "pending_approval", label: "PENDING APPROVAL", statuses: ["pending_approval"] },
   { key: "decisioned", label: "DECISIONED", statuses: ["approved", "rejected"] },
@@ -102,7 +103,13 @@ export const PipelineDashboardPage: React.FC = () => {
   const handleSubmitForApproval = async (candidateId: string) => {
     try {
       setSubmittingId(candidateId);
-      await api.submitForApproval(candidateId);
+      const cand = candidates.find((c) => c.id === candidateId);
+      const appId = cand?.applications?.[0]?.id;
+      if (appId) {
+        await api.submitApplicationForApproval(appId);
+      } else {
+        await api.submitForApproval(candidateId);
+      }
       await loadData();
       if (refreshPendingCount) refreshPendingCount();
     } catch (err: unknown) {
@@ -113,17 +120,22 @@ export const PipelineDashboardPage: React.FC = () => {
     }
   };
 
-  const getJobForCandidate = (jobId?: string | null): Job | undefined => {
+  const getCandidateEffectiveStatus = (c: Candidate): CandidateStatus => {
+    return (c.applications?.[0]?.status as CandidateStatus) || (c.parsed_status as CandidateStatus) || c.status || "uploaded";
+  };
+
+  const getJobForCandidate = (cand: Candidate): Job | undefined => {
+    const jobId = cand.job_id || cand.applications?.[0]?.job_id;
     if (!jobId) return undefined;
     return jobs.find((j) => j.id === jobId);
   };
 
   // Metric aggregates
   const totalCount = candidates.length;
-  const parsedCount = candidates.filter((c) => c.status === "parsed" || c.status === "uploaded").length;
-  const shortlistedCount = candidates.filter((c) => c.status === "shortlisted").length;
-  const pendingCount = candidates.filter((c) => c.status === "pending_approval").length;
-  const decisionedCount = candidates.filter((c) => c.status === "approved" || c.status === "rejected").length;
+  const parsedCount = candidates.filter((c) => ["parsed", "uploaded"].includes(getCandidateEffectiveStatus(c))).length;
+  const shortlistedCount = candidates.filter((c) => getCandidateEffectiveStatus(c) === "shortlisted").length;
+  const pendingCount = candidates.filter((c) => getCandidateEffectiveStatus(c) === "pending_approval").length;
+  const decisionedCount = candidates.filter((c) => ["approved", "rejected"].includes(getCandidateEffectiveStatus(c))).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
@@ -182,7 +194,7 @@ export const PipelineDashboardPage: React.FC = () => {
                 cursor: "pointer",
               }}
             >
-              <option value="">All Requisitions ({candidates.length})</option>
+              <option value="">All Requisitions ({jobs.length})</option>
               {jobs.map((job) => (
                 <option key={job.id} value={job.id}>
                   {job.title} ({job.role_tier})
@@ -375,13 +387,13 @@ export const PipelineDashboardPage: React.FC = () => {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
+            gridTemplateColumns: "repeat(6, 1fr)",
             gap: "16px",
             alignItems: "start",
           }}
         >
           {LIFECYCLE_STAGES.map((stage) => {
-            const stageCandidates = candidates.filter((c) => stage.statuses.includes(c.status));
+            const stageCandidates = candidates.filter((c) => stage.statuses.includes(getCandidateEffectiveStatus(c)));
 
             return (
               <div
@@ -442,7 +454,8 @@ export const PipelineDashboardPage: React.FC = () => {
                   ) : (
                     stageCandidates.map((cand) => {
                       const parsed = cand.parsed_data;
-                      const candJob = getJobForCandidate(cand.job_id);
+                      const candJob = getJobForCandidate(cand);
+                      const candStatus = getCandidateEffectiveStatus(cand);
 
                       return (
                         <div
@@ -460,7 +473,7 @@ export const PipelineDashboardPage: React.FC = () => {
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <StatusBadge status={cand.status} />
+                            <StatusBadge status={candStatus} />
                             <span className="mono" style={{ fontSize: "10.5px", color: "var(--text-muted)" }}>
                               ID: {cand.id.slice(0, 6)}
                             </span>
@@ -485,7 +498,7 @@ export const PipelineDashboardPage: React.FC = () => {
                             )}
                           </div>
 
-                          {parsed && (
+                          {parsed ? (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
                               {parsed.core_skills?.slice(0, 3).map((skill, idx) => (
                                 <span
@@ -502,9 +515,25 @@ export const PipelineDashboardPage: React.FC = () => {
                                 </span>
                               ))}
                             </div>
-                          )}
+                          ) : candStatus === "extraction_failed" ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: 600,
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  backgroundColor: "#fff7ed",
+                                  color: "#c2410c",
+                                  border: "1px solid #ffedd5",
+                                }}
+                              >
+                                Indexed in Chroma (Raw Text)
+                              </span>
+                            </div>
+                          ) : null}
 
-                          {cand.status === "shortlisted" && (
+                          {candStatus === "shortlisted" && (
                             <button
                               type="button"
                               onClick={() => handleSubmitForApproval(cand.id)}
@@ -567,7 +596,7 @@ export const PipelineDashboardPage: React.FC = () => {
                       {cand.parsed_data?.years_experience ? `${cand.parsed_data.years_experience} yrs` : "N/A"}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <StatusBadge status={cand.status} />
+                      <StatusBadge status={getCandidateEffectiveStatus(cand)} />
                     </td>
                     <td style={{ padding: "12px 16px" }}>
                       <Link to={`/candidates/${cand.id}`} style={{ fontSize: "12px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}>

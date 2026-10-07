@@ -68,7 +68,7 @@ export function getUserInitials(
  * - "hr" -> "Recruiter"
  * - "admin" -> "Administrator"
  * - "candidate" -> "Candidate"
- * - "approver" -> "Administrator ({tier})"
+ * - "approver" -> "Approver ({tier})"
  */
 export function getRoleBadgeLabel(
   role?: UserRole | string,
@@ -76,19 +76,19 @@ export function getRoleBadgeLabel(
 ): string {
   if (role === "candidate") return "Candidate";
   if (role === "hr") return "Recruiter";
-  if (role === "admin") return "Administrator";
+  if (role === "admin") return "System Administrator";
   if (role === "approver") {
     switch (approverRole) {
       case "hiring_manager":
-        return "Administrator (Hiring Mgr)";
+        return "Approver (Hiring Mgr)";
       case "director":
-        return "Administrator (Director)";
+        return "Approver (Director)";
       case "vp":
-        return "Administrator (VP)";
+        return "Approver (VP)";
       case "ceo":
-        return "Administrator (CEO)";
+        return "Approver (CEO)";
       default:
-        return "Administrator";
+        return "Approver";
     }
   }
   return "Member";

@@ -10,37 +10,59 @@ router = APIRouter(prefix="/candidates", tags=["candidates"])
 
 @router.get("/", response_model=list[schemas.CandidateOut])
 def list_candidates(
+    job_id: str | None = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Lists candidates scoped by role:
     - Candidate: sees only their own record(s).
-    - HR/approver: sees candidates with Applications to their company's jobs.
+    - HR/approver: sees candidates with Applications to their company's jobs (plus unassigned pool fallback).
     - Admin: sees all candidates.
     """
     if current_user.role == "candidate":
-        return (
-            db.query(models.Candidate)
-            .filter(models.Candidate.user_id == current_user.id)
-            .order_by(models.Candidate.created_at.desc())
-            .all()
-        )
+        query = db.query(models.Candidate).filter(models.Candidate.user_id == current_user.id)
+        if job_id:
+            query = query.join(models.Application).filter(models.Application.job_id == job_id)
+        return query.order_by(models.Candidate.created_at.desc()).all()
 
     if current_user.role in ("hr", "approver"):
+        if job_id:
+            job = db.query(models.Job).filter(models.Job.id == job_id).first()
+            if not job or (current_user.company_id and job.company_id != current_user.company_id):
+                return []
+            return (
+                db.query(models.Candidate)
+                .join(models.Application, models.Application.candidate_id == models.Candidate.id)
+                .filter(models.Application.job_id == job_id)
+                .distinct()
+                .order_by(models.Candidate.created_at.desc())
+                .all()
+            )
+
         # Candidates who have at least one application to this company's jobs
+        # Fallback: candidates with no applications assigned yet (unassigned recruitment pool)
+        # Note: Proper seeding of company applications should replace this fallback in production.
+        from sqlalchemy import select
+        has_any_apps = select(models.Application.candidate_id)
         return (
             db.query(models.Candidate)
-            .join(models.Application, models.Application.candidate_id == models.Candidate.id)
-            .join(models.Job, models.Job.id == models.Application.job_id)
-            .filter(models.Job.company_id == current_user.company_id)
+            .outerjoin(models.Application, models.Application.candidate_id == models.Candidate.id)
+            .outerjoin(models.Job, models.Job.id == models.Application.job_id)
+            .filter(
+                (models.Job.company_id == current_user.company_id)
+                | (~models.Candidate.id.in_(has_any_apps))
+            )
             .distinct()
             .order_by(models.Candidate.created_at.desc())
             .all()
         )
 
     # admin: see all
-    return db.query(models.Candidate).order_by(models.Candidate.created_at.desc()).all()
+    query = db.query(models.Candidate)
+    if job_id:
+        query = query.join(models.Application).filter(models.Application.job_id == job_id)
+    return query.order_by(models.Candidate.created_at.desc()).all()
 
 
 @router.get("/{candidate_id}", response_model=schemas.CandidateOut)
@@ -58,7 +80,7 @@ def get_candidate(
     if current_user.role == "candidate" and candidate.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    # HR/approver can only see candidates with applications to their company
+    # HR/approver can only see candidates with applications to their company OR unassigned pool candidates
     if current_user.role in ("hr", "approver"):
         has_company_app = (
             db.query(models.Application)
@@ -69,7 +91,17 @@ def get_candidate(
             )
             .first()
         )
-        if not has_company_app:
+        has_other_company_app = (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(
+                models.Application.candidate_id == candidate_id,
+                models.Job.company_id != current_user.company_id,
+            )
+            .first()
+        )
+        # Deny access if candidate has applications belonging to another company
+        if has_other_company_app and not has_company_app:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return candidate
@@ -219,3 +251,28 @@ def submit_for_approval(
         current_approval=schemas.ApprovalOut.model_validate(approval),
         message=f"Application submitted for approval to {approval.approver_role} (tier: {job.role_tier}, step: {approval.step_order}).",
     )
+
+
+@router.post(
+    "/{candidate_id}/submit-for-approval",
+    response_model=schemas.SubmitForApprovalResponse,
+)
+def submit_candidate_for_approval(
+    candidate_id: str,
+    current_user: models.User = Depends(require_role("hr", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Convenience alias: submits the candidate's latest active application for approval."""
+    application = (
+        db.query(models.Application)
+        .filter(models.Application.candidate_id == candidate_id)
+        .order_by(models.Application.created_at.desc())
+        .first()
+    )
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No application found for candidate '{candidate_id}'",
+        )
+    return submit_for_approval(application.id, current_user, db)
+

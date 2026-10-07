@@ -151,9 +151,23 @@ def test_upload_resume_requires_auth(client):
     assert response.status_code == 401
 
 
-def test_upload_resume_hr_forbidden(client, hr_auth):
-    """HR users should not be able to upload resumes (candidate-only route)."""
+def test_upload_resume_hr_allowed(client, hr_auth):
+    """Recruiters (hr) should be able to source/upload resumes."""
     headers, _ = hr_auth
+    response = client.post(
+        "/upload-resume",
+        files={"file": ("candidate.txt", b"text content", "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "candidate_id" in data
+    assert data["status"] in ("uploaded", "parsed")
+
+
+def test_upload_resume_approver_forbidden(client, approver_auth):
+    """Approvers should not be able to upload resumes."""
+    headers, _ = approver_auth
     response = client.post(
         "/upload-resume",
         files={"file": ("candidate.txt", b"text content", "text/plain")},

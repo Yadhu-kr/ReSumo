@@ -4,6 +4,7 @@
  */
 import type {
   Candidate,
+  Application,
   Job,
   JobCreate,
   JobMatchesResponse,
@@ -138,6 +139,9 @@ export const api = {
   getCandidate: (candidateId: string) =>
     request<Candidate>(`/candidates/${encodeURIComponent(candidateId)}`),
 
+  getCandidateApplications: (candidateId: string) =>
+    request<Application[]>(`/candidates/${encodeURIComponent(candidateId)}/applications`),
+
   patchCandidate: (candidateId: string, patch: Partial<Candidate>) =>
     request<Candidate>(`/candidates/${encodeURIComponent(candidateId)}`, {
       method: "PATCH",
@@ -191,6 +195,9 @@ export const api = {
 
   getCandidateApprovals: (candidateId: string) =>
     request<Approval[]>(`/approvals/candidate/${encodeURIComponent(candidateId)}`),
+
+  getApplicationApprovals: (applicationId: string) =>
+    request<Approval[]>(`/approvals/application/${encodeURIComponent(applicationId)}`),
 
   actionApproval: (approvalId: string, actionReq: ApprovalActionRequest) =>
     request<Approval>(`/approvals/${encodeURIComponent(approvalId)}/action`, {

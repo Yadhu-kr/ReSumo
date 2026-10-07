@@ -292,8 +292,10 @@ export const ApprovalsPage: React.FC = () => {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {approvals.map((appr) => {
-            const cand = candidatesMap[appr.candidate_id];
-            const job = cand?.job_id ? jobsMap[cand.job_id] : undefined;
+            const candId = appr.application?.candidate_id || appr.candidate_id;
+            const cand = candId ? candidatesMap[candId] : undefined;
+            const jobId = appr.application?.job_id || cand?.job_id || cand?.applications?.[0]?.job_id;
+            const job = jobId ? jobsMap[jobId] : undefined;
             const parsed = cand?.parsed_data;
 
             return (
@@ -429,7 +431,7 @@ export const ApprovalsPage: React.FC = () => {
                       borderTop: "1px solid var(--border-subtle)",
                     }}
                   >
-                    <Link to={`/candidates/${appr.candidate_id}`} className="btn btn-subtle btn-sm">
+                    <Link to={`/candidates/${candId || appr.candidate_id}`} className="btn btn-subtle btn-sm">
                       Inspect Full Dossier & Plaintext →
                     </Link>
 

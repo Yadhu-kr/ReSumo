@@ -183,3 +183,24 @@ def test_register_and_update_name(client):
     assert patch_res.status_code == 200
     assert patch_res.json()["name"] == "Samuel H. Altman"
 
+
+def test_update_me_cannot_escalate_role(client, register_user):
+    """Users cannot escalate their role or approver tier via PATCH /auth/me."""
+    headers, user = register_user("normal_user@example.com", "Password123!", "candidate")
+
+    # Attempt to elevate to admin
+    res1 = client.patch("/auth/me", headers=headers, json={"role": "admin"})
+    assert res1.status_code == 403
+    assert "Self-service role changes are not allowed" in res1.json()["detail"]
+
+    # Attempt to change approver tier
+    res2 = client.patch("/auth/me", headers=headers, json={"approver_role": "ceo"})
+    assert res2.status_code == 403
+    assert "Self-service role changes are not allowed" in res2.json()["detail"]
+
+    # Verify role remains candidate
+    me_res = client.get("/auth/me", headers=headers)
+    assert me_res.status_code == 200
+    assert me_res.json()["role"] == "candidate"
+
+

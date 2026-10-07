@@ -137,12 +137,28 @@ def build_job_embedding_text(title: str, description: str, role_tier: str) -> st
     return f"Job Title: {title}\nRole Tier: {role_tier}\nDescription: {description}"
 
 
-def upsert_candidate_vector(candidate_id: str, parsed_data: dict[str, Any] | None, client=None) -> bool:
+def upsert_candidate_vector(
+    candidate_id: str,
+    parsed_data: dict[str, Any] | None = None,
+    client=None,
+    raw_text: str | None = None,
+) -> bool:
     """
     Builds embedding text and upserts candidate vector into Chroma.
-    Returns True if embedded and upserted, False if skipped (parsed_data is null/empty).
+    If parsed_data is provided, constructs embedding text from the 10 locked fields.
+    If parsed_data is unavailable and raw_text is provided, falls back to embedding
+    the unstructured raw resume text for Phase 2 RAG matching.
+    Returns True if embedded and upserted, False if skipped.
     """
     text = build_candidate_embedding_text(parsed_data)
+    seniority = ""
+    if parsed_data and isinstance(parsed_data, dict):
+        seniority = str(parsed_data.get("seniority", ""))
+
+    # Fallback to unstructured raw resume text when structured parsing is unavailable
+    if not text and raw_text:
+        text = raw_text.strip()
+
     if not text:
         return False
 
@@ -152,7 +168,7 @@ def upsert_candidate_vector(candidate_id: str, parsed_data: dict[str, Any] | Non
         ids=[candidate_id],
         embeddings=[vector],
         documents=[text],
-        metadatas=[{"candidate_id": candidate_id, "seniority": str(parsed_data.get("seniority", ""))}],
+        metadatas=[{"candidate_id": candidate_id, "seniority": seniority}],
     )
     return True
 

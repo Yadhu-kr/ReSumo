@@ -132,26 +132,7 @@ class CandidateUpdate(BaseModel):
     email: Optional[str] = None
     raw_text: Optional[str] = None
     parsed_data: Optional[ParsedResumeData | dict[str, Any]] = None
-
-
-class CandidateOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    user_id: Optional[str] = None
-    name: Optional[str] = None
-    email: Optional[str] = None
-    raw_resume_filename: str
-    raw_text: Optional[str] = None
-    parsed_data: Optional[ParsedResumeData | dict[str, Any]] = None
-    created_at: datetime
-
-
-class UploadResumeResponse(BaseModel):
-    candidate_id: str
-    filename: str
-    status: str
-    message: str
+    parsed_status: Optional[str] = None
 
 
 # ---- Applications ----
@@ -167,6 +148,30 @@ class ApplicationOut(BaseModel):
     rationale: Optional[str] = None
     rationale_source: Optional[str] = None
     created_at: datetime
+
+
+class CandidateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    user_id: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    raw_resume_filename: str
+    raw_text: Optional[str] = None
+    parsed_data: Optional[ParsedResumeData | dict[str, Any]] = None
+    parsed_status: Optional[str] = "uploaded"
+    created_at: datetime
+    applications: list[ApplicationOut] = []
+    job_id: Optional[str] = None
+    status: Optional[str] = None
+
+
+class UploadResumeResponse(BaseModel):
+    candidate_id: str
+    filename: str
+    status: str
+    message: str
 
 
 # ---- Phase 2 RAG Matching Schemas ----
@@ -211,6 +216,8 @@ class ApprovalOut(BaseModel):
     acted_by_user_id: Optional[str] = None
     acted_at: Optional[datetime] = None
     created_at: datetime
+    candidate_id: Optional[str] = None
+    application: Optional[ApplicationOut] = None
 
 
 class ApprovalPolicyCreate(BaseModel):

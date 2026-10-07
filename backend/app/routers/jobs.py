@@ -237,3 +237,106 @@ def match_candidates_for_job(
         matches=matches_out,
         count=len(matches_out),
     )
+
+
+def seed_demo_jobs_and_applications_if_empty(db: Session):
+    """
+    Seed demo jobs and link existing candidates to applications for the primary company
+    so the Kanban pipeline and requisitions display realistic, interactive data.
+    """
+    try:
+        company = (
+            db.query(models.Company)
+            .filter(models.Company.name.in_(["ReSumo Tech", "ReSumo Technologies"]))
+            .first()
+        )
+        if not company:
+            company = db.query(models.Company).first()
+        if not company:
+            return
+
+        demo_jobs = db.query(models.Job).filter(models.Job.company_id == company.id).all()
+        if not demo_jobs:
+            job_specs = [
+                ("Senior Full-Stack Engineer", "Lead frontend (React/TS) and backend (FastAPI/Python) architecture for enterprise HR tech.", "senior"),
+                ("AI / ML Systems Engineer", "Design RAG retrieval systems, Chroma vector pipelines, and fine-tuned QLoRA models.", "mid"),
+                ("Lead DevOps & Infrastructure Engineer", "Automate Docker pipelines, SQLite/PostgreSQL migrations, and tenant isolation.", "senior"),
+            ]
+            for title, desc, tier in job_specs:
+                db_job = models.Job(title=title, description=desc, role_tier=tier, company_id=company.id)
+                db.add(db_job)
+            db.commit()
+            demo_jobs = db.query(models.Job).filter(models.Job.company_id == company.id).all()
+
+            try:
+                from app.services.embeddings import upsert_job_vector
+                for j in demo_jobs:
+                    upsert_job_vector(j.id, j.title, j.description, j.role_tier)
+            except Exception:
+                pass
+
+        if not demo_jobs:
+            return
+
+        existing_apps = (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(models.Job.company_id == company.id)
+            .count()
+        )
+        if existing_apps == 0:
+            candidates = db.query(models.Candidate).order_by(models.Candidate.created_at.asc()).all()
+            parsed_cands = [c for c in candidates if c.parsed_status == "parsed"]
+            uploaded_cands = [c for c in candidates if c.parsed_status == "uploaded"]
+            failed_cands = [c for c in candidates if c.parsed_status == "extraction_failed"]
+
+            stages = ["parsed", "parsed", "shortlisted", "shortlisted", "pending_approval", "pending_approval", "approved", "approved"]
+            for idx, c in enumerate(parsed_cands):
+                stage = stages[idx % len(stages)]
+                job = demo_jobs[idx % len(demo_jobs)]
+                sim_score = 0.82 + (idx * 0.02)
+                app = models.Application(
+                    candidate_id=c.id,
+                    job_id=job.id,
+                    status=stage,
+                    similarity_score=round(sim_score, 2),
+                    rationale=f"Candidate demonstrates strong proficiency aligned with {job.title} requisitions.",
+                    rationale_source="mock",
+                )
+                db.add(app)
+                db.flush()
+
+                if stage == "pending_approval":
+                    from app.models import Approval
+                    existing_approval = db.query(Approval).filter(Approval.application_id == app.id).first()
+                    if not existing_approval:
+                        appr = Approval(
+                            application_id=app.id,
+                            approver_role="hiring_manager",
+                            step_order=1,
+                            action="pending",
+                        )
+                        db.add(appr)
+
+            for idx, c in enumerate(uploaded_cands):
+                job = demo_jobs[idx % len(demo_jobs)]
+                app = models.Application(
+                    candidate_id=c.id,
+                    job_id=job.id,
+                    status="uploaded",
+                )
+                db.add(app)
+
+            for idx, c in enumerate(failed_cands):
+                job = demo_jobs[idx % len(demo_jobs)]
+                app = models.Application(
+                    candidate_id=c.id,
+                    job_id=job.id,
+                    status="extraction_failed",
+                )
+                db.add(app)
+
+            db.commit()
+    except Exception as exc:
+        db.rollback()
+        print(f"Warning: Failed to seed demo jobs and applications: {exc}")

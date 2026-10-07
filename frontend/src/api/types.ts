@@ -67,7 +67,8 @@ export type CandidateStatus =
   | "shortlisted"
   | "pending_approval"
   | "approved"
-  | "rejected";
+  | "rejected"
+  | "extraction_failed";
 
 export type ApproverRole = "hiring_manager" | "director" | "vp" | "ceo";
 
@@ -93,14 +94,16 @@ export interface ParsedResumeData {
 
 export interface Candidate {
   id: string;
-  job_id: string | null;
+  job_id?: string | null;
   name?: string | null;
   email?: string | null;
   raw_resume_filename: string;
   raw_text?: string | null;
   parsed_data?: ParsedResumeData | null;
+  parsed_status?: string | null;
   status: CandidateStatus;
   created_at: string;
+  applications?: Application[];
 }
 
 export interface Job {
@@ -119,11 +122,12 @@ export interface JobCreate {
 
 export interface CandidateMatchOut {
   candidate: Candidate;
+  application: Application;
   similarity_score: number;
   similarity_percentage: number;
   rationale: string;
   rationale_source: "groq" | "claude" | "mock";
-  status_updated: boolean;
+  status_updated?: boolean;
 }
 
 export interface JobMatchesResponse {
@@ -140,13 +144,15 @@ export interface MatchRequest {
 
 export interface Approval {
   id: string;
-  candidate_id: string;
+  application_id: string;
+  candidate_id?: string;
   approver_role: ApproverRole;
   step_order: number;
   action: "pending" | "approved" | "rejected";
   notes?: string | null;
   acted_at?: string | null;
   created_at: string;
+  application?: Application;
 }
 
 export interface ApprovalPolicy {
@@ -163,7 +169,8 @@ export interface ApprovalActionRequest {
 }
 
 export interface SubmitForApprovalResponse {
-  candidate_id: string;
+  application_id: string;
+  candidate_id?: string;
   status: string;
   current_approval: Approval;
   message: string;

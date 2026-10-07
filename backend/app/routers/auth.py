@@ -106,19 +106,15 @@ def update_me(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Update current user profile information, role or approver tier."""
+    """Update current user profile information. Self-service role changes are disallowed to preserve RBAC integrity."""
+    if payload.role is not None or payload.approver_role is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Self-service role changes are not allowed",
+        )
+
     if payload.name is not None:
         current_user.name = payload.name.strip() or None
-
-    if payload.role is not None:
-        current_user.role = payload.role
-        if payload.role == "approver" and not current_user.approver_role:
-            current_user.approver_role = "hiring_manager"
-        elif payload.role != "approver":
-            current_user.approver_role = None
-
-    if payload.approver_role is not None:
-        current_user.approver_role = payload.approver_role
 
     db.commit()
     db.refresh(current_user)

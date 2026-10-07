@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
-import type { Candidate, Job, Approval } from "../../api/types";
+import type { Candidate, Job, Approval, Application, CandidateStatus } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
 import { EmptyState } from "../../components/EmptyState";
@@ -15,6 +15,7 @@ export const CandidateDossierPage: React.FC = () => {
   const { refreshPendingCount } = useOutletContext<OutletContextType>();
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [job, setJob] = useState<Job | null>(null);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,9 +36,21 @@ export const CandidateDossierPage: React.FC = () => {
       const cand = await api.getCandidate(id);
       setCandidate(cand);
 
-      if (cand.job_id) {
+      let appsList: Application[] = [];
+      try {
+        appsList = await api.getCandidateApplications(id);
+        setApplications(appsList);
+      } catch {
+        appsList = cand.applications || [];
+        setApplications(appsList);
+      }
+
+      const activeApp = appsList[0];
+      const targetJobId = activeApp?.job_id || cand.job_id;
+
+      if (targetJobId) {
         try {
-          const j = await api.getJob(cand.job_id);
+          const j = await api.getJob(targetJobId);
           setJob(j);
         } catch {
           // Job might be missing or deleted
@@ -45,8 +58,13 @@ export const CandidateDossierPage: React.FC = () => {
       }
 
       try {
-        const apprs = await api.getCandidateApprovals(id);
-        setApprovals(apprs);
+        if (activeApp) {
+          const apprs = await api.getApplicationApprovals(activeApp.id);
+          setApprovals(apprs);
+        } else {
+          const apprs = await api.getCandidateApprovals(id);
+          setApprovals(apprs);
+        }
       } catch {
         // Approvals endpoint fallback
       }
@@ -67,7 +85,12 @@ export const CandidateDossierPage: React.FC = () => {
     try {
       setSubmitting(true);
       setSubmitError(null);
-      await api.submitForApproval(candidate.id);
+      const activeApp = applications[0];
+      if (activeApp) {
+        await api.submitApplicationForApproval(activeApp.id);
+      } else {
+        await api.submitForApproval(candidate.id);
+      }
       await loadCandidateDetails();
       if (refreshPendingCount) refreshPendingCount();
     } catch (err: unknown) {
@@ -101,6 +124,8 @@ export const CandidateDossierPage: React.FC = () => {
   }
 
   const parsed = candidate.parsed_data;
+  const effectiveStatus: CandidateStatus = (applications[0]?.status as CandidateStatus) || candidate.status || "uploaded";
+  const effectiveJobId = candidate.job_id || applications[0]?.job_id;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -117,7 +142,7 @@ export const CandidateDossierPage: React.FC = () => {
             <h1 style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.01em" }}>
               {candidate.name || parsed?.current_title || candidate.raw_resume_filename}
             </h1>
-            <StatusBadge status={candidate.status} />
+            <StatusBadge status={effectiveStatus} />
           </div>
 
           <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
@@ -127,7 +152,7 @@ export const CandidateDossierPage: React.FC = () => {
 
         {/* Quick Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {["shortlisted", "parsed"].includes(candidate.status) && candidate.job_id && (
+          {["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
             <button
               className="btn btn-primary"
               disabled={submitting}
@@ -137,7 +162,7 @@ export const CandidateDossierPage: React.FC = () => {
             </button>
           )}
 
-          {candidate.status === "pending_approval" && (
+          {effectiveStatus === "pending_approval" && (
             <Link to="/approvals" className="btn btn-primary">
               Review in Approval Queue →
             </Link>
@@ -200,7 +225,7 @@ export const CandidateDossierPage: React.FC = () => {
             <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
               CURRENT ESCALATION STATUS
             </span>
-            <EscalationTracker roleTier={job.role_tier} status={candidate.status} />
+            <EscalationTracker roleTier={job.role_tier} status={effectiveStatus} />
           </div>
         )}
       </div>
@@ -428,8 +453,12 @@ export const CandidateDossierPage: React.FC = () => {
                 </div>
               ) : (
                 <EmptyState
-                  title="EXTRACTION PENDING"
-                  description="Structured JSON has not been generated for this candidate yet. Raw text was captured during ingestion pre-processing."
+                  title={candidate.parsed_status === "extraction_failed" ? "EXTRACTION FAILED" : "EXTRACTION PENDING"}
+                  description={
+                    candidate.parsed_status === "extraction_failed"
+                      ? "Extraction failed — raw resume text was indexed for matching instead."
+                      : "Structured JSON has not been generated for this candidate yet. Raw text was captured during ingestion pre-processing."
+                  }
                 />
               )
             ) : (
@@ -473,7 +502,7 @@ export const CandidateDossierPage: React.FC = () => {
               <EmptyState
                 title="NO APPROVALS INITIATED"
                 description={
-                  candidate.status === "shortlisted" && candidate.job_id
+                  effectiveStatus === "shortlisted" && effectiveJobId
                     ? "Candidate is shortlisted. Click 'Submit for Approval' above to initiate the escalation chain."
                     : "Approval workflow begins once candidate is linked to a requisition and submitted."
                 }

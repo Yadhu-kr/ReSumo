@@ -171,3 +171,117 @@ def test_hr_cannot_match_other_company_job(client, register_user):
         headers=headers_b,
     )
     assert match_res.status_code == 403
+
+
+def test_approver_cannot_action_other_company_approval(client, register_user, monkeypatch):
+    """An approver from Company B cannot approve/reject an approval belonging to Company A."""
+    monkeypatch.setenv("MATCH_SIMILARITY_THRESHOLD", "0.01")
+
+    hr_a, user_a = register_user("hr_act_a@test.com", "TestPass123!", "hr", company_name="ActionCorpA")
+    _, user_b = register_user("hr_act_b@test.com", "TestPass123!", "hr", company_name="ActionCorpB")
+
+    approver_a, _ = register_user(
+        "app_act_a@test.com", "TestPass123!", "approver",
+        company_id=user_a["company_id"], approver_role="hiring_manager",
+    )
+    approver_b, _ = register_user(
+        "app_act_b@test.com", "TestPass123!", "approver",
+        company_id=user_b["company_id"], approver_role="hiring_manager",
+    )
+
+    # Candidate uploads resume
+    cand_headers, _ = register_user("cand_act@test.com", "TestPass123!", "candidate")
+    client.post(
+        "/upload-resume",
+        files={"file": ("act_cv.txt", b"Resume text", "text/plain")},
+        headers=cand_headers,
+    )
+
+    # HR A creates junior job, matches, and submits for approval
+    job_a = client.post("/jobs/", json={"title": "A Role", "description": "Desc", "role_tier": "junior"}, headers=hr_a)
+    match_res = client.post(
+        f"/jobs/{job_a.json()['id']}/matches",
+        json={"top_k": 5, "min_score": 0.0},
+        headers=hr_a,
+    )
+    app_id = match_res.json()["matches"][0]["application"]["id"]
+
+    submit_res = client.post(
+        f"/candidates/applications/{app_id}/submit-for-approval",
+        headers=hr_a,
+    )
+    approval_id = submit_res.json()["current_approval"]["id"]
+
+    # Approver B (different company) tries to action Company A's approval -> 403
+    action_res_b = client.post(
+        f"/approvals/{approval_id}/action",
+        json={"action": "approve", "notes": "Malicious cross-company approval"},
+        headers=approver_b,
+    )
+    assert action_res_b.status_code == 403
+    assert "Access denied: approver cannot act on approvals for another company" in action_res_b.json()["detail"]
+
+    # Approver A (same company) can successfully approve
+    action_res_a = client.post(
+        f"/approvals/{approval_id}/action",
+        json={"action": "approve", "notes": "Legitimate approval"},
+        headers=approver_a,
+    )
+    assert action_res_a.status_code == 200
+    assert action_res_a.json()["action"] == "approved"
+
+
+def test_user_cannot_view_other_company_application_approvals(client, register_user, monkeypatch):
+    """Users from Company B cannot inspect historical/pending approvals for Company A's applications."""
+    monkeypatch.setenv("MATCH_SIMILARITY_THRESHOLD", "0.01")
+
+    hr_a, user_a = register_user("hr_view_a@test.com", "TestPass123!", "hr", company_name="ViewCorpA")
+    hr_b, user_b = register_user("hr_view_b@test.com", "TestPass123!", "hr", company_name="ViewCorpB")
+
+    approver_a, _ = register_user(
+        "app_view_a@test.com", "TestPass123!", "approver",
+        company_id=user_a["company_id"], approver_role="hiring_manager",
+    )
+    approver_b, _ = register_user(
+        "app_view_b@test.com", "TestPass123!", "approver",
+        company_id=user_b["company_id"], approver_role="hiring_manager",
+    )
+
+    cand_headers, cand_user = register_user("cand_view@test.com", "TestPass123!", "candidate")
+    up_res = client.post(
+        "/upload-resume",
+        files={"file": ("view_cv.txt", b"Resume text", "text/plain")},
+        headers=cand_headers,
+    )
+    cand_id = up_res.json()["candidate_id"]
+
+    job_a = client.post("/jobs/", json={"title": "A Role", "description": "Desc", "role_tier": "junior"}, headers=hr_a)
+    match_res = client.post(
+        f"/jobs/{job_a.json()['id']}/matches",
+        json={"top_k": 5, "min_score": 0.0},
+        headers=hr_a,
+    )
+    app_id = match_res.json()["matches"][0]["application"]["id"]
+    client.post(f"/candidates/applications/{app_id}/submit-for-approval", headers=hr_a)
+
+    # Approver B and HR B try to access Company A's application approvals -> 403
+    res_b_app = client.get(f"/approvals/application/{app_id}", headers=approver_b)
+    assert res_b_app.status_code == 403
+
+    res_b_hr = client.get(f"/approvals/application/{app_id}", headers=hr_b)
+    assert res_b_hr.status_code == 403
+
+    # Candidate from another account tries to access -> 403
+    other_cand_headers, _ = register_user("other_cand@test.com", "TestPass123!", "candidate")
+    res_other_cand = client.get(f"/approvals/application/{app_id}", headers=other_cand_headers)
+    assert res_other_cand.status_code == 403
+
+    # Approver A and owning Candidate can view
+    res_a = client.get(f"/approvals/application/{app_id}", headers=approver_a)
+    assert res_a.status_code == 200
+    assert len(res_a.json()) == 1
+
+    res_cand = client.get(f"/approvals/application/{app_id}", headers=cand_headers)
+    assert res_cand.status_code == 200
+    assert len(res_cand.json()) == 1
+

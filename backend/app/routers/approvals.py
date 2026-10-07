@@ -79,10 +79,78 @@ def get_application_approvals(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Retrieves all historical and active approval records for a specific application."""
+    """Retrieves all historical and active approval records for a specific application, enforcing company/ownership isolation."""
+    application = db.query(models.Application).filter(models.Application.id == application_id).first()
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Application '{application_id}' not found",
+        )
+
+    # Multi-tenancy check
+    if current_user.role != "admin":
+        if current_user.role in ("recruiter", "hr", "approver"):
+            job = db.query(models.Job).filter(models.Job.id == application.job_id).first()
+            if not job or job.company_id != current_user.company_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: application belongs to another company",
+                )
+        elif current_user.role == "candidate":
+            candidate = db.query(models.Candidate).filter(models.Candidate.id == application.candidate_id).first()
+            if not candidate or candidate.user_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: you do not own this application",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
     return (
         db.query(models.Approval)
         .filter(models.Approval.application_id == application_id)
+        .order_by(models.Approval.step_order.asc(), models.Approval.created_at.asc())
+        .all()
+    )
+
+
+@router.get("/candidate/{candidate_id}", response_model=list[schemas.ApprovalOut])
+def get_candidate_approvals(
+    candidate_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieves approvals for all applications belonging to candidate, with tenant isolation."""
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Candidate '{candidate_id}' not found",
+        )
+
+    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    apps_query = db.query(models.Application).filter(models.Application.candidate_id == candidate_id)
+    if current_user.role in ("recruiter", "hr", "approver"):
+        apps_query = apps_query.join(models.Job).filter(models.Job.company_id == current_user.company_id)
+
+    matching_apps = apps_query.all()
+    if not matching_apps:
+        if current_user.role in ("recruiter", "hr", "approver"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: candidate has no applications in your company",
+            )
+        return []
+
+    app_ids = [a.id for a in matching_apps]
+    return (
+        db.query(models.Approval)
+        .filter(models.Approval.application_id.in_(app_ids))
         .order_by(models.Approval.step_order.asc(), models.Approval.created_at.asc())
         .all()
     )
@@ -98,6 +166,7 @@ def action_approval(
     """
     Action an approval record (approve or reject) with optional notes.
     Records acted_by_user_id from the authenticated user.
+    Enforces multi-tenant company isolation and approver tier matching.
 
     - On reject:
         Halts the approval chain immediately and transitions application.status to 'rejected'.
@@ -128,6 +197,21 @@ def action_approval(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Application '{approval.application_id}' associated with approval not found",
         )
+
+    job = db.query(models.Job).filter(models.Job.id == application.job_id).first()
+
+    # Enforce multi-tenancy and approver tier authorization
+    if current_user.role == "approver":
+        if not job or job.company_id != current_user.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: approver cannot act on approvals for another company",
+            )
+        if current_user.approver_role and current_user.approver_role != approval.approver_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Approver tier '{current_user.approver_role}' cannot act on step requiring '{approval.approver_role}'",
+            )
 
     now = datetime.now(timezone.utc)
     acted_action = "approved" if action_req.action == "approve" else "rejected"

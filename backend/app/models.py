@@ -102,10 +102,21 @@ class Candidate(Base):
     # Note: Does not contain name, email, or phone (handled separately).
     parsed_data = Column(JSON, nullable=True)
 
+    # Ingestion extraction status: "uploaded", "parsed", "extraction_failed"
+    parsed_status = Column(String, default="uploaded", nullable=True)
+
     created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User", backref="candidates")
     applications = relationship("Application", back_populates="candidate")
+
+    @property
+    def job_id(self):
+        return self.applications[0].job_id if self.applications else None
+
+    @property
+    def status(self):
+        return self.applications[0].status if self.applications else (self.parsed_status or "uploaded")
 
 
 # ---- New: Application (bridges Candidate ↔ Job, owns status machine) ----
@@ -145,6 +156,10 @@ class Approval(Base):
     created_at = Column(DateTime, default=utc_now)
 
     application = relationship("Application", back_populates="approvals")
+
+    @property
+    def candidate_id(self):
+        return self.application.candidate_id if self.application else None
     acted_by_user = relationship("User", foreign_keys=[acted_by_user_id])
 
 

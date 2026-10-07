@@ -373,11 +373,24 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                   type="button"
                   className="as-demo-fill-btn"
                   onClick={() => {
+                    setEmail("approver@resumo.ai");
+                    setPassword("Password123!");
+                    setError(null);
+                  }}
+                  title="Autofill Approver (Hiring Manager) credentials"
+                >
+                  Approver
+                </button>
+                <span className="as-demo-sep">·</span>
+                <button
+                  type="button"
+                  className="as-demo-fill-btn"
+                  onClick={() => {
                     setEmail("admin@resumo.ai");
                     setPassword("Password123!");
                     setError(null);
                   }}
-                  title="Autofill Administrator credentials"
+                  title="Autofill System Administrator credentials"
                 >
                   Administrator
                 </button>
