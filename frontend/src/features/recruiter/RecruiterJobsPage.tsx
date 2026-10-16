@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 import type { Job, JobCreate, JobMatchesResponse, CandidateMatchOut, RoleTier } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { RationaleSourceBadge } from "../../components/RationaleSourceBadge";
@@ -13,6 +14,9 @@ interface OutletContextType {
 
 export const RecruiterJobsPage: React.FC = () => {
   const { refreshPendingCount } = useOutletContext<OutletContextType>();
+  const { user } = useAuth();
+  const canManageJobs = user?.role === "hr" || user?.role === "admin";
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -142,14 +146,16 @@ export const RecruiterJobsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowCreateModal(true)}
-          style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "50px" }}
-        >
-          <Plus size={15} />
-          <span>New Job Opening</span>
-        </button>
+        {canManageJobs && (
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowCreateModal(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "50px" }}
+          >
+            <Plus size={15} />
+            <span>New Job Opening</span>
+          </button>
+        )}
       </div>
 
       {error && (
@@ -329,15 +335,21 @@ export const RecruiterJobsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    className="btn btn-primary"
-                    disabled={matchLoading}
-                    onClick={() => handleRunMatch(selectedJob.id)}
-                    style={{ borderRadius: "50px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                  >
-                    <Sparkles size={14} />
-                    <span>{matchLoading ? "Running Vector Search & LLM..." : "Run Semantic Match →"}</span>
-                  </button>
+                  {canManageJobs ? (
+                    <button
+                      className="btn btn-primary"
+                      disabled={matchLoading}
+                      onClick={() => handleRunMatch(selectedJob.id)}
+                      style={{ borderRadius: "50px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    >
+                      <Sparkles size={14} />
+                      <span>{matchLoading ? "Running Vector Search & LLM..." : "Run Semantic Match →"}</span>
+                    </button>
+                  ) : (
+                    <span className="badge badge-neutral mono" style={{ fontSize: "11px", padding: "6px 12px" }}>
+                      AI MATCHING MANAGED BY RECRUITER
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -465,7 +477,7 @@ export const RecruiterJobsPage: React.FC = () => {
 
                           {/* Actions */}
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
-                            {cand.status === "shortlisted" && (
+                            {canManageJobs && cand.status === "shortlisted" && (
                               <button
                                 className="btn btn-primary btn-sm"
                                 disabled={submittingId === cand.id}
@@ -497,7 +509,7 @@ export const RecruiterJobsPage: React.FC = () => {
       </div>
 
       {/* New Job Modal */}
-      {showCreateModal && (
+      {showCreateModal && canManageJobs && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: "560px" }}>
             <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

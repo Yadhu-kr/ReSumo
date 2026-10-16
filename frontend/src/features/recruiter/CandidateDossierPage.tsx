@@ -17,6 +17,7 @@ import type {
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
 import { EmptyState } from "../../components/EmptyState";
+import { useAuth } from "../../context/AuthContext";
 import {
   Gift,
   Send,
@@ -45,6 +46,8 @@ interface OutletContextType {
 export const CandidateDossierPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { refreshPendingCount } = useOutletContext<OutletContextType>();
+  const { user } = useAuth();
+  const isHRorAdmin = user?.role === "hr" || user?.role === "admin";
 
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -493,7 +496,7 @@ export const CandidateDossierPage: React.FC = () => {
 
         {/* Quick Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
+          {isHRorAdmin && ["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
             <button
               className="btn btn-primary"
               disabled={submitting}
@@ -1121,7 +1124,7 @@ export const CandidateDossierPage: React.FC = () => {
                           <span>Download Letter (.md)</span>
                         </a>
 
-                        {activeOffer.status === "draft" && (
+                        {isHRorAdmin && activeOffer.status === "draft" && (
                           <button
                             type="button"
                             disabled={sendingOffer}
@@ -1260,126 +1263,146 @@ export const CandidateDossierPage: React.FC = () => {
                 )}
 
                 {/* Offer Letter Generator / Editor Form */}
-                <form
-                  onSubmit={handleGenerateOffer}
-                  style={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "14px",
-                    border: "1px solid var(--border-subtle)",
-                    padding: "20px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      {activeOffer ? "Revise / Re-generate Offer Terms" : "Generate Formal Offer Letter"}
-                    </h4>
-                    <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                      ATS AUTOMATION STUDIO
-                    </span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                    <div>
-                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                        Official Role Title
-                      </label>
-                      <input
-                        type="text"
-                        value={offerForm.role_title}
-                        onChange={(e) => setOfferForm({ ...offerForm, role_title: e.target.value })}
-                        placeholder="e.g. Senior Machine Learning Engineer"
-                        required
-                        style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
-                      />
+                {isHRorAdmin ? (
+                  <form
+                    onSubmit={handleGenerateOffer}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "14px",
+                      border: "1px solid var(--border-subtle)",
+                      padding: "20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "16px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {activeOffer ? "Revise / Re-generate Offer Terms" : "Generate Formal Offer Letter"}
+                      </h4>
+                      <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        ATS AUTOMATION STUDIO
+                      </span>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "8px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                       <div>
                         <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                          Annual Base Salary
+                          Official Role Title
                         </label>
                         <input
-                          type="number"
-                          value={offerForm.salary}
-                          onChange={(e) => setOfferForm({ ...offerForm, salary: Number(e.target.value) })}
+                          type="text"
+                          value={offerForm.role_title}
+                          onChange={(e) => setOfferForm({ ...offerForm, role_title: e.target.value })}
+                          placeholder="e.g. Senior Machine Learning Engineer"
                           required
-                          min={1}
                           style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
                         />
                       </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "8px" }}>
+                        <div>
+                          <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                            Annual Base Salary
+                          </label>
+                          <input
+                            type="number"
+                            value={offerForm.salary}
+                            onChange={(e) => setOfferForm({ ...offerForm, salary: Number(e.target.value) })}
+                            required
+                            min={1}
+                            style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                            Currency
+                          </label>
+                          <select
+                            value={offerForm.currency}
+                            onChange={(e) => setOfferForm({ ...offerForm, currency: e.target.value })}
+                            style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
+                          >
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="CAD">CAD ($)</option>
+                            <option value="AUD">AUD ($)</option>
+                            <option value="INR">INR (₹)</option>
+                          </select>
+                        </div>
+                      </div>
+
                       <div>
                         <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                          Currency
+                          Target Start Date
                         </label>
-                        <select
-                          value={offerForm.currency}
-                          onChange={(e) => setOfferForm({ ...offerForm, currency: e.target.value })}
+                        <input
+                          type="date"
+                          value={offerForm.start_date}
+                          onChange={(e) => setOfferForm({ ...offerForm, start_date: e.target.value })}
                           style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
-                        >
-                          <option value="USD">USD ($)</option>
-                          <option value="EUR">EUR (€)</option>
-                          <option value="GBP">GBP (£)</option>
-                          <option value="CAD">CAD ($)</option>
-                          <option value="AUD">AUD ($)</option>
-                          <option value="INR">INR (₹)</option>
-                        </select>
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                          Equity & Incentives
+                        </label>
+                        <input
+                          type="text"
+                          value={offerForm.equity}
+                          onChange={(e) => setOfferForm({ ...offerForm, equity: e.target.value })}
+                          placeholder="e.g. 0.25% equity options (4-yr vesting)"
+                          style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
+                        />
                       </div>
                     </div>
 
                     <div>
                       <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                        Target Start Date
+                        Benefits & Notes (Appended to formal letter)
                       </label>
-                      <input
-                        type="date"
-                        value={offerForm.start_date}
-                        onChange={(e) => setOfferForm({ ...offerForm, start_date: e.target.value })}
+                      <textarea
+                        rows={3}
+                        value={offerForm.notes}
+                        onChange={(e) => setOfferForm({ ...offerForm, notes: e.target.value })}
+                        placeholder="Outline healthcare, 401(k), relocation assistance, or signing bonus..."
                         style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
                       />
                     </div>
 
-                    <div>
-                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                        Equity & Incentives
-                      </label>
-                      <input
-                        type="text"
-                        value={offerForm.equity}
-                        onChange={(e) => setOfferForm({ ...offerForm, equity: e.target.value })}
-                        placeholder="e.g. 0.25% equity options (4-yr vesting)"
-                        style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
-                      />
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="submit"
+                        disabled={generatingOffer}
+                        className="btn btn-purple"
+                        style={{ padding: "9px 22px", fontSize: "13px" }}
+                      >
+                        <Sparkles size={14} />
+                        <span>{generatingOffer ? "Generating Offer Draft..." : "Generate Offer Letter Draft"}</span>
+                      </button>
                     </div>
+                  </form>
+                ) : !activeOffer ? (
+                  <div
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "14px",
+                      border: "1px solid var(--border-subtle)",
+                      padding: "36px 24px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <Gift size={32} color="#a855f7" style={{ margin: "0 auto 12px", display: "block" }} />
+                    <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      No Formal Offer Drafted
+                    </h4>
+                    <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)", maxWidth: "440px", marginLeft: "auto", marginRight: "auto" }}>
+                      Formal offer compensation terms and letter generation are authored by HR recruiters following multi-tier stage approval.
+                    </p>
                   </div>
-
-                  <div>
-                    <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                      Benefits & Notes (Appended to formal letter)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={offerForm.notes}
-                      onChange={(e) => setOfferForm({ ...offerForm, notes: e.target.value })}
-                      placeholder="Outline healthcare, 401(k), relocation assistance, or signing bonus..."
-                      style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      type="submit"
-                      disabled={generatingOffer}
-                      className="btn btn-purple"
-                      style={{ padding: "9px 22px", fontSize: "13px" }}
-                    >
-                      <Sparkles size={14} />
-                      <span>{generatingOffer ? "Generating Offer Draft..." : "Generate Offer Letter Draft"}</span>
-                    </button>
-                  </div>
-                </form>
+                ) : null}
               </div>
             )}
 
@@ -2198,7 +2221,7 @@ export const CandidateDossierPage: React.FC = () => {
                                 <span className="badge badge-neutral">PENDING</span>
                               )}
 
-                              {task.status === "completed" && (
+                              {task.status === "completed" && isHRorAdmin && (
                                 <button
                                   type="button"
                                   onClick={() => handleVerifyOnboardingTask(task.id)}

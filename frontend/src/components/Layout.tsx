@@ -22,7 +22,7 @@ export const Layout: React.FC = () => {
     }
 
     // 2. Refresh pending approvals if authenticated (only for roles with approval access)
-    if (isAuthenticated && (user?.role === "approver" || user?.role === "admin")) {
+    if (isAuthenticated && (user?.role === "approver" || user?.role === "admin" || user?.role === "hr")) {
       try {
         const approvals = await api.listPendingApprovals();
         setPendingCount(approvals.length);
@@ -253,7 +253,7 @@ export const Layout: React.FC = () => {
                   Jobs & RAG Matching
                 </NavLink>
 
-                {user?.role === "admin" && (
+                {(user?.role === "admin" || user?.role === "hr") && (
                   <NavLink
                     to="/approvals"
                     style={({ isActive }) => ({
@@ -271,7 +271,7 @@ export const Layout: React.FC = () => {
                       transition: "all 0.15s ease",
                     })}
                   >
-                    <span>Approval Queue</span>
+                    <span>{user?.role === "hr" ? "Approvals Track" : "Approval Queue"}</span>
                     {pendingCount > 0 && (
                       <span
                         className="badge badge-pending"

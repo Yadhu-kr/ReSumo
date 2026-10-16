@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 import type { Approval, ApproverRole, Candidate, Job, ApprovalPolicy } from "../../api/types";
 import { EscalationTracker } from "../../components/EscalationTracker";
 import { EmptyState } from "../../components/EmptyState";
@@ -18,7 +19,12 @@ const ROLES: { key: ApproverRole; label: string; desc: string }[] = [
 
 export const ApprovalsPage: React.FC = () => {
   const { refreshPendingCount } = useOutletContext<OutletContextType>();
-  const [activeRole, setActiveRole] = useState<ApproverRole>("hiring_manager");
+  const { user } = useAuth();
+  const initialRole: ApproverRole =
+    user?.role === "approver" && (user.approver_role as ApproverRole)
+      ? (user.approver_role as ApproverRole)
+      : "hiring_manager";
+  const [activeRole, setActiveRole] = useState<ApproverRole>(initialRole);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [candidatesMap, setCandidatesMap] = useState<Record<string, Candidate>>({});
   const [jobsMap, setJobsMap] = useState<Record<string, Job>>({});
@@ -134,6 +140,16 @@ export const ApprovalsPage: React.FC = () => {
     }
   };
 
+  // User authority check: Only approvers matching the tier or admins can approve/reject
+  const canActOnApproval = (appr: Approval): boolean => {
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    if (user.role === "approver") {
+      return !user.approver_role || user.approver_role === appr.approver_role;
+    }
+    return false;
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Header */}
@@ -157,6 +173,29 @@ export const ApprovalsPage: React.FC = () => {
           {showPolicyDemo ? "Hide Routing Matrix" : "Inspect Routing Matrix (Viva)"}
         </button>
       </div>
+
+      {/* Role Notice Banner for HR or Non-Approver Roles */}
+      {user?.role === "hr" && (
+        <div
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#f5f3ff",
+            border: "1px solid #ddd6fe",
+            borderRadius: "var(--radius-md)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "12.5px",
+            color: "#6b21a8",
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>HR Tracking Mode:</span>
+          <span>
+            You are viewing the company approval queue for pipeline monitoring. Decision actions (Approve / Reject)
+            are restricted to designated Approvers at each evaluation tier.
+          </span>
+        </div>
+      )}
 
       {/* Configurable Policy Demonstration Panel (Viva Architecture Differentiator) */}
       {showPolicyDemo && (
@@ -435,31 +474,49 @@ export const ApprovalsPage: React.FC = () => {
                       Inspect Full Dossier & Plaintext →
                     </Link>
 
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => {
-                          setSelectedApproval(appr);
-                          setActionType("reject");
-                          setActionNotes("");
-                          setActionError(null);
-                        }}
-                      >
-                        Reject (Halt Chain)
-                      </button>
+                    {canActOnApproval(appr) ? (
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => {
+                            setSelectedApproval(appr);
+                            setActionType("reject");
+                            setActionNotes("");
+                            setActionError(null);
+                          }}
+                        >
+                          Reject (Halt Chain)
+                        </button>
 
-                      <button
-                        className="btn btn-success btn-sm"
-                        onClick={() => {
-                          setSelectedApproval(appr);
-                          setActionType("approve");
-                          setActionNotes("");
-                          setActionError(null);
-                        }}
-                      >
-                        Approve Candidate →
-                      </button>
-                    </div>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => {
+                            setSelectedApproval(appr);
+                            setActionType("approve");
+                            setActionNotes("");
+                            setActionError(null);
+                          }}
+                        >
+                          Approve Candidate →
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          className="badge badge-neutral"
+                          style={{
+                            fontSize: "11px",
+                            padding: "4px 10px",
+                            borderRadius: "50px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {user?.role === "hr"
+                            ? `Awaiting ${ROLES.find((r) => r.key === appr.approver_role)?.label || appr.approver_role} Sign-off`
+                            : `Requires ${ROLES.find((r) => r.key === appr.approver_role)?.label || appr.approver_role} Authority`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -469,7 +526,7 @@ export const ApprovalsPage: React.FC = () => {
       )}
 
       {/* Decision Action Modal */}
-      {selectedApproval && (
+      {selectedApproval && canActOnApproval(selectedApproval) && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="panel-header">

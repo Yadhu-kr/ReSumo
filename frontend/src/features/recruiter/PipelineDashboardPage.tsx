@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 import type { Candidate, Job, CandidateStatus } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import {
@@ -41,6 +42,9 @@ const LIFECYCLE_STAGES: {
 
 export const PipelineDashboardPage: React.FC = () => {
   const { refreshPendingCount } = useOutletContext<OutletContextType>();
+  const { user } = useAuth();
+  const canManagePipeline = user?.role === "hr" || user?.role === "admin";
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>("");
@@ -361,27 +365,51 @@ export const PipelineDashboardPage: React.FC = () => {
           </div>
 
           {/* Optional Source Candidate Modal Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setUploadStatus(null);
-              setShowIngestModal(true);
-            }}
-            className="btn btn-primary"
-            style={{
-              padding: "8px 16px",
-              fontSize: "12.5px",
-              borderRadius: "50px",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <Plus size={15} />
-            <span>Source Resume</span>
-          </button>
+          {canManagePipeline && (
+            <button
+              type="button"
+              onClick={() => {
+                setUploadStatus(null);
+                setShowIngestModal(true);
+              }}
+              className="btn btn-primary"
+              style={{
+                padding: "8px 16px",
+                fontSize: "12.5px",
+                borderRadius: "50px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Plus size={15} />
+              <span>Source Resume</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Role Notice Banner if read-only observer */}
+      {!canManagePipeline && (
+        <div
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#f0f9ff",
+            border: "1px solid #bae6fd",
+            borderRadius: "var(--radius-md)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "12.5px",
+            color: "#0369a1",
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>Observation Mode:</span>
+          <span>
+            You are viewing the recruitment pipeline in read-only mode. Candidate stage transitions and requisition assignments are managed by HR recruiters.
+          </span>
+        </div>
+      )}
 
       {/* KPI Metric Summary Bar */}
       <div
@@ -596,8 +624,8 @@ export const PipelineDashboardPage: React.FC = () => {
                       return (
                         <div
                           key={cand.id}
-                          draggable={!isUpdating}
-                          onDragStart={(e) => handleDragStart(e, cand)}
+                          draggable={canManagePipeline && !isUpdating}
+                          onDragStart={(e) => canManagePipeline && handleDragStart(e, cand)}
                           style={{
                             padding: "12px 14px",
                             backgroundColor: "#ffffff",
@@ -607,7 +635,7 @@ export const PipelineDashboardPage: React.FC = () => {
                             display: "flex",
                             flexDirection: "column",
                             gap: "8px",
-                            cursor: "grab",
+                            cursor: canManagePipeline ? "grab" : "default",
                             opacity: isUpdating ? 0.6 : 1,
                             transition: "transform 0.15s ease, box-shadow 0.15s ease",
                           }}
@@ -615,7 +643,9 @@ export const PipelineDashboardPage: React.FC = () => {
                           {/* Card Top: Drag Handle + Status + ID */}
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <GripVertical size={13} style={{ color: "var(--text-muted)", cursor: "grab" }} />
+                              {canManagePipeline && (
+                                <GripVertical size={13} style={{ color: "var(--text-muted)", cursor: "grab" }} />
+                              )}
                               <StatusBadge status={candStatus} />
                             </div>
                             <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
@@ -676,153 +706,155 @@ export const PipelineDashboardPage: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Quick Interactive Actions Ribbon */}
-                          <div
-                            style={{
-                              borderTop: "1px solid var(--border-subtle)",
-                              paddingTop: "8px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "6px",
-                            }}
-                          >
-                            {/* Unassigned Candidate Action */}
-                            {!candJob && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAssignModalCandidate(cand);
-                                  setAssignTargetJobId(jobs[0]?.id || "");
-                                }}
-                                className="btn btn-purple btn-sm"
-                                style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
-                              >
-                                <Briefcase size={12} />
-                                <span>Assign to Job Requisition</span>
-                              </button>
-                            )}
-
-                            {/* Stage-Specific Contextual Actions */}
-                            {["uploaded", "parsed", "extraction_failed"].includes(candStatus) && candJob && (
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                          {/* Quick Interactive Actions Ribbon (Only rendered for HR & Admin) */}
+                          {canManagePipeline && (
+                            <div
+                              style={{
+                                borderTop: "1px solid var(--border-subtle)",
+                                paddingTop: "8px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "6px",
+                              }}
+                            >
+                              {/* Unassigned Candidate Action */}
+                              {!candJob && (
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateStatus(cand, "shortlisted")}
-                                  className="btn btn-sm btn-primary"
-                                  style={{ fontSize: "11px", padding: "4px 8px" }}
-                                >
-                                  Shortlist
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStatus(cand, "rejected")}
-                                  className="btn btn-sm btn-danger"
-                                  style={{ fontSize: "11px", padding: "4px 8px" }}
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            )}
-
-                            {candStatus === "shortlisted" && (
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSubmitForApproval(cand.id)}
-                                  disabled={submittingId === cand.id}
-                                  className="btn btn-primary btn-sm"
+                                  onClick={() => {
+                                    setAssignModalCandidate(cand);
+                                    setAssignTargetJobId(jobs[0]?.id || "");
+                                  }}
+                                  className="btn btn-purple btn-sm"
                                   style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
                                 >
-                                  {submittingId === cand.id ? "Routing..." : "Route for Approval →"}
+                                  <Briefcase size={12} />
+                                  <span>Assign to Job Requisition</span>
                                 </button>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                  <Link
-                                    to={`/candidates/${cand.id}`}
-                                    style={{
-                                      fontSize: "10.5px",
-                                      color: "var(--accent-purple)",
-                                      textDecoration: "none",
-                                      fontWeight: 600,
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "3px",
-                                    }}
+                              )}
+
+                              {/* Stage-Specific Contextual Actions */}
+                              {["uploaded", "parsed", "extraction_failed"].includes(candStatus) && candJob && (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateStatus(cand, "shortlisted")}
+                                    className="btn btn-sm btn-primary"
+                                    style={{ fontSize: "11px", padding: "4px 8px" }}
                                   >
-                                    <Star size={11} />
-                                    <span>Score Interview</span>
-                                  </Link>
+                                    Shortlist
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateStatus(cand, "rejected")}
-                                    className="btn btn-danger btn-sm"
-                                    style={{ fontSize: "10px", padding: "1px 6px" }}
+                                    className="btn btn-sm btn-danger"
+                                    style={{ fontSize: "11px", padding: "4px 8px" }}
                                   >
                                     Reject
                                   </button>
                                 </div>
+                              )}
+
+                              {candStatus === "shortlisted" && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSubmitForApproval(cand.id)}
+                                    disabled={submittingId === cand.id}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
+                                  >
+                                    {submittingId === cand.id ? "Routing..." : "Route for Approval →"}
+                                  </button>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Link
+                                      to={`/candidates/${cand.id}`}
+                                      style={{
+                                        fontSize: "10.5px",
+                                        color: "var(--accent-purple)",
+                                        textDecoration: "none",
+                                        fontWeight: 600,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                      }}
+                                    >
+                                      <Star size={11} />
+                                      <span>Score Interview</span>
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateStatus(cand, "rejected")}
+                                      className="btn btn-danger btn-sm"
+                                      style={{ fontSize: "10px", padding: "1px 6px" }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {candStatus === "approved" && (
+                                <Link
+                                  to={`/candidates/${cand.id}`}
+                                  className="btn btn-purple btn-sm"
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none" }}
+                                >
+                                  <Gift size={12} />
+                                  <span>Generate Offer Letter →</span>
+                                </Link>
+                              )}
+
+                              {candStatus === "offered" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(cand, "hired")}
+                                  className="btn btn-success btn-sm"
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
+                                >
+                                  <CheckCircle2 size={12} />
+                                  <span>Mark as Hired</span>
+                                </button>
+                              )}
+
+                              {candStatus === "hired" && (
+                                <Link
+                                  to={`/candidates/${cand.id}`}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none", gap: "4px" }}
+                                >
+                                  <CheckSquare size={12} style={{ color: "#059669" }} />
+                                  <span>Track Onboarding Hub →</span>
+                                </Link>
+                              )}
+
+                              {/* Manual Move Dropdown */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Stage:</span>
+                                <select
+                                  value={candStatus}
+                                  onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
+                                  style={{
+                                    fontSize: "10.5px",
+                                    padding: "2px 8px",
+                                    borderRadius: "4px",
+                                    backgroundColor: "#f8fafc",
+                                    border: "1px solid var(--border-subtle)",
+                                    width: "100%",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <option value="parsed">Sourced / Parsed</option>
+                                  <option value="shortlisted">Shortlisted</option>
+                                  <option value="pending_approval">Pending Approval</option>
+                                  <option value="approved">Approved</option>
+                                  <option value="offered">Offer Extended</option>
+                                  <option value="hired">Hired</option>
+                                  <option value="rejected">Rejected</option>
+                                </select>
                               </div>
-                            )}
-
-                            {candStatus === "approved" && (
-                              <Link
-                                to={`/candidates/${cand.id}`}
-                                className="btn btn-purple btn-sm"
-                                style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none" }}
-                              >
-                                <Gift size={12} />
-                                <span>Generate Offer Letter →</span>
-                              </Link>
-                            )}
-
-                            {candStatus === "offered" && (
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateStatus(cand, "hired")}
-                                className="btn btn-success btn-sm"
-                                style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
-                              >
-                                <CheckCircle2 size={12} />
-                                <span>Mark as Hired</span>
-                              </button>
-                            )}
-
-                            {candStatus === "hired" && (
-                              <Link
-                                to={`/candidates/${cand.id}`}
-                                className="btn btn-secondary btn-sm"
-                                style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none", gap: "4px" }}
-                              >
-                                <CheckSquare size={12} style={{ color: "#059669" }} />
-                                <span>Track Onboarding Hub →</span>
-                              </Link>
-                            )}
-
-                            {/* Manual Move Dropdown */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Stage:</span>
-                              <select
-                                value={candStatus}
-                                onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
-                                style={{
-                                  fontSize: "10.5px",
-                                  padding: "2px 8px",
-                                  borderRadius: "4px",
-                                  backgroundColor: "#f8fafc",
-                                  border: "1px solid var(--border-subtle)",
-                                  width: "100%",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <option value="parsed">Sourced / Parsed</option>
-                                <option value="shortlisted">Shortlisted</option>
-                                <option value="pending_approval">Pending Approval</option>
-                                <option value="approved">Approved</option>
-                                <option value="offered">Offer Extended</option>
-                                <option value="hired">Hired</option>
-                                <option value="rejected">Rejected</option>
-                              </select>
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })
@@ -877,7 +909,7 @@ export const PipelineDashboardPage: React.FC = () => {
                       <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
                         {candJob ? (
                           <span style={{ fontWeight: 600 }}>{candJob.title}</span>
-                        ) : (
+                        ) : canManagePipeline ? (
                           <button
                             type="button"
                             onClick={() => {
@@ -889,6 +921,8 @@ export const PipelineDashboardPage: React.FC = () => {
                           >
                             + Assign Requisition
                           </button>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Unassigned</span>
                         )}
                       </td>
                       <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
@@ -901,26 +935,32 @@ export const PipelineDashboardPage: React.FC = () => {
                         <StatusBadge status={candStatus} />
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        <select
-                          value={candStatus}
-                          onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
-                          style={{
-                            fontSize: "11px",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            backgroundColor: "#f8fafc",
-                            border: "1px solid var(--border-subtle)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <option value="parsed">Sourced / Parsed</option>
-                          <option value="shortlisted">Shortlisted</option>
-                          <option value="pending_approval">Pending Approval</option>
-                          <option value="approved">Approved</option>
-                          <option value="offered">Offer Extended</option>
-                          <option value="hired">Hired</option>
-                          <option value="rejected">Rejected</option>
-                        </select>
+                        {canManagePipeline ? (
+                          <select
+                            value={candStatus}
+                            onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
+                            style={{
+                              fontSize: "11px",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              backgroundColor: "#f8fafc",
+                              border: "1px solid var(--border-subtle)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <option value="parsed">Sourced / Parsed</option>
+                            <option value="shortlisted">Shortlisted</option>
+                            <option value="pending_approval">Pending Approval</option>
+                            <option value="approved">Approved</option>
+                            <option value="offered">Offer Extended</option>
+                            <option value="hired">Hired</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                            {LIFECYCLE_STAGES.find((s) => s.statuses.includes(candStatus))?.label || candStatus}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <Link to={`/candidates/${cand.id}`} style={{ fontSize: "12px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}>
