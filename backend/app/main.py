@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, resumes, candidates, jobs, approvals
+from app.routers import auth, resumes, candidates, jobs, approvals, offers, interviews, onboarding
 from app.routers.approvals import seed_default_policies_if_empty
 from app.routers.auth import seed_demo_users_if_empty
 from app.routers.jobs import seed_demo_jobs_and_applications_if_empty
@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI-Driven Recruitment & Onboarding Automation API",
-    description="Phase 1-3 + Auth: Resume Ingestion, RAG Matching, HITL Tiered Approval Workflows, JWT Authentication & Multi-Tenancy.",
-    version="0.4.0",
+    description="Phase 1-5 + Auth: Resume Ingestion, RAG Matching, HITL Approval Workflows, Offer Management, Interview Scorecards, Onboarding Automation & Multi-Tenancy.",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -56,6 +56,9 @@ app.include_router(resumes.router)
 app.include_router(candidates.router)
 app.include_router(jobs.router)
 app.include_router(approvals.router)
+app.include_router(offers.router)
+app.include_router(interviews.router)
+app.include_router(onboarding.router)
 
 
 @app.get("/", tags=["root"])

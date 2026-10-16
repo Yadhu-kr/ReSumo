@@ -50,6 +50,52 @@ export interface AuthTokenResponse {
   token_type: string;
 }
 
+export type CandidateStatus =
+  | "uploaded"
+  | "parsed"
+  | "shortlisted"
+  | "pending_approval"
+  | "approved"
+  | "offered"
+  | "hired"
+  | "rejected"
+  | "extraction_failed";
+
+export type OfferStatus = "draft" | "sent" | "accepted" | "declined";
+
+export interface Offer {
+  id: string;
+  candidate_id: string;
+  application_id?: string | null;
+  role_title?: string | null;
+  salary?: number | null;
+  currency?: string;
+  start_date?: string | null;
+  equity?: string | null;
+  offer_letter_text?: string | null;
+  document_path?: string | null;
+  status: OfferStatus;
+  notes?: string | null;
+  responded_at?: string | null;
+  created_at: string;
+}
+
+export interface OfferGenerateRequest {
+  application_id: string;
+  salary: number;
+  currency?: string;
+  start_date: string;
+  equity?: string;
+  role_title?: string;
+  benefits_summary?: string;
+  notes?: string;
+}
+
+export interface OfferRespondRequest {
+  action: "accept" | "decline";
+  notes?: string;
+}
+
 export interface Application {
   id: string;
   candidate_id: string;
@@ -59,16 +105,19 @@ export interface Application {
   rationale?: string | null;
   rationale_source?: string | null;
   created_at: string;
+  job?: Job;
+  offers?: Offer[];
 }
 
-export type CandidateStatus =
-  | "uploaded"
-  | "parsed"
-  | "shortlisted"
-  | "pending_approval"
-  | "approved"
-  | "rejected"
-  | "extraction_failed";
+export interface CandidateAssignJobRequest {
+  job_id: string;
+  initial_status?: CandidateStatus;
+}
+
+export interface ApplicationStatusUpdateRequest {
+  status: CandidateStatus;
+  notes?: string;
+}
 
 export type ApproverRole = "hiring_manager" | "director" | "vp" | "ceo";
 
@@ -182,3 +231,110 @@ export interface UploadResumeResponse {
   status: string;
   message: string;
 }
+
+// ---- Phase 5 Interview Scorecard Types ----
+
+export type InterviewRecommendation =
+  | "strong_hire"
+  | "hire"
+  | "lean_hire"
+  | "lean_no_hire"
+  | "no_hire";
+
+export interface DimensionScoreIn {
+  dimension: string;
+  score: number;
+  notes?: string;
+}
+
+export interface InterviewScorecardCreate {
+  candidate_id: string;
+  application_id?: string;
+  interviewer_name?: string;
+  recommendation: InterviewRecommendation;
+  overall_notes?: string;
+  dimensions: DimensionScoreIn[];
+}
+
+export interface InterviewScore {
+  id: string;
+  candidate_id: string;
+  application_id?: string | null;
+  interviewer_id?: string | null;
+  interviewer_name?: string | null;
+  dimension: string;
+  score: number;
+  baseline_score?: number | null;
+  finetuned_score?: number | null;
+  recommendation?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface CandidateScorecardSummary {
+  candidate_id: string;
+  application_id?: string | null;
+  average_score: number;
+  total_evaluations: number;
+  recommendation_consensus: string;
+  dimension_averages: Record<string, number>;
+  scores: InterviewScore[];
+}
+
+// ---- Post-Offer Onboarding Types ----
+
+export type OnboardingCategory =
+  | "compliance"
+  | "banking"
+  | "agreements"
+  | "it_provisioning"
+  | "orientation"
+  | "workstation"
+  | "direct_deposit"
+  | "w4_tax"
+  | "i9_compliance"
+  | "ip_agreement"
+  | (string & {});
+
+export type OnboardingStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "verified";
+
+export interface OnboardingTaskUpdate {
+  status?: OnboardingStatus;
+  form_data?: Record<string, any>;
+}
+
+export interface OnboardingTask {
+  id: string;
+  candidate_id: string;
+  application_id?: string | null;
+  company_id?: string | null;
+  title: string;
+  category: OnboardingCategory;
+  description?: string | null;
+  status: OnboardingStatus;
+  due_days: number;
+  completed_at?: string | null;
+  verified_at?: string | null;
+  form_data?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface OnboardingSummary {
+  candidate_id: string;
+  application_id?: string | null;
+  total_tasks: number;
+  completed_tasks: number;
+  verified_tasks: number;
+  progress_percentage: number;
+  is_complete: boolean;
+  tasks: OnboardingTask[];
+}
+
+export type OnboardingSummaryOut = OnboardingSummary;
+export type OnboardingTaskOut = OnboardingTask;
+
+

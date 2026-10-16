@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
-import type { Job } from "../../api/types";
+import type { Job, Application } from "../../api/types";
 import { EmptyState } from "../../components/EmptyState";
 import {
   Briefcase,
@@ -10,25 +10,37 @@ import {
   Sparkles,
   CheckCircle2,
   Calendar,
+  AlertCircle,
+  FileUp,
 } from "lucide-react";
 
 export const CandidateJobsPage: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [appliedJobs, setAppliedJobs] = useState<Record<string, boolean>>({});
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [applyFeedback, setApplyFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+    needResume?: boolean;
+  } | null>(null);
 
-  const loadJobs = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.listJobs();
-      setJobs(data);
-      if (data.length > 0 && !selectedJob) {
-        setSelectedJob(data[0]);
+      const [jobData, appData] = await Promise.all([
+        api.listJobs(),
+        api.getMyApplications().catch(() => [] as Application[]),
+      ]);
+      setJobs(jobData);
+      setApplications(appData);
+      if (jobData.length > 0 && !selectedJob) {
+        setSelectedJob(jobData[0]);
       }
     } catch (err: unknown) {
       const msg = err instanceof ApiError ? err.detail : "Failed to load active job openings";
@@ -39,8 +51,36 @@ export const CandidateJobsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadJobs();
+    loadData();
   }, []);
+
+  const getApplicationForJob = (jobId: string) => {
+    return applications.find((a) => a.job_id === jobId);
+  };
+
+  const handleApplyClick = async (jobId: string) => {
+    try {
+      setApplyingId(jobId);
+      setApplyFeedback(null);
+      const newApp = await api.applyForJob(jobId);
+      setApplications((prev) => [...prev.filter((a) => a.job_id !== jobId), newApp]);
+      setApplyFeedback({
+        type: "success",
+        message: "Application submitted successfully! Your profile has been matched with this requisition.",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.detail : "Failed to submit application";
+      const isMissingResume =
+        msg.toLowerCase().includes("resume") || msg.toLowerCase().includes("upload");
+      setApplyFeedback({
+        type: "error",
+        message: msg,
+        needResume: isMissingResume,
+      });
+    } finally {
+      setApplyingId(null);
+    }
+  };
 
   const filteredJobs = jobs.filter((j) => {
     const matchesSearch =
@@ -49,10 +89,6 @@ export const CandidateJobsPage: React.FC = () => {
     const matchesTier = selectedTier === "all" || j.role_tier === selectedTier;
     return matchesSearch && matchesTier;
   });
-
-  const handleApplyClick = (jobId: string) => {
-    setAppliedJobs((prev) => ({ ...prev, [jobId]: true }));
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -205,12 +241,15 @@ export const CandidateJobsPage: React.FC = () => {
             ) : (
               filteredJobs.map((job) => {
                 const isSelected = selectedJob?.id === job.id;
-                const isApplied = appliedJobs[job.id];
+                const existingApp = getApplicationForJob(job.id);
 
                 return (
                   <div
                     key={job.id}
-                    onClick={() => setSelectedJob(job)}
+                    onClick={() => {
+                      setSelectedJob(job);
+                      setApplyFeedback(null);
+                    }}
                     style={{
                       padding: "16px 18px",
                       borderBottom: "1px solid var(--border-subtle)",
@@ -232,7 +271,7 @@ export const CandidateJobsPage: React.FC = () => {
                       >
                         {job.role_tier} tier
                       </span>
-                      {isApplied && (
+                      {existingApp && (
                         <span
                           style={{
                             fontSize: "11px",
@@ -317,27 +356,39 @@ export const CandidateJobsPage: React.FC = () => {
 
               {/* Direct Apply Action */}
               <div>
-                {appliedJobs[selectedJob.id] ? (
-                  <div
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: "50px",
-                      backgroundColor: "var(--status-approved-bg)",
-                      color: "var(--status-approved-text)",
-                      fontWeight: 700,
-                      fontSize: "13px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      border: "1px solid var(--status-approved-border)",
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>Application Submitted</span>
+                {getApplicationForJob(selectedJob.id) ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                    <div
+                      style={{
+                        padding: "8px 18px",
+                        borderRadius: "50px",
+                        backgroundColor: "var(--status-approved-bg)",
+                        color: "var(--status-approved-text)",
+                        fontWeight: 700,
+                        fontSize: "13px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        border: "1px solid var(--status-approved-border)",
+                      }}
+                    >
+                      <CheckCircle2 size={16} />
+                      <span>
+                        Applied (Status:{" "}
+                        {(getApplicationForJob(selectedJob.id)?.status || "applied").toUpperCase()})
+                      </span>
+                    </div>
+                    <Link
+                      to="/portal"
+                      style={{ fontSize: "11.5px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      Track in Portal →
+                    </Link>
                   </div>
                 ) : (
                   <button
                     type="button"
+                    disabled={applyingId === selectedJob.id}
                     onClick={() => handleApplyClick(selectedJob.id)}
                     className="btn btn-primary"
                     style={{
@@ -350,11 +401,66 @@ export const CandidateJobsPage: React.FC = () => {
                     }}
                   >
                     <Sparkles size={15} />
-                    <span>Apply with My Profile</span>
+                    <span>
+                      {applyingId === selectedJob.id ? "Submitting Application..." : "Apply with My Profile"}
+                    </span>
                   </button>
                 )}
               </div>
             </div>
+
+            {/* Apply Feedback Alert */}
+            {applyFeedback && (
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  backgroundColor:
+                    applyFeedback.type === "success"
+                      ? "var(--status-approved-bg)"
+                      : "var(--status-rejected-bg)",
+                  border: `1px solid ${
+                    applyFeedback.type === "success"
+                      ? "var(--status-approved-border)"
+                      : "var(--status-rejected-border)"
+                  }`,
+                  color:
+                    applyFeedback.type === "success"
+                      ? "var(--status-approved-text)"
+                      : "var(--status-rejected-text)",
+                  fontSize: "13px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {applyFeedback.type === "success" ? (
+                    <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+                  ) : (
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  )}
+                  <span>{applyFeedback.message}</span>
+                </div>
+                {applyFeedback.needResume && (
+                  <Link
+                    to="/portal"
+                    className="btn btn-primary btn-sm"
+                    style={{
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <FileUp size={13} />
+                    <span>Upload Resume Now</span>
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Requisition Description */}
             <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "18px" }}>

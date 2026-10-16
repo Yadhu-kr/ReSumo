@@ -149,6 +149,31 @@ def update_candidate(
 
 # ---- Applications ----
 
+@router.get("/me/applications", response_model=list[schemas.ApplicationOut])
+def get_my_applications(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lists applications belonging to the authenticated candidate."""
+    if current_user.role != "candidate":
+        # For non-candidates, return applications relevant to their company
+        return (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(models.Job.company_id == current_user.company_id)
+            .order_by(models.Application.created_at.desc())
+            .all()
+        )
+
+    return (
+        db.query(models.Application)
+        .join(models.Candidate, models.Candidate.id == models.Application.candidate_id)
+        .filter(models.Candidate.user_id == current_user.id)
+        .order_by(models.Application.created_at.desc())
+        .all()
+    )
+
+
 @router.get("/{candidate_id}/applications", response_model=list[schemas.ApplicationOut])
 def list_candidate_applications(
     candidate_id: str,
@@ -156,6 +181,9 @@ def list_candidate_applications(
     db: Session = Depends(get_db),
 ):
     """Lists all applications for a specific candidate."""
+    if candidate_id == "me":
+        return get_my_applications(current_user, db)
+
     candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
@@ -171,6 +199,127 @@ def list_candidate_applications(
         query = query.join(models.Job).filter(models.Job.company_id == current_user.company_id)
 
     return query.order_by(models.Application.created_at.desc()).all()
+
+
+@router.patch("/applications/{application_id}/status", response_model=schemas.ApplicationOut)
+def update_application_status(
+    application_id: str,
+    payload: schemas.ApplicationStatusUpdate,
+    current_user: models.User = Depends(require_role("hr", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually transitions application status for recruiter Kanban and stage management.
+    Supports moving candidate to 'shortlisted', 'rejected', 'parsed', etc.
+    If transitioned to 'pending_approval', invokes the approval policy escalation chain.
+    """
+    application = db.query(models.Application).filter(models.Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+
+    job = db.query(models.Job).filter(models.Job.id == application.job_id).first()
+    if not job:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Linked job not found")
+
+    if current_user.role == "hr" and current_user.company_id and job.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to other company requisitions")
+
+    # If transitioning to pending_approval, delegate to submit_for_approval logic
+    if payload.status == "pending_approval":
+        submit_res = submit_for_approval(application_id, current_user, db)
+        db.refresh(application)
+        return application
+
+    application.status = payload.status
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.post("/{candidate_id}/assign-job", response_model=schemas.ApplicationOut, status_code=status.HTTP_201_CREATED)
+def assign_candidate_to_job(
+    candidate_id: str,
+    payload: schemas.CandidateAssignJobRequest,
+    current_user: models.User = Depends(require_role("hr", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Assigns an unassigned candidate in the talent pool to a job requisition.
+    Directly creates an Application with the designated initial status (default 'shortlisted').
+    """
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    job = db.query(models.Job).filter(models.Job.id == payload.job_id).first()
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job requisition not found")
+
+    if current_user.role == "hr" and current_user.company_id and job.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to assign to other company jobs")
+
+    # Check existing application
+    existing = (
+        db.query(models.Application)
+        .filter(models.Application.candidate_id == candidate.id, models.Application.job_id == job.id)
+        .first()
+    )
+    if existing:
+        existing.status = payload.initial_status
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    # Compute similarity and rationale
+    sim = 0.75
+    rationale = f"Candidate assigned directly to requisition {job.title} by recruitment team."
+    rationale_source = "mock"
+
+    try:
+        from app.services.embeddings import build_job_embedding_text, compute_embedding
+        import numpy as np
+
+        cand_text = candidate.raw_text or ""
+        if candidate.parsed_data:
+            from app.services.embeddings import serialize_candidate_for_embedding
+            cand_text = serialize_candidate_for_embedding(candidate.parsed_data)
+        if cand_text:
+            j_vec = np.array(compute_embedding(build_job_embedding_text(job.title, job.description, job.role_tier)))
+            c_vec = np.array(compute_embedding(cand_text))
+            norm_j = np.linalg.norm(j_vec)
+            norm_c = np.linalg.norm(c_vec)
+            if norm_j > 0 and norm_c > 0:
+                sim = float(np.dot(j_vec, c_vec) / (norm_j * norm_c))
+    except Exception:
+        pass
+
+    if candidate.parsed_data:
+        try:
+            from app.services.llm import get_llm_provider
+            llm = get_llm_provider()
+            rationale = llm.generate_match_rationale(
+                job_title=job.title,
+                job_description=job.description,
+                job_role_tier=job.role_tier,
+                candidate_data=candidate.parsed_data,
+                similarity_score=sim,
+            )
+            rationale_source = getattr(llm, "provider_name", "mock")
+        except Exception:
+            pass
+
+    application = models.Application(
+        candidate_id=candidate.id,
+        job_id=job.id,
+        status=payload.initial_status,
+        similarity_score=round(sim, 4),
+        rationale=rationale,
+        rationale_source=rationale_source,
+    )
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
 
 
 # ---- Submit Application for Approval ----

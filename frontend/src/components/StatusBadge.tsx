@@ -35,6 +35,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ""
       badgeClass = "badge-rejected";
       label = "REJECTED";
       break;
+    case "offered":
+      badgeClass = "badge-offered";
+      label = "OFFER EXTENDED";
+      break;
+    case "hired":
+      badgeClass = "badge-hired";
+      label = "HIRED";
+      break;
     case "extraction_failed":
       badgeClass = "badge-extraction-failed";
       label = "EXTRACTION FAILED";

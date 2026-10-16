@@ -362,6 +362,18 @@ select {
   border-color: #ffedd5;
 }
 
+.badge-offered {
+  background-color: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.badge-hired {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
 .badge-source-groq {
   background-color: var(--source-groq-bg);
   color: var(--source-groq-text);

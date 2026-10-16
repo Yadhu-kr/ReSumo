@@ -21,6 +21,15 @@ import type {
   UserUpdatePayload,
   UserLoginPayload,
   AuthTokenResponse,
+  Offer,
+  OfferGenerateRequest,
+  OfferRespondRequest,
+  CandidateStatus,
+  InterviewScorecardCreate,
+  CandidateScorecardSummary,
+  OnboardingTaskUpdate,
+  OnboardingTask,
+  OnboardingSummary,
 } from "./types";
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -209,4 +218,104 @@ export const api = {
     const query = roleTier ? `?role_tier=${encodeURIComponent(roleTier)}` : "";
     return request<ApprovalPolicy[]>(`/approvals/policies${query}`);
   },
+
+  // Candidate Self-Application
+  applyForJob: (jobId: string) =>
+    request<Application>(`/jobs/${encodeURIComponent(jobId)}/apply`, {
+      method: "POST",
+    }),
+
+  getMyApplications: () =>
+    request<Application[]>("/candidates/me/applications"),
+
+  // Interactive Kanban & Manual Actions
+  updateApplicationStatus: (applicationId: string, status: CandidateStatus, notes?: string) =>
+    request<Application>(`/candidates/applications/${encodeURIComponent(applicationId)}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, notes }),
+    }),
+
+  assignCandidateToJob: (candidateId: string, jobId: string, initialStatus: CandidateStatus = "shortlisted") =>
+    request<Application>(`/candidates/${encodeURIComponent(candidateId)}/assign-job`, {
+      method: "POST",
+      body: JSON.stringify({ job_id: jobId, initial_status: initialStatus }),
+    }),
+
+  // Phase 4 Offers
+  generateOffer: (payload: OfferGenerateRequest) =>
+    request<Offer>("/offers/generate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getOffer: (offerId: string) =>
+    request<Offer>(`/offers/${encodeURIComponent(offerId)}`),
+
+  getApplicationOffer: (applicationId: string) =>
+    request<Offer>(`/offers/application/${encodeURIComponent(applicationId)}`),
+
+  getCandidateOffers: (candidateId: string) =>
+    request<Offer[]>(`/offers/candidate/${encodeURIComponent(candidateId)}`),
+
+  sendOffer: (offerId: string) =>
+    request<Offer>(`/offers/${encodeURIComponent(offerId)}/send`, {
+      method: "POST",
+    }),
+
+  respondToOffer: (offerId: string, req: OfferRespondRequest) =>
+    request<Offer>(`/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  getOfferDownloadUrl: (offerId: string) =>
+    `${BASE_URL}/offers/${encodeURIComponent(offerId)}/download`,
+
+  // Phase 5 Interviews & Scorecards
+  submitInterviewScorecard: (payload: InterviewScorecardCreate) =>
+    request<CandidateScorecardSummary>("/interviews/scorecards", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getCandidateScorecard: (candidateId: string, applicationId?: string) =>
+    request<CandidateScorecardSummary>(
+      applicationId
+        ? `/interviews/candidate/${encodeURIComponent(candidateId)}?application_id=${encodeURIComponent(applicationId)}`
+        : `/interviews/candidate/${encodeURIComponent(candidateId)}`
+    ),
+
+  getApplicationScorecard: (applicationId: string) =>
+    request<CandidateScorecardSummary>(`/interviews/application/${encodeURIComponent(applicationId)}`),
+
+  deleteInterviewScore: (scoreId: string) =>
+    request<void>(`/interviews/${encodeURIComponent(scoreId)}`, {
+      method: "DELETE",
+    }),
+
+  // Post-Offer Onboarding
+  initializeOnboarding: (candidateId: string, applicationId?: string) =>
+    request<OnboardingSummary>(
+      applicationId
+        ? `/onboarding/initialize/${encodeURIComponent(candidateId)}?application_id=${encodeURIComponent(applicationId)}`
+        : `/onboarding/initialize/${encodeURIComponent(candidateId)}`,
+      { method: "POST" }
+    ),
+
+  getCandidateOnboarding: (candidateId: string) =>
+    request<OnboardingSummary>(`/onboarding/candidate/${encodeURIComponent(candidateId)}`),
+
+  getMyOnboarding: () =>
+    request<OnboardingSummary>("/onboarding/me"),
+
+  updateOnboardingTask: (taskId: string, payload: OnboardingTaskUpdate) =>
+    request<OnboardingTask>(`/onboarding/tasks/${encodeURIComponent(taskId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  verifyOnboardingTask: (taskId: string) =>
+    request<OnboardingTask>(`/onboarding/tasks/${encodeURIComponent(taskId)}/verify`, {
+      method: "POST",
+    }),
 };

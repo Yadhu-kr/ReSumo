@@ -11,10 +11,13 @@ RoleTier = Literal["junior", "mid", "senior", "exec"]
 UserRole = Literal["candidate", "hr", "approver", "admin"]
 ApproverRole = Literal["hiring_manager", "director", "vp", "ceo"]
 ApplicationStatus = Literal[
+    "uploaded",
     "parsed",
     "shortlisted",
     "pending_approval",
     "approved",
+    "offered",
+    "hired",
     "rejected",
 ]
 ApprovalAction = Literal["approve", "reject"]
@@ -137,6 +140,36 @@ class CandidateUpdate(BaseModel):
 
 # ---- Applications ----
 
+class ApplicationStatusUpdate(BaseModel):
+    status: ApplicationStatus
+    notes: Optional[str] = None
+
+
+class CandidateAssignJobRequest(BaseModel):
+    job_id: str
+    initial_status: ApplicationStatus = "shortlisted"
+
+
+# Forward declaration placeholder for OfferOut
+class OfferOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    candidate_id: str
+    application_id: Optional[str] = None
+    role_title: Optional[str] = None
+    salary: Optional[float] = None
+    currency: Optional[str] = "USD"
+    start_date: Optional[str] = None
+    equity: Optional[str] = None
+    offer_letter_text: Optional[str] = None
+    document_path: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    responded_at: Optional[datetime] = None
+    created_at: datetime
+
+
 class ApplicationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,6 +181,8 @@ class ApplicationOut(BaseModel):
     rationale: Optional[str] = None
     rationale_source: Optional[str] = None
     created_at: datetime
+    job: Optional[JobOut] = None
+    offers: list[OfferOut] = []
 
 
 class CandidateOut(BaseModel):
@@ -241,3 +276,129 @@ class SubmitForApprovalResponse(BaseModel):
     status: str
     current_approval: ApprovalOut
     message: str
+
+
+# ---- Phase 4 Offer Generation Schemas ----
+
+OfferStatus = Literal["draft", "sent", "accepted", "declined"]
+
+
+class OfferGenerateRequest(BaseModel):
+    application_id: str
+    salary: float = Field(..., gt=0, description="Annual base salary")
+    currency: str = Field(default="USD", description="Currency code (USD, EUR, GBP, INR, etc.)")
+    start_date: str = Field(..., description="Target employment start date (YYYY-MM-DD)")
+    equity: Optional[str] = Field(None, description="Equity or stock grant details")
+    role_title: Optional[str] = Field(None, description="Official job title override")
+    benefits_summary: Optional[str] = Field(None, description="Healthcare, 401k, PTO details")
+    notes: Optional[str] = Field(None, description="Special terms, sign-on bonus, or comments")
+
+
+class OfferRespondRequest(BaseModel):
+    action: Literal["accept", "decline"]
+    notes: Optional[str] = None
+
+
+# ---- Phase 5 Interview Scorecard Schemas ----
+
+InterviewRecommendation = Literal[
+    "strong_hire",
+    "hire",
+    "lean_hire",
+    "lean_no_hire",
+    "no_hire",
+]
+
+
+class DimensionScoreIn(BaseModel):
+    dimension: str
+    score: float = Field(..., ge=1.0, le=5.0)
+    notes: Optional[str] = None
+
+
+class InterviewScorecardCreate(BaseModel):
+    candidate_id: str
+    application_id: Optional[str] = None
+    interviewer_name: Optional[str] = None
+    recommendation: InterviewRecommendation = "hire"
+    overall_notes: Optional[str] = None
+    dimensions: list[DimensionScoreIn]
+
+
+class InterviewScoreOut(BaseModel):
+    id: str
+    candidate_id: str
+    application_id: Optional[str] = None
+    interviewer_id: Optional[str] = None
+    interviewer_name: Optional[str] = None
+    dimension: str
+    score: float
+    baseline_score: Optional[float] = None
+    finetuned_score: Optional[float] = None
+    recommendation: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CandidateScorecardSummary(BaseModel):
+    candidate_id: str
+    application_id: Optional[str] = None
+    average_score: float
+    total_evaluations: int
+    recommendation_consensus: str
+    dimension_averages: dict[str, float]
+    scores: list[InterviewScoreOut]
+
+
+# ---- Post-Offer Onboarding Schemas ----
+
+OnboardingCategory = Literal[
+    "compliance",
+    "banking",
+    "agreements",
+    "it_provisioning",
+    "orientation",
+]
+
+OnboardingStatus = Literal[
+    "pending",
+    "in_progress",
+    "completed",
+    "verified",
+]
+
+
+class OnboardingTaskUpdate(BaseModel):
+    status: Optional[OnboardingStatus] = None
+    form_data: Optional[dict[str, Any]] = None
+
+
+class OnboardingTaskOut(BaseModel):
+    id: str
+    candidate_id: str
+    application_id: Optional[str] = None
+    company_id: Optional[str] = None
+    title: str
+    category: str
+    description: Optional[str] = None
+    status: str
+    due_days: int
+    completed_at: Optional[datetime] = None
+    verified_at: Optional[datetime] = None
+    form_data: Optional[dict[str, Any]] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OnboardingSummaryOut(BaseModel):
+    candidate_id: str
+    application_id: Optional[str] = None
+    total_tasks: int
+    completed_tasks: int
+    verified_tasks: int
+    progress_percentage: float
+    is_complete: bool
+    tasks: list[OnboardingTaskOut]

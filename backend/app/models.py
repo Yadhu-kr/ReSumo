@@ -180,9 +180,21 @@ class Offer(Base):
 
     id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
     candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
+    application_id = Column(UUID_TYPE, ForeignKey("applications.id"), nullable=True)
+    role_title = Column(String, nullable=True)
+    salary = Column(Float, nullable=True)
+    currency = Column(String, default="USD")
+    start_date = Column(String, nullable=True)
+    equity = Column(String, nullable=True)
+    offer_letter_text = Column(Text, nullable=True)
     document_path = Column(String, nullable=True)
-    status = Column(String, default="pending")  # pending/generated/sent
+    status = Column(String, default="draft")  # draft/sent/accepted/declined
+    notes = Column(Text, nullable=True)
+    responded_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="offers")
+    application = relationship("Application", backref="offers")
 
 
 class InterviewScore(Base):
@@ -190,7 +202,39 @@ class InterviewScore(Base):
 
     id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
     candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
-    dimension = Column(String, nullable=False)  # technical_depth/communication/role_fit/etc
+    application_id = Column(UUID_TYPE, ForeignKey("applications.id"), nullable=True)
+    interviewer_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=True)
+    interviewer_name = Column(String, nullable=True)
+    dimension = Column(String, nullable=False)  # technical_depth/communication/role_fit/system_design/cultural_alignment
+    score = Column(Float, nullable=False, default=3.0)  # 1.0 to 5.0
     baseline_score = Column(Float, nullable=True)
     finetuned_score = Column(Float, nullable=True)
+    recommendation = Column(String, nullable=True)  # strong_hire/hire/lean_hire/lean_no_hire/no_hire
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="interview_scores")
+    application = relationship("Application", backref="interview_scores")
+    interviewer = relationship("User", foreign_keys=[interviewer_id])
+
+
+class OnboardingTask(Base):
+    __tablename__ = "onboarding_tasks"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
+    application_id = Column(UUID_TYPE, ForeignKey("applications.id"), nullable=True)
+    company_id = Column(UUID_TYPE, ForeignKey("companies.id"), nullable=True)
+    title = Column(String, nullable=False)
+    category = Column(String, nullable=False)  # compliance/banking/agreements/it_provisioning/orientation
+    description = Column(Text, nullable=True)
+    status = Column(String, default="pending")  # pending/in_progress/completed/verified
+    due_days = Column(Integer, default=7)
+    completed_at = Column(DateTime, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    form_data = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="onboarding_tasks")
+    application = relationship("Application", backref="onboarding_tasks")
+    company = relationship("Company", foreign_keys=[company_id])
