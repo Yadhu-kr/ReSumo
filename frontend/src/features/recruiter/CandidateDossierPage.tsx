@@ -15,6 +15,9 @@ import type {
   InterviewScheduleCreate,
   CandidateNote,
   TimelineEvent,
+  InterviewRoundType,
+  InterviewQuestionItem,
+  GenerateInterviewQuestionsResponse,
 } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
@@ -45,6 +48,8 @@ import {
   Copy,
   Check,
   Trash2,
+  BookOpen,
+  PlusCircle,
 } from "lucide-react";
 
 interface OutletContextType {
@@ -129,6 +134,15 @@ export const CandidateDossierPage: React.FC = () => {
     cultural_alignment: 4.0,
     role_fit: 4.0,
   });
+
+  // Dynamic AI Interview Questions State
+  const [questionRoundType, setQuestionRoundType] = useState<InterviewRoundType>("technical");
+  const [customFocus, setCustomFocus] = useState<string>("");
+  const [generatingQuestions, setGeneratingQuestions] = useState<boolean>(false);
+  const [questionsResult, setQuestionsResult] = useState<GenerateInterviewQuestionsResponse | null>(null);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
+  const [insertedQuestionId, setInsertedQuestionId] = useState<string | null>(null);
 
   // Onboarding state
   const [onboarding, setOnboarding] = useState<OnboardingSummary | null>(null);
@@ -394,6 +408,48 @@ export const CandidateDossierPage: React.FC = () => {
     } finally {
       setSubmittingScorecard(false);
     }
+  };
+
+  const handleGenerateQuestions = async (round?: InterviewRoundType) => {
+    if (!id) return;
+    const roundToUse = round || questionRoundType;
+    if (round) {
+      setQuestionRoundType(round);
+    }
+    try {
+      setGeneratingQuestions(true);
+      setQuestionError(null);
+      const res = await api.generateInterviewQuestions({
+        candidate_id: id,
+        job_id: job?.id || candidate?.job_id || undefined,
+        round_type: roundToUse,
+        custom_focus: customFocus.trim() || undefined,
+      });
+      setQuestionsResult(res);
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.detail : "Failed to generate interview questions. Please try again.";
+      setQuestionError(msg);
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  };
+
+  const handleCopyQuestion = (q: InterviewQuestionItem) => {
+    const text = `${q.question}\n\n[What to Look For in Candidate Answers]:\n${q.what_to_look_for}`;
+    navigator.clipboard.writeText(text);
+    setCopiedQuestionId(q.id);
+    setTimeout(() => setCopiedQuestionId(null), 2000);
+  };
+
+  const handleInsertQuestionIntoNotes = (q: InterviewQuestionItem) => {
+    const rubricLabel = q.suggested_dimension.replace("_", " ").toUpperCase();
+    const formatted = `[${q.category.toUpperCase()} • RUBRIC: ${rubricLabel}]\nQ: ${q.question}\nRubric Evaluation Guide: ${q.what_to_look_for}\n\nCandidate Response & Observations:\n- `;
+    setScorecardForm((prev) => ({
+      ...prev,
+      overall_notes: prev.overall_notes ? `${prev.overall_notes.trim()}\n\n${formatted}` : formatted,
+    }));
+    setInsertedQuestionId(q.id);
+    setTimeout(() => setInsertedQuestionId(null), 2500);
   };
 
   const handleVerifyOnboardingTask = async (taskId: string) => {
@@ -1673,6 +1729,415 @@ export const CandidateDossierPage: React.FC = () => {
                             </span>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Interview Question Generator */}
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "14px",
+                    border: "1px solid var(--border-subtle)",
+                    padding: "22px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "18px",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: "3px",
+                      background: "linear-gradient(90deg, #6366f1, #a855f7, #ec4899)",
+                    }}
+                  />
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          style={{
+                            width: "34px",
+                            height: "34px",
+                            borderRadius: "10px",
+                            backgroundColor: "#f5f3ff",
+                            color: "#7c3aed",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                            AI Dynamic Interview Question Generator
+                          </h4>
+                          <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                            Generate tailored coding, system design, and behavioral questions tuned to {candidate?.name || "the candidate"}'s resume claims and target role requirements.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {questionsResult && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: "11px",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            backgroundColor: "#f1f5f9",
+                            color: "#475569",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {questionsResult.total_questions} Questions Generated
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateQuestions()}
+                          disabled={generatingQuestions}
+                          className="btn btn-secondary"
+                          style={{ padding: "6px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                        >
+                          <Sparkles size={13} />
+                          <span>Regenerate</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Controls: Round Pills & Custom Focus Input */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                      padding: "16px",
+                      backgroundColor: "#f8fafc",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border-subtle)",
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.5px" }} className="mono">
+                        INTERVIEW ROUND TYPE
+                      </label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {[
+                          { id: "technical", label: "Technical Coding" },
+                          { id: "system_design", label: "System Design & Architecture" },
+                          { id: "behavioral", label: "Behavioral & Leadership" },
+                          { id: "screening", label: "Initial Screening" },
+                          { id: "executive", label: "Executive Consensus" },
+                        ].map((r) => {
+                          const isSelected = questionRoundType === r.id;
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => setQuestionRoundType(r.id as InterviewRoundType)}
+                              style={{
+                                padding: "7px 13px",
+                                borderRadius: "8px",
+                                border: isSelected ? "1.5px solid #6366f1" : "1px solid var(--border-subtle)",
+                                backgroundColor: isSelected ? "#eef2ff" : "#ffffff",
+                                color: isSelected ? "#4338ca" : "var(--text-secondary)",
+                                fontWeight: isSelected ? 700 : 500,
+                                fontSize: "12.5px",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              <span>{r.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", alignItems: "flex-end" }}>
+                      <div>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.5px", display: "block", marginBottom: "4px" }} className="mono">
+                          CUSTOM TOPIC / RESUME CLAIM FOCUS (OPTIONAL)
+                        </label>
+                        <input
+                          type="text"
+                          value={customFocus}
+                          onChange={(e) => setCustomFocus(e.target.value)}
+                          placeholder="e.g. Distributed consensus, Kafka partitioning, Kubernetes zero-downtime, Team conflict..."
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            fontSize: "13px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            backgroundColor: "#ffffff",
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleGenerateQuestions();
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions()}
+                        disabled={generatingQuestions}
+                        className="btn btn-primary"
+                        style={{
+                          padding: "9px 20px",
+                          fontSize: "13px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          whiteSpace: "nowrap",
+                          backgroundColor: "#4f46e5",
+                          borderColor: "#4338ca",
+                        }}
+                      >
+                        <Sparkles size={15} />
+                        <span>{generatingQuestions ? "Generating Questions..." : "Generate AI Questions"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Error State */}
+                  {questionError && (
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        backgroundColor: "var(--status-rejected-bg)",
+                        color: "var(--status-rejected-text)",
+                        fontSize: "12.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <AlertCircle size={16} />
+                      <span>{questionError}</span>
+                    </div>
+                  )}
+
+                  {/* Loading State Skeleton */}
+                  {generatingQuestions && (
+                    <div style={{ textAlign: "center", padding: "30px 0" }}>
+                      <Sparkles size={28} color="#6366f1" style={{ margin: "0 auto 10px", display: "block" }} />
+                      <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                        Synthesizing candidate background, verified skills, and role criteria...
+                      </p>
+                      <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--text-secondary)" }}>
+                        Generating probing questions and evaluation rubric guidelines tailored to {candidate?.name || "candidate"}.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Generated Questions List */}
+                  {!generatingQuestions && questionsResult && questionsResult.questions.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      {questionsResult.questions.map((q, idx) => {
+                        const isCopied = copiedQuestionId === q.id;
+                        const isInserted = insertedQuestionId === q.id;
+                        const diffLower = q.difficulty.toLowerCase();
+                        const diffColor =
+                          diffLower === "advanced"
+                            ? { bg: "#fef2f2", text: "#b91c1c", border: "#fecaca" }
+                            : diffLower === "intermediate"
+                            ? { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" }
+                            : { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" };
+
+                        return (
+                          <div
+                            key={q.id || idx}
+                            style={{
+                              padding: "16px 18px",
+                              borderRadius: "10px",
+                              border: "1px solid var(--border-subtle)",
+                              backgroundColor: "#ffffff",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "12px",
+                            }}
+                          >
+                            {/* Header info bar */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span
+                                  className="mono"
+                                  style={{
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    padding: "3px 8px",
+                                    borderRadius: "6px",
+                                    backgroundColor: "#f1f5f9",
+                                    color: "var(--text-secondary)",
+                                  }}
+                                >
+                                  Q{idx + 1} • {q.category.toUpperCase()}
+                                </span>
+                                <span
+                                  className="mono"
+                                  style={{
+                                    fontSize: "10.5px",
+                                    fontWeight: 700,
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    backgroundColor: diffColor.bg,
+                                    color: diffColor.text,
+                                    border: `1px solid ${diffColor.border}`,
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  {q.difficulty}
+                                </span>
+                                <span
+                                  className="mono"
+                                  style={{
+                                    fontSize: "10.5px",
+                                    fontWeight: 600,
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    backgroundColor: "#faf5ff",
+                                    color: "#7e22ce",
+                                    border: "1px solid #e9d5ff",
+                                  }}
+                                >
+                                  Rubric: {q.suggested_dimension.replace("_", " ")}
+                                </span>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyQuestion(q)}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontSize: "11.5px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                  }}
+                                  title="Copy question and rubric to clipboard"
+                                >
+                                  {isCopied ? <Check size={13} color="#16a34a" /> : <Copy size={13} />}
+                                  <span>{isCopied ? "Copied!" : "Copy"}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleInsertQuestionIntoNotes(q)}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    padding: "5px 12px",
+                                    fontSize: "11.5px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    backgroundColor: isInserted ? "var(--status-approved-bg)" : "#ffffff",
+                                    borderColor: isInserted ? "var(--status-approved-border)" : "var(--border-subtle)",
+                                    color: isInserted ? "var(--status-approved-text)" : "var(--text-primary)",
+                                  }}
+                                  title="Insert question and evaluation notes into Scorecard Form below"
+                                >
+                                  {isInserted ? <CheckCircle2 size={13} color="#16a34a" /> : <PlusCircle size={13} color="#6366f1" />}
+                                  <span>{isInserted ? "Inserted into Scorecard!" : "Insert into Scorecard"}</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Question Text */}
+                            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.5 }}>
+                              {q.question}
+                            </div>
+
+                            {/* What to look for */}
+                            <div
+                              style={{
+                                padding: "10px 14px",
+                                borderRadius: "8px",
+                                backgroundColor: "#f0fdf4",
+                                border: "1px solid #bbf7d0",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "4px",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", fontWeight: 700, color: "#166534" }}>
+                                <CheckCircle2 size={13} color="#16a34a" />
+                                <span>WHAT TO LOOK FOR IN CANDIDATE ANSWERS:</span>
+                              </div>
+                              <p style={{ margin: 0, fontSize: "12px", color: "#14532d", lineHeight: 1.45 }}>
+                                {q.what_to_look_for}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Empty State / Not Generated Yet */}
+                  {!generatingQuestions && !questionsResult && (
+                    <div
+                      style={{
+                        padding: "24px",
+                        borderRadius: "10px",
+                        backgroundColor: "#f8fafc",
+                        border: "1px dashed var(--border-subtle)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <BookOpen size={28} color="#6366f1" style={{ margin: "0 auto 8px", display: "block" }} />
+                      <h5 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        Prepare Tailored Interview Questions
+                      </h5>
+                      <p style={{ margin: "0 0 14px", fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "520px", marginLeft: "auto", marginRight: "auto" }}>
+                        ReSumo analyzes candidate experience, GitHub/resume claims, and target position specs to draft high-signal interview questions with evaluation criteria.
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateQuestions("technical")}
+                          className="btn btn-secondary"
+                          style={{ padding: "6px 14px", fontSize: "12px" }}
+                        >
+                          ⚡ Technical Coding
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateQuestions("system_design")}
+                          className="btn btn-secondary"
+                          style={{ padding: "6px 14px", fontSize: "12px" }}
+                        >
+                          🏗️ System Design
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateQuestions("behavioral")}
+                          className="btn btn-secondary"
+                          style={{ padding: "6px 14px", fontSize: "12px" }}
+                        >
+                          🤝 Behavioral & Leadership
+                        </button>
                       </div>
                     </div>
                   )}

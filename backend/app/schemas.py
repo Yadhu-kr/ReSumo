@@ -354,6 +354,45 @@ class CandidateScorecardSummary(BaseModel):
     scores: list[InterviewScoreOut]
 
 
+# ---- AI Dynamic Interview Question Schemas ----
+
+InterviewRoundType = Literal[
+    "technical",
+    "system_design",
+    "behavioral",
+    "screening",
+    "executive",
+]
+
+
+class GenerateInterviewQuestionsRequest(BaseModel):
+    candidate_id: str
+    job_id: Optional[str] = None
+    round_type: InterviewRoundType = "technical"
+    custom_focus: Optional[str] = None
+
+
+class InterviewQuestionItem(BaseModel):
+    id: str
+    category: str
+    question: str
+    what_to_look_for: str
+    suggested_dimension: str
+    difficulty: str
+    rationale: Optional[str] = None
+
+
+class GenerateInterviewQuestionsResponse(BaseModel):
+    candidate_id: str
+    job_id: Optional[str] = None
+    round_type: str
+    total_questions: int
+    questions: list[InterviewQuestionItem]
+    generated_at: str
+    model_provider: str
+
+
+
 # ---- Post-Offer Onboarding Schemas ----
 
 OnboardingCategory = Literal[

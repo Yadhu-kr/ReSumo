@@ -37,6 +37,8 @@ import type {
   CandidateTimelineResponse,
   HiringPacketResponse,
   UnreadCountResponse,
+  GenerateInterviewQuestionsRequest,
+  GenerateInterviewQuestionsResponse,
 } from "./types";
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -330,6 +332,13 @@ export const api = {
     request<void>(`/interviews/${encodeURIComponent(scoreId)}`, {
       method: "DELETE",
     }),
+
+  generateInterviewQuestions: (payload: GenerateInterviewQuestionsRequest) =>
+    request<GenerateInterviewQuestionsResponse>("/interviews/generate-questions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
 
   // Post-Offer Onboarding
   initializeOnboarding: (candidateId: string, applicationId?: string) =>

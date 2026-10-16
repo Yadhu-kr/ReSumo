@@ -282,6 +282,43 @@ export interface CandidateScorecardSummary {
   scores: InterviewScore[];
 }
 
+// ---- AI Dynamic Interview Question Types ----
+
+export type InterviewRoundType =
+  | "technical"
+  | "system_design"
+  | "behavioral"
+  | "screening"
+  | "executive";
+
+export interface InterviewQuestionItem {
+  id: string;
+  category: string;
+  question: string;
+  what_to_look_for: string;
+  suggested_dimension: string;
+  difficulty: string;
+  rationale?: string | null;
+}
+
+export interface GenerateInterviewQuestionsRequest {
+  candidate_id: string;
+  job_id?: string | null;
+  round_type?: InterviewRoundType;
+  custom_focus?: string | null;
+}
+
+export interface GenerateInterviewQuestionsResponse {
+  candidate_id: string;
+  job_id?: string | null;
+  round_type: string;
+  total_questions: number;
+  questions: InterviewQuestionItem[];
+  generated_at: string;
+  model_provider: string;
+}
+
+
 // ---- Post-Offer Onboarding Types ----
 
 export type OnboardingCategory =

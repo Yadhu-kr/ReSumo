@@ -203,3 +203,89 @@ def delete_interview_score(
     db.delete(score)
     db.commit()
     return None
+
+
+@router.post("/generate-questions", response_model=schemas.GenerateInterviewQuestionsResponse)
+def generate_interview_questions(
+    payload: schemas.GenerateInterviewQuestionsRequest,
+    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Generates dynamic, AI-assisted interview questions grounded in candidate accomplishments
+    and job requirements, complete with 'what to look for' evaluation rubrics.
+    """
+    from datetime import datetime, timezone
+    from app.services.llm import get_llm_provider
+
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == payload.candidate_id).first()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Candidate '{payload.candidate_id}' not found",
+        )
+
+    # Resolve job
+    job = None
+    if payload.job_id:
+        job = db.query(models.Job).filter(models.Job.id == payload.job_id).first()
+
+    # Auto-resolve from candidate's latest active application if not specified
+    if not job:
+        latest_app = (
+            db.query(models.Application)
+            .filter(models.Application.candidate_id == candidate.id)
+            .order_by(models.Application.created_at.desc())
+            .first()
+        )
+        if latest_app:
+            job = db.query(models.Job).filter(models.Job.id == latest_app.job_id).first()
+
+    parsed_info = candidate.parsed_data if isinstance(candidate.parsed_data, dict) else {}
+    cand_seniority = parsed_info.get("seniority") or "Senior"
+    cand_title = parsed_info.get("current_title") or "Engineer"
+    cand_exp = parsed_info.get("years_experience") or 5.0
+    cand_core_skills = parsed_info.get("core_skills") or []
+    cand_sec_skills = parsed_info.get("secondary_skills") or []
+    cand_domain = parsed_info.get("primary_domain") or "Backend & Cloud Architecture"
+    cand_summary = parsed_info.get("summary") or candidate.raw_text or ""
+    cand_accomplishments = parsed_info.get("key_achievements") or parsed_info.get("key_accomplishments") or []
+
+    job_title = job.title if job else "Senior Software Engineer"
+    job_desc = job.description if job else "Enterprise software systems, distributed services, and cloud architecture."
+    job_tier = job.role_tier if job else cand_seniority
+
+    # Candidate profile dictionary
+    candidate_data = {
+        "seniority": cand_seniority,
+        "current_title": cand_title,
+        "years_experience": cand_exp,
+        "core_skills": cand_core_skills,
+        "secondary_skills": cand_sec_skills,
+        "primary_domain": cand_domain,
+        "summary": cand_summary,
+        "key_accomplishments": cand_accomplishments,
+    }
+
+    provider = get_llm_provider()
+    raw_questions = provider.generate_interview_questions(
+        job_title=job_title,
+        job_description=job_desc,
+        job_role_tier=job_tier,
+        candidate_data=candidate_data,
+        round_type=payload.round_type or "technical",
+        custom_focus=payload.custom_focus,
+    )
+
+    questions = [schemas.InterviewQuestionItem(**q) for q in raw_questions]
+
+    return schemas.GenerateInterviewQuestionsResponse(
+        candidate_id=candidate.id,
+        job_id=job.id if job else None,
+        round_type=payload.round_type or "technical",
+        total_questions=len(questions),
+        questions=questions,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        model_provider=provider.provider_name,
+    )
+
