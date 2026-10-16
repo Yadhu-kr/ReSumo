@@ -6,6 +6,7 @@ from app.routers import auth, resumes, candidates, jobs, approvals, offers, inte
 from app.routers.approvals import seed_default_policies_if_empty
 from app.routers.auth import seed_demo_users_if_empty
 from app.routers.jobs import seed_demo_jobs_and_applications_if_empty
+from app.routers.notifications import seed_demo_notifications_if_empty
 from app.database import SessionLocal
 
 
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
         seed_default_policies_if_empty(db)
         seed_demo_users_if_empty(db)
         seed_demo_jobs_and_applications_if_empty(db)
+        seed_demo_notifications_if_empty(db)
     except Exception as exc:
         print(f"Startup warning: {exc}")
     finally:

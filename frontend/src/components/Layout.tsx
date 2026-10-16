@@ -431,33 +431,51 @@ export const Layout: React.FC = () => {
             <div ref={notifRef} style={{ position: "relative" }}>
               <button
                 type="button"
+                className="btn-icon"
                 onClick={handleToggleNotifications}
                 style={{
                   position: "relative",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: "34px",
-                  height: "34px",
+                  width: "36px",
+                  height: "36px",
+                  padding: 0,
+                  boxSizing: "border-box",
                   borderRadius: "50%",
-                  border: notifMenuOpen ? "1px solid var(--accent-purple-border)" : "1px solid var(--border-subtle)",
+                  border: notifMenuOpen ? "1.5px solid var(--accent-purple)" : "1px solid var(--border-subtle)",
                   backgroundColor: notifMenuOpen ? "#ffffff" : "var(--bg-surface-elevated)",
                   color: notifMenuOpen ? "var(--accent-purple)" : "var(--text-secondary)",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  if (!notifMenuOpen) {
+                    e.currentTarget.style.borderColor = "var(--border-strong)";
+                    e.currentTarget.style.backgroundColor = "#ffffff";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!notifMenuOpen) {
+                    e.currentTarget.style.borderColor = "var(--border-subtle)";
+                    e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
+                  }
                 }}
                 title="Notifications"
                 aria-label="Notifications"
               >
-                <Bell size={16} />
+                <Bell size={18} strokeWidth={2.2} style={{ display: "block", flexShrink: 0 }} />
                 {unreadNotifications > 0 && (
                   <span
                     style={{
                       position: "absolute",
-                      top: "-2px",
-                      right: "-2px",
-                      minWidth: "16px",
-                      height: "16px",
+                      top: "-3px",
+                      right: "-3px",
+                      minWidth: "17px",
+                      height: "17px",
                       borderRadius: "10px",
                       backgroundColor: "#ef4444",
                       color: "#ffffff",
@@ -467,7 +485,8 @@ export const Layout: React.FC = () => {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "0 3px",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      boxShadow: "0 1px 4px rgba(239, 68, 68, 0.4)",
+                      border: "2px solid #ffffff",
                     }}
                   >
                     {unreadNotifications > 99 ? "99+" : unreadNotifications}

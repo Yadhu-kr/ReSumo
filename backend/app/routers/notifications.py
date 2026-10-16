@@ -125,3 +125,78 @@ def send_test_email(
         notification_type="general",
         user_id=current_user.id,
     )
+
+
+def seed_demo_notifications_if_empty(db: Session):
+    """Seed demo in-app alerts so users can immediately test notifications across all roles."""
+    try:
+        count = db.query(models.Notification).count()
+        if count > 0:
+            return
+
+        demo_notifs = [
+            # Candidate alerts
+            (
+                "candidate@resumo.ai",
+                "Offer Extended: Senior AI Engineer",
+                "Congratulations Alex! An offer of $185,000 has been extended for the Senior AI Engineer role. Please review your terms and sign.",
+                "offer_extended",
+                False,
+            ),
+            (
+                "candidate@resumo.ai",
+                "Interview Confirmed: Technical Architecture",
+                "Your interview with David Chen is scheduled. View your calendar in the portal to download your .ics invite.",
+                "interview_scheduled",
+                False,
+            ),
+            # HR alerts
+            (
+                "hr@resumo.ai",
+                "New Candidate Application: Alex Rivera",
+                "Alex Rivera applied for Senior AI Engineer with a 94% match score and 8 years of distributed systems experience.",
+                "application_received",
+                False,
+            ),
+            (
+                "hr@resumo.ai",
+                "Onboarding Milestone: Background Check Approved",
+                "Candidate Alex Rivera completed direct deposit and I-9 compliance forms.",
+                "onboarding_update",
+                False,
+            ),
+            # Approver alerts
+            (
+                "approver@resumo.ai",
+                "Approval Required: Offer for Alex Rivera",
+                "Offer of $185,000 for Senior AI Engineer requires hiring manager sign-off. Click to inspect rationale and scorecards.",
+                "approval_required",
+                False,
+            ),
+            # Admin alerts
+            (
+                "admin@resumo.ai",
+                "System Health: AI Ingestion Services Online",
+                "Resume parsing workers, vector indexers, and SMTP dispatch gateways are operating normally.",
+                "general",
+                False,
+            ),
+        ]
+
+        for email, subject, body, n_type, is_read in demo_notifs:
+            user = db.query(models.User).filter(models.User.email == email).first()
+            notif = models.Notification(
+                user_id=user.id if user else None,
+                recipient_email=email,
+                subject=subject,
+                body_text=body,
+                notification_type=n_type,
+                is_read=is_read,
+                delivery_status="sent",
+            )
+            db.add(notif)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        print(f"Warning: Failed to seed demo notifications: {exc}")
+
