@@ -285,3 +285,18 @@ class Notification(Base):
 
     user = relationship("User", backref="notifications")
 
+
+class CandidateNote(Base):
+    __tablename__ = "candidate_notes"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
+    author_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=False)
+    author_name = Column(String, nullable=True)
+    author_role = Column(String, nullable=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="notes")
+    author = relationship("User", foreign_keys=[author_id])
+

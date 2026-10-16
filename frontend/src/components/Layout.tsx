@@ -3,10 +3,14 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { getUserDisplayName, getUserInitials, getRoleBadgeLabel, getAvatarGradient } from "../lib/user";
-import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers } from "lucide-react";
+import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox } from "lucide-react";
+import type { AppNotification } from "../api/types";
 
 export const Layout: React.FC = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifMenuOpen, setNotifMenuOpen] = useState<boolean>(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,6 +34,16 @@ export const Layout: React.FC = () => {
         // Ignored if user lacks permission or network issue
       }
     }
+
+    // 3. Refresh unread notifications count
+    if (isAuthenticated) {
+      try {
+        const countRes = await api.getUnreadNotificationCount();
+        setUnreadNotifications(countRes.unread_count);
+      } catch {
+        // Ignored
+      }
+    }
   };
 
   useEffect(() => {
@@ -40,24 +54,73 @@ export const Layout: React.FC = () => {
 
   const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setProfileMenuOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifMenuOpen(false);
+      }
     };
-    if (profileMenuOpen) {
+    if (profileMenuOpen || notifMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [profileMenuOpen]);
+  }, [profileMenuOpen, notifMenuOpen]);
 
   useEffect(() => {
     setProfileMenuOpen(false);
+    setNotifMenuOpen(false);
   }, [location.pathname]);
+
+  const handleToggleNotifications = async () => {
+    if (!notifMenuOpen) {
+      try {
+        const list = await api.getMyNotifications();
+        setNotifications(list);
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+      }
+    }
+    setNotifMenuOpen(!notifMenuOpen);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadNotifications(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications read", err);
+    }
+  };
+
+  const handleNotificationClick = async (notif: AppNotification) => {
+    try {
+      if (!notif.is_read) {
+        await api.markNotificationRead(notif.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+        );
+        setUnreadNotifications((prev) => Math.max(0, prev - 1));
+      }
+    } catch {
+      // Ignored
+    }
+    setNotifMenuOpen(false);
+    if (user?.role === "candidate") {
+      navigate("/portal");
+    } else if (notif.notification_type && notif.notification_type.includes("approval")) {
+      navigate("/approvals");
+    } else {
+      navigate("/");
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -322,6 +385,250 @@ export const Layout: React.FC = () => {
               API: {backendOnline === true ? "ONLINE" : backendOnline === false ? "UNREACHABLE" : "CONNECTING"}
             </span>
           </div>
+
+          {/* Global Notification Bell & Dropdown */}
+          {user && (
+            <div ref={notifRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={handleToggleNotifications}
+                style={{
+                  position: "relative",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "50%",
+                  border: notifMenuOpen ? "1px solid var(--accent-purple-border)" : "1px solid var(--border-subtle)",
+                  backgroundColor: notifMenuOpen ? "#ffffff" : "var(--bg-surface-elevated)",
+                  color: notifMenuOpen ? "var(--accent-purple)" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <Bell size={16} />
+                {unreadNotifications > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "-2px",
+                      right: "-2px",
+                      minWidth: "16px",
+                      height: "16px",
+                      borderRadius: "10px",
+                      backgroundColor: "#ef4444",
+                      color: "#ffffff",
+                      fontSize: "9.5px",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 3px",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Drawer */}
+              {notifMenuOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 10px)",
+                    right: 0,
+                    width: "360px",
+                    maxHeight: "440px",
+                    backgroundColor: "#ffffff",
+                    borderRadius: "14px",
+                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)",
+                    border: "1px solid var(--border-subtle)",
+                    zIndex: 100,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {/* Popover Header */}
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom: "1px solid var(--border-subtle)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      backgroundColor: "#fafbfc",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        Notifications
+                      </span>
+                      {unreadNotifications > 0 && (
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: "10px",
+                            backgroundColor: "var(--accent-purple-subtle)",
+                            color: "var(--accent-purple)",
+                            padding: "2px 6px",
+                            borderRadius: "10px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {unreadNotifications} new
+                        </span>
+                      )}
+                    </div>
+
+                    {unreadNotifications > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--accent-purple)",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <CheckCheck size={12} />
+                        <span>Mark all read</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Popover Body / Feed */}
+                  <div style={{ overflowY: "auto", flex: 1, maxHeight: "380px" }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                        <Inbox size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
+                        <div style={{ fontSize: "12.5px", fontWeight: 600 }}>No notifications yet</div>
+                        <div style={{ fontSize: "11px", marginTop: "4px" }}>
+                          You'll receive alerts here when candidate actions or stage updates happen.
+                        </div>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 15).map((notif) => {
+                        const isUnread = !notif.is_read;
+                        const icon = notif.notification_type.includes("offer") ? (
+                          <Gift size={14} color="#a855f7" />
+                        ) : notif.notification_type.includes("interview") ? (
+                          <Calendar size={14} color="#6366f1" />
+                        ) : notif.notification_type.includes("onboarding") ? (
+                          <ShieldCheck size={14} color="#10b981" />
+                        ) : (
+                          <Bell size={14} color="#f59e0b" />
+                        );
+
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            style={{
+                              padding: "10px 14px",
+                              borderBottom: "1px solid var(--border-subtle)",
+                              backgroundColor: isUnread ? "rgba(100, 82, 206, 0.04)" : "#ffffff",
+                              cursor: "pointer",
+                              display: "flex",
+                              gap: "10px",
+                              alignItems: "flex-start",
+                              transition: "background 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "rgba(100, 82, 206, 0.08)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = isUnread ? "rgba(100, 82, 206, 0.04)" : "#ffffff";
+                            }}
+                          >
+                            <div
+                              style={{
+                                marginTop: "2px",
+                                width: "26px",
+                                height: "26px",
+                                borderRadius: "8px",
+                                backgroundColor: isUnread ? "rgba(100, 82, 206, 0.12)" : "var(--bg-canvas)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {icon}
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "12px",
+                                    fontWeight: isUnread ? 700 : 600,
+                                    color: "var(--text-primary)",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {notif.subject}
+                                </span>
+                                {isUnread && (
+                                  <span
+                                    style={{
+                                      width: "6px",
+                                      height: "6px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "var(--accent-purple)",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                )}
+                              </div>
+
+                              <p
+                                style={{
+                                  fontSize: "11.5px",
+                                  color: "var(--text-secondary)",
+                                  margin: "2px 0 4px 0",
+                                  lineHeight: "1.4",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                }}
+                              >
+                                {notif.body_text}
+                              </p>
+
+                              <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                                {new Date(notif.created_at).toLocaleString([], {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* User Profile Dropdown Menu */}
           {user ? (

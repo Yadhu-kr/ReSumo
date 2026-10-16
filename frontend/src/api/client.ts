@@ -33,6 +33,10 @@ import type {
   InterviewSchedule,
   InterviewScheduleCreate,
   AppNotification,
+  CandidateNote,
+  CandidateTimelineResponse,
+  HiringPacketResponse,
+  UnreadCountResponse,
 } from "./types";
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -366,4 +370,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  getUnreadNotificationCount: () =>
+    request<UnreadCountResponse>("/notifications/unread-count"),
+
+  // Timeline & Collaboration Notes
+  getCandidateTimeline: (candidateId: string) =>
+    request<CandidateTimelineResponse>(`/candidates/${encodeURIComponent(candidateId)}/timeline`),
+
+  addCandidateNote: (candidateId: string, content: string) =>
+    request<CandidateNote>(`/candidates/${encodeURIComponent(candidateId)}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
+
+  deleteCandidateNote: (candidateId: string, noteId: string) =>
+    request<void>(`/candidates/${encodeURIComponent(candidateId)}/notes/${encodeURIComponent(noteId)}`, {
+      method: "DELETE",
+    }),
+
+  // Executive Hiring Packet
+  getHiringPacket: (candidateId: string) =>
+    request<HiringPacketResponse>(`/candidates/${encodeURIComponent(candidateId)}/hiring-packet`),
+
+  getHiringPacketDownloadUrl: (candidateId: string) =>
+    `${BASE_URL}/candidates/${encodeURIComponent(candidateId)}/hiring-packet/download`,
 };
+

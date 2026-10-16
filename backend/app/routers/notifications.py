@@ -35,6 +35,26 @@ def get_my_notifications(
     return notifications
 
 
+@router.get("/unread-count", response_model=schemas.UnreadCountResponse)
+def get_unread_notification_count(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Returns unread notification count for current user for fast navbar polling."""
+    count = (
+        db.query(models.Notification)
+        .filter(
+            or_(
+                models.Notification.user_id == current_user.id,
+                models.Notification.recipient_email == current_user.email,
+            ),
+            models.Notification.is_read == False,
+        )
+        .count()
+    )
+    return schemas.UnreadCountResponse(unread_count=count)
+
+
 @router.patch("/{notification_id}/read", response_model=schemas.NotificationOut)
 def mark_notification_read(
     notification_id: str,

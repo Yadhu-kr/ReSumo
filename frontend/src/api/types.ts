@@ -386,4 +386,45 @@ export interface AppNotification {
   created_at: string;
 }
 
+export interface CandidateNote {
+  id: string;
+  candidate_id: string;
+  author_id: string;
+  author_name?: string | null;
+  author_role?: string | null;
+  content: string;
+  created_at: string;
+}
+
+export interface CandidateNoteCreate {
+  content: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  event_type: string;
+  title: string;
+  description: string;
+  actor_name?: string | null;
+  actor_role?: string | null;
+  timestamp: string;
+  metadata?: Record<string, any> | null;
+}
+
+export interface CandidateTimelineResponse {
+  candidate_id: string;
+  events: TimelineEvent[];
+  notes: CandidateNote[];
+}
+
+export interface HiringPacketResponse {
+  candidate_id: string;
+  candidate_name: string;
+  markdown: string;
+}
+
+export interface UnreadCountResponse {
+  unread_count: number;
+}
+
 

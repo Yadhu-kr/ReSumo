@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -424,4 +425,453 @@ def submit_candidate_for_approval(
             detail=f"No application found for candidate '{candidate_id}'",
         )
     return submit_for_approval(application.id, current_user, db)
+
+
+# =========================================================================
+# Activity Audit Trail, Timeline & Internal Collaboration Notes
+# =========================================================================
+
+@router.get("/{candidate_id}/timeline", response_model=schemas.CandidateTimelineResponse)
+def get_candidate_timeline(
+    candidate_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Chronological activity log aggregating candidate lifecycle events:
+    - Resume parsing
+    - Application assignments & status updates
+    - Approvals requested & actioned
+    - Interview rounds scheduled
+    - Scorecards submitted
+    - Offer letters drafted, sent, accepted/declined
+    - Onboarding completions & verifications
+    - Internal team notes
+    """
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    events = []
+
+    # 1. Candidate Creation / Resume Parsed
+    created_at = candidate.created_at or datetime.now(timezone.utc)
+    parsed_skills_count = len(candidate.parsed_data.get("core_skills", [])) if candidate.parsed_data else 0
+    events.append(schemas.TimelineEventOut(
+        id=f"evt-created-{candidate.id}",
+        event_type="resume_uploaded",
+        title="Resume Ingested & Parsed",
+        description=f"Resume file '{candidate.raw_resume_filename}' processed with {parsed_skills_count} core skills extracted.",
+        actor_name=candidate.name or "Candidate Sourcing Engine",
+        actor_role="system",
+        timestamp=created_at,
+        metadata={"filename": candidate.raw_resume_filename, "skills_count": parsed_skills_count},
+    ))
+
+    # 2. Applications & Status Transitions
+    for app in candidate.applications:
+        job_title = app.job.title if app.job else "Unknown Role"
+        app_created = app.created_at or created_at
+        events.append(schemas.TimelineEventOut(
+            id=f"evt-app-{app.id}",
+            event_type="application_created",
+            title=f"Applied to {job_title}",
+            description=f"Application linked to requisition with {int((app.similarity_score or 0.75) * 100)}% match score.",
+            actor_name="Talent Matching Engine",
+            actor_role="system",
+            timestamp=app_created,
+            metadata={"job_id": app.job_id, "similarity": app.similarity_score, "status": app.status},
+        ))
+
+        # 3. Approvals
+        for approval in app.approvals:
+            appr_created = approval.created_at or app_created
+            events.append(schemas.TimelineEventOut(
+                id=f"evt-appr-req-{approval.id}",
+                event_type="approval_requested",
+                title=f"Approval Requested ({approval.approver_role.replace('_', ' ').title()})",
+                description=f"Step {approval.step_order} routed for {approval.approver_role.replace('_', ' ').upper()} review.",
+                actor_name="ReSumo Orchestrator",
+                actor_role="system",
+                timestamp=appr_created,
+                metadata={"step_order": approval.step_order, "role": approval.approver_role},
+            ))
+
+            if approval.action != "pending" and approval.acted_at:
+                action_title = "Approved by " + approval.approver_role.replace('_', ' ').title() if approval.action == "approved" else "Rejected by " + approval.approver_role.replace('_', ' ').title()
+                actor_display = approval.acted_by_user.name if approval.acted_by_user else approval.approver_role.replace('_', ' ').title()
+                events.append(schemas.TimelineEventOut(
+                    id=f"evt-appr-act-{approval.id}",
+                    event_type="approval_signed" if approval.action == "approved" else "approval_rejected",
+                    title=action_title,
+                    description=approval.notes or f"Decision confirmed for Step {approval.step_order}.",
+                    actor_name=actor_display,
+                    actor_role=approval.approver_role,
+                    timestamp=approval.acted_at,
+                    metadata={"action": approval.action, "notes": approval.notes},
+                ))
+
+    # 4. Interviews
+    for sched in candidate.schedules:
+        events.append(schemas.TimelineEventOut(
+            id=f"evt-sched-{sched.id}",
+            event_type="interview_scheduled",
+            title=f"Interview Scheduled: {sched.title}",
+            description=f"Format: {sched.round_type.title()} ({sched.duration_minutes} min). Interviewer: {sched.interviewer_name}.",
+            actor_name=sched.interviewer_name or "Scheduling Coordinator",
+            actor_role="interviewer",
+            timestamp=sched.created_at or created_at,
+            metadata={"meeting_link": sched.meeting_link, "round_type": sched.round_type},
+        ))
+
+    # 5. Scorecards
+    for score in candidate.interview_scores:
+        events.append(schemas.TimelineEventOut(
+            id=f"evt-score-{score.id}",
+            event_type="scorecard_submitted",
+            title=f"Scorecard: {score.dimension.replace('_', ' ').title()} ({score.score}★)",
+            description=score.notes or f"Evaluated by {score.interviewer_name}. Recommendation: {score.recommendation or 'N/A'}.",
+            actor_name=score.interviewer_name or "Evaluator",
+            actor_role="interviewer",
+            timestamp=score.created_at or created_at,
+            metadata={"dimension": score.dimension, "score": score.score, "recommendation": score.recommendation},
+        ))
+
+    # 6. Offers
+    for offer in candidate.offers:
+        offer_created = offer.created_at or created_at
+        salary_str = f"${offer.salary:,.2f}" if offer.salary else "Competitive"
+        events.append(schemas.TimelineEventOut(
+            id=f"evt-offer-draft-{offer.id}",
+            event_type="offer_drafted",
+            title=f"Offer Prepared ({offer.role_title or 'Selected Role'})",
+            description=f"Compensation: {salary_str} base. Equity: {offer.equity or 'None'}.",
+            actor_name="Talent Acquisition",
+            actor_role="hr",
+            timestamp=offer_created,
+            metadata={"status": offer.status, "salary": offer.salary},
+        ))
+
+        if offer.status in ("sent", "accepted", "declined") and offer.responded_at:
+            if offer.status == "accepted":
+                events.append(schemas.TimelineEventOut(
+                    id=f"evt-offer-acc-{offer.id}",
+                    event_type="offer_accepted",
+                    title="Offer Accepted by Candidate 🎉",
+                    description=f"Candidate accepted offer terms. Start date: {offer.start_date or 'To be confirmed'}.",
+                    actor_name=candidate.name or "Candidate",
+                    actor_role="candidate",
+                    timestamp=offer.responded_at,
+                    metadata={"status": "accepted"},
+                ))
+            elif offer.status == "declined":
+                events.append(schemas.TimelineEventOut(
+                    id=f"evt-offer-dec-{offer.id}",
+                    event_type="offer_declined",
+                    title="Offer Declined",
+                    description=offer.notes or "Candidate declined the extended offer.",
+                    actor_name=candidate.name or "Candidate",
+                    actor_role="candidate",
+                    timestamp=offer.responded_at,
+                    metadata={"status": "declined"},
+                ))
+
+    # 7. Onboarding Tasks
+    for task in candidate.onboarding_tasks:
+        if task.status == "verified" and task.verified_at:
+            events.append(schemas.TimelineEventOut(
+                id=f"evt-onboard-ver-{task.id}",
+                event_type="onboarding_verified",
+                title=f"Compliance Verified: {task.title}",
+                description=f"Document/form validated for federal/company compliance category '{task.category}'.",
+                actor_name="Compliance Officer",
+                actor_role="hr",
+                timestamp=task.verified_at,
+                metadata={"category": task.category},
+            ))
+
+    # 8. Team Notes
+    notes = (
+        db.query(models.CandidateNote)
+        .filter(models.CandidateNote.candidate_id == candidate_id)
+        .order_by(models.CandidateNote.created_at.desc())
+        .all()
+    )
+    for note in notes:
+        events.append(schemas.TimelineEventOut(
+            id=f"evt-note-{note.id}",
+            event_type="note_added",
+            title="Internal Note Added",
+            description=note.content,
+            actor_name=note.author_name or "Team Member",
+            actor_role=note.author_role or "hr",
+            timestamp=note.created_at,
+            metadata={"note_id": note.id},
+        ))
+
+    # Sort all events chronologically ascending
+    def get_event_time(evt):
+        ts = evt.timestamp
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts
+
+    events.sort(key=get_event_time)
+
+    return schemas.CandidateTimelineResponse(
+        candidate_id=candidate.id,
+        events=events,
+        notes=[schemas.CandidateNoteOut.model_validate(n) for n in notes],
+    )
+
+
+@router.post("/{candidate_id}/notes", response_model=schemas.CandidateNoteOut, status_code=status.HTTP_201_CREATED)
+def add_candidate_note(
+    candidate_id: str,
+    payload: schemas.CandidateNoteCreate,
+    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Adds an internal collaboration note to the candidate dossier."""
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    author_name = current_user.name or current_user.email
+    note = models.CandidateNote(
+        candidate_id=candidate_id,
+        author_id=current_user.id,
+        author_name=author_name,
+        author_role=current_user.role,
+        content=payload.content.strip(),
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.delete("/{candidate_id}/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_candidate_note(
+    candidate_id: str,
+    note_id: str,
+    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Deletes an internal collaboration note."""
+    note = db.query(models.CandidateNote).filter(
+        models.CandidateNote.id == note_id,
+        models.CandidateNote.candidate_id == candidate_id,
+    ).first()
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+
+    # Author can delete their own note; HR and admin can delete any note
+    if current_user.role not in ("hr", "admin") and note.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete notes written by other team members",
+        )
+
+    db.delete(note)
+    db.commit()
+    return None
+
+
+# =========================================================================
+# Executive Hiring Dossier / Packet Generator
+# =========================================================================
+
+def generate_hiring_packet_markdown(candidate: models.Candidate, db: Session) -> str:
+    parsed = candidate.parsed_data or {}
+    cand_name = candidate.name or parsed.get("current_title") or "Candidate"
+    title = parsed.get("current_title") or "Professional"
+    seniority = (parsed.get("seniority") or "mid").upper()
+    years_exp = parsed.get("years_experience", 0)
+    company = parsed.get("current_company") or "Independent"
+    location = parsed.get("location") or candidate.phone or "Not specified"
+    summary = parsed.get("summary") or "Profile ingested into ReSumo talent intelligence system."
+    core_skills = ", ".join(parsed.get("core_skills", [])) or "None specified"
+    secondary_skills = ", ".join(parsed.get("secondary_skills", [])) or "None specified"
+    tools = ", ".join(parsed.get("tools", [])) or "Standard toolchain"
+    achievements = parsed.get("key_achievements", [])
+
+    lines = [
+        f"# Executive Hiring Dossier: {cand_name}",
+        f"**Role Designation:** {title} ({seniority}) | **Total Experience:** {years_exp} Years | **Current Organization:** {company}",
+        f"**Candidate Email:** {candidate.email or 'N/A'} | **Location:** {location}",
+        f"**Report Generated:** {datetime.now(timezone.utc).strftime('%B %d, %Y at %H:%M UTC')}",
+        "",
+        "---",
+        "",
+        "## 1. Executive Candidate Profile & Qualifications",
+        f"> {summary}",
+        "",
+        f"- **Primary Competencies & Core Skills:** {core_skills}",
+        f"- **Secondary & Domain Competencies:** {secondary_skills}",
+        f"- **Engineering Toolchain & Frameworks:** {tools}",
+        "",
+    ]
+
+    if achievements:
+        lines.append("### Key Verified Achievements")
+        for ach in achievements:
+            lines.append(f"- {ach}")
+        lines.append("")
+
+    # Application & RAG Match
+    lines.append("---")
+    lines.append("## 2. Requisition Alignment & Vector Match Rationale")
+    if candidate.applications:
+        app = candidate.applications[0]
+        job = app.job
+        sim_pct = int((app.similarity_score or 0.75) * 100)
+        lines.append(f"- **Target Requisition:** {job.title if job else 'Unassigned'} ({job.role_tier.upper() if job else 'N/A'})")
+        lines.append(f"- **Current Pipeline Stage:** `{app.status.upper()}`")
+        lines.append(f"- **Semantic Embedding Similarity:** **{sim_pct}%**")
+        lines.append(f"- **AI Match Rationale:**")
+        lines.append(f"  > {app.rationale or 'Candidate aligned with core technical job requirements.'}")
+    else:
+        lines.append("*Candidate currently resides in unassigned talent pool.*")
+    lines.append("")
+
+    # Interview Scorecard & Rubrics
+    lines.append("---")
+    lines.append("## 3. Interview Evaluation & Multi-Dimensional Rubrics")
+    scores = candidate.interview_scores
+    if scores:
+        avg_score = round(sum(s.score for s in scores) / len(scores), 2)
+        lines.append(f"**Aggregate Score:** {avg_score} / 5.0 ★ | **Total Evaluations:** {len(scores)}")
+        lines.append("")
+        lines.append("| Dimension | Rating | Recommendation | Evaluator | Notes |")
+        lines.append("|---|---|---|---|---|")
+        for s in scores:
+            dim = s.dimension.replace("_", " ").title()
+            rec = (s.recommendation or "Hire").replace("_", " ").title()
+            notes = (s.notes or "").replace("\n", " ")
+            lines.append(f"| {dim} | {s.score} ★ | {rec} | {s.interviewer_name or 'Interviewer'} | {notes} |")
+    else:
+        lines.append("*No interview scorecards recorded to date.*")
+    lines.append("")
+
+    # Approval Sign-offs
+    lines.append("---")
+    lines.append("## 4. Multi-Tier Governance & Approval Audit Trail")
+    approvals = []
+    for app in candidate.applications:
+        approvals.extend(app.approvals)
+    if approvals:
+        lines.append("| Step | Approver Tier | Status | Acted By | Sign-off Date | Notes |")
+        lines.append("|---|---|---|---|---|---|")
+        for a in approvals:
+            acted_by = a.acted_by_user.name if a.acted_by_user else (a.approver_role.replace("_", " ").title() if a.action != "pending" else "Pending")
+            acted_date = a.acted_at.strftime('%Y-%m-%d %H:%M') if a.acted_at else "—"
+            notes = (a.notes or "—").replace("\n", " ")
+            lines.append(f"| Step {a.step_order} | {a.approver_role.replace('_', ' ').upper()} | `{a.action.upper()}` | {acted_by} | {acted_date} | {notes} |")
+    else:
+        lines.append("*No approval chain triggered.*")
+    lines.append("")
+
+    # Offer Terms
+    lines.append("---")
+    lines.append("## 5. Compensation & Extended Offer Terms")
+    if candidate.offers:
+        off = candidate.offers[0]
+        sal = f"${off.salary:,.2f}" if off.salary else "Unspecified"
+        lines.append(f"- **Offer Status:** `{off.status.upper()}`")
+        lines.append(f"- **Annual Base Salary:** {sal} {off.currency}")
+        lines.append(f"- **Equity Grant:** {off.equity or 'None'}")
+        lines.append(f"- **Target Start Date:** {off.start_date or 'Immediate'}")
+        if off.notes:
+            lines.append(f"- **Terms & Perks:** {off.notes}")
+    else:
+        lines.append("*No formal offer extended.*")
+    lines.append("")
+
+    # Onboarding Compliance
+    lines.append("---")
+    lines.append("## 6. Post-Offer Onboarding Compliance Status")
+    tasks = candidate.onboarding_tasks
+    if tasks:
+        verified_count = sum(1 for t in tasks if t.status == "verified")
+        lines.append(f"**Progress:** {verified_count}/{len(tasks)} Verified Compliance Deliverables")
+        lines.append("")
+        for t in tasks:
+            status_icon = "✅" if t.status == "verified" else ("⏳" if t.status == "completed" else "⚪")
+            lines.append(f"- {status_icon} **{t.title}** (`{t.status.upper()}`) — Category: *{t.category}*")
+    else:
+        lines.append("*Onboarding checklist pending offer confirmation.*")
+    lines.append("")
+
+    # Internal Collaboration Notes
+    lines.append("---")
+    lines.append("## 7. Internal Team Collaboration Notes")
+    notes = candidate.notes
+    if notes:
+        lines.append(f"**Total Internal Notes:** {len(notes)}")
+        lines.append("")
+        for n in notes:
+            created = n.created_at.strftime('%Y-%m-%d %H:%M') if n.created_at else "—"
+            author = f"{n.author_name} ({n.author_role.upper()})" if n.author_role else (n.author_name or "Team Member")
+            lines.append(f"### Note by {author} — *{created}*")
+            lines.append(f"> {n.content}")
+            lines.append("")
+    else:
+        lines.append("*No internal collaboration notes recorded.*")
+    lines.append("")
+
+    lines.append("---")
+    lines.append("*Confidential: Generated by ReSumo Autonomous Talent Intelligence System.*")
+
+    return "\n".join(lines)
+
+
+@router.get("/{candidate_id}/hiring-packet")
+def get_candidate_hiring_packet(
+    candidate_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieves full candidate hiring debrief packet formatted in Markdown."""
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    md_content = generate_hiring_packet_markdown(candidate, db)
+    return {
+        "candidate_id": candidate_id,
+        "candidate_name": candidate.name or "Candidate",
+        "markdown": md_content,
+    }
+
+
+@router.get("/{candidate_id}/hiring-packet/download")
+def download_candidate_hiring_packet(
+    candidate_id: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Downloads full candidate hiring debrief packet as Markdown (.md) file."""
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    md_content = generate_hiring_packet_markdown(candidate, db)
+    cand_slug = (candidate.name or "Candidate").replace(" ", "_").replace("/", "_")
+    filename = f"ReSumo_Hiring_Packet_{cand_slug}.md"
+
+    return Response(
+        content=md_content,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 

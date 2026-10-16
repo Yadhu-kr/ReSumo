@@ -13,6 +13,8 @@ import type {
   OnboardingSummary,
   InterviewSchedule,
   InterviewScheduleCreate,
+  CandidateNote,
+  TimelineEvent,
 } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
@@ -37,6 +39,12 @@ import {
   Mail,
   MapPin,
   ExternalLink,
+  History,
+  MessageSquarePlus,
+  FileText,
+  Copy,
+  Check,
+  Trash2,
 } from "lucide-react";
 
 interface OutletContextType {
@@ -58,8 +66,21 @@ export const CandidateDossierPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Tab: 'extracted' vs 'raw_text' vs 'scorecard' vs 'calendar' vs 'offer' vs 'onboarding'
-  const [activeTab, setActiveTab] = useState<"extracted" | "raw" | "scorecard" | "calendar" | "offer" | "onboarding">("extracted");
+  // Tab: 'extracted' vs 'raw_text' vs 'scorecard' vs 'calendar' vs 'offer' vs 'onboarding' vs 'timeline'
+  const [activeTab, setActiveTab] = useState<"extracted" | "raw" | "scorecard" | "calendar" | "offer" | "onboarding" | "timeline">("extracted");
+
+  // Timeline & Collaboration Notes state
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+  const [notes, setNotes] = useState<CandidateNote[]>([]);
+  const [newNoteContent, setNewNoteContent] = useState<string>("");
+  const [postingNote, setPostingNote] = useState<boolean>(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+
+  // Executive Hiring Packet state
+  const [hiringPacketModalOpen, setHiringPacketModalOpen] = useState<boolean>(false);
+  const [hiringPacketMarkdown, setHiringPacketMarkdown] = useState<string>("");
+  const [loadingPacket, setLoadingPacket] = useState<boolean>(false);
+  const [copiedPacket, setCopiedPacket] = useState<boolean>(false);
 
   // Interview Calendar state
   const [schedules, setSchedules] = useState<InterviewSchedule[]>([]);
@@ -225,11 +246,74 @@ export const CandidateDossierPage: React.FC = () => {
       } catch {
         // Onboarding fallback
       }
+
+      // Load timeline & collaboration notes
+      try {
+        const tl = await api.getCandidateTimeline(id);
+        setTimelineEvents(tl.events);
+        setNotes(tl.notes);
+      } catch {
+        // Timeline fallback
+      }
     } catch (err: unknown) {
       const msg = err instanceof ApiError ? err.detail : "Failed to load candidate dossier";
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !newNoteContent.trim()) return;
+    try {
+      setPostingNote(true);
+      setNoteError(null);
+      const created = await api.addCandidateNote(id, newNoteContent.trim());
+      setNotes((prev) => [created, ...prev]);
+      setNewNoteContent("");
+      // Refresh timeline events
+      const tl = await api.getCandidateTimeline(id);
+      setTimelineEvents(tl.events);
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.detail : "Failed to post note";
+      setNoteError(msg);
+    } finally {
+      setPostingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!id) return;
+    try {
+      await api.deleteCandidateNote(id, noteId);
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      setTimelineEvents((prev) => prev.filter((e) => e.metadata?.note_id !== noteId));
+    } catch (err: unknown) {
+      console.error("Failed to delete note", err);
+    }
+  };
+
+  const handleOpenHiringPacket = async () => {
+    if (!id) return;
+    try {
+      setLoadingPacket(true);
+      setCopiedPacket(false);
+      const packet = await api.getHiringPacket(id);
+      setHiringPacketMarkdown(packet.markdown);
+      setHiringPacketModalOpen(true);
+    } catch (err: unknown) {
+      console.error("Failed to fetch hiring packet", err);
+    } finally {
+      setLoadingPacket(false);
+    }
+  };
+
+  const handleCopyHiringPacket = () => {
+    if (hiringPacketMarkdown) {
+      navigator.clipboard.writeText(hiringPacketMarkdown);
+      setCopiedPacket(true);
+      setTimeout(() => setCopiedPacket(false), 2500);
     }
   };
 
@@ -560,6 +644,35 @@ export const CandidateDossierPage: React.FC = () => {
               <span>Onboarding {onboarding ? `(${onboarding.completed_tasks}/${onboarding.total_tasks})` : ""}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("timeline")}
+            className="btn btn-secondary"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              backgroundColor: activeTab === "timeline" ? "var(--accent-purple-subtle)" : undefined,
+              borderColor: activeTab === "timeline" ? "var(--accent-purple-border)" : undefined,
+              color: activeTab === "timeline" ? "var(--accent-purple)" : undefined,
+            }}
+          >
+            <History size={14} color="#0284c7" />
+            <span>Activity Trail {timelineEvents.length > 0 ? `(${timelineEvents.length})` : ""}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenHiringPacket}
+            disabled={loadingPacket}
+            className="btn btn-subtle"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", border: "1px solid var(--border-subtle)" }}
+            title="Generate and export comprehensive executive hiring packet"
+          >
+            <FileText size={14} color="var(--accent-purple)" />
+            <span>{loadingPacket ? "Compiling..." : "Export Hiring Packet (.md)"}</span>
+          </button>
         </div>
       </div>
 
@@ -799,6 +912,42 @@ export const CandidateDossierPage: React.FC = () => {
                     }}
                   >
                     {onboarding.completed_tasks}/{onboarding.total_tasks}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="btn-sm"
+                onClick={() => setActiveTab("timeline")}
+                style={{
+                  border: "none",
+                  borderRadius: "var(--radius-pill)",
+                  backgroundColor: activeTab === "timeline" ? "#ffffff" : "transparent",
+                  color: activeTab === "timeline" ? "var(--accent-purple)" : "var(--text-secondary)",
+                  fontWeight: activeTab === "timeline" ? 700 : 500,
+                  boxShadow: activeTab === "timeline" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
+                  transition: "all 0.2s ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <History size={12} color={activeTab === "timeline" ? "var(--accent-purple)" : "currentColor"} />
+                <span>Timeline & Notes</span>
+                {timelineEvents.length > 0 && (
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: "10px",
+                      padding: "1px 6px",
+                      borderRadius: "10px",
+                      backgroundColor: activeTab === "timeline" ? "var(--accent-purple)" : "var(--border-subtle)",
+                      color: activeTab === "timeline" ? "#ffffff" : "var(--text-secondary)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {timelineEvents.length}
                   </span>
                 )}
               </button>
@@ -2272,6 +2421,214 @@ export const CandidateDossierPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Tab: Timeline & Collaboration Notes */}
+            {activeTab === "timeline" && (
+              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                {/* Section Header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                      Candidate Activity & Audit Timeline
+                    </h3>
+                    <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
+                      Chronological audit log tracking resume parsing, job matches, approval sign-offs, interviews, and offers.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenHiringPacket}
+                    disabled={loadingPacket}
+                    className="btn btn-primary btn-sm"
+                    style={{ borderRadius: "50px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <FileText size={13} />
+                    <span>{loadingPacket ? "Loading..." : "Export Full Packet (.md)"}</span>
+                  </button>
+                </div>
+
+                {/* Team Notes Composer (HR, Approver, Admin) */}
+                <div
+                  style={{
+                    backgroundColor: "var(--bg-canvas)",
+                    padding: "16px 20px",
+                    borderRadius: "14px",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <MessageSquarePlus size={15} color="var(--accent-purple)" />
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      Add Internal Collaboration Note {notes.length > 0 && `(${notes.length})`}
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleAddNote} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {noteError && (
+                      <div style={{ padding: "8px 12px", borderRadius: "6px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", fontSize: "12px" }}>
+                        {noteError}
+                      </div>
+                    )}
+                    <textarea
+                      rows={2}
+                      value={newNoteContent}
+                      onChange={(e) => setNewNoteContent(e.target.value)}
+                      placeholder="Add interview takeaways, salary flexibility notes, or recruiter observations..."
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        fontSize: "13px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-subtle)",
+                        backgroundColor: "#ffffff",
+                        resize: "vertical",
+                      }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="submit"
+                        disabled={postingNote || !newNoteContent.trim()}
+                        className="btn btn-purple btn-sm"
+                        style={{ borderRadius: "50px", padding: "6px 18px", fontSize: "12px" }}
+                      >
+                        {postingNote ? "Saving Note..." : "Post Note"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Chronological Timeline Stream */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)" }}>
+                    LIFECYCLE EVENTS ({timelineEvents.length})
+                  </div>
+
+                  {timelineEvents.length === 0 ? (
+                    <EmptyState
+                      title="NO EVENTS RECORDED"
+                      description="Activity events will appear automatically as the candidate progresses through stages."
+                    />
+                  ) : (
+                    <div style={{ position: "relative", paddingLeft: "28px" }}>
+                      {/* Vertical line connecting nodes */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "11px",
+                          top: "8px",
+                          bottom: "8px",
+                          width: "2px",
+                          backgroundColor: "#e2e8f0",
+                        }}
+                      />
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                        {timelineEvents.map((evt) => {
+                          const isNote = evt.event_type === "note_added";
+                          const isApproval = evt.event_type.startsWith("approval");
+                          const isOffer = evt.event_type.startsWith("offer");
+                          const isInterview = evt.event_type.startsWith("interview") || evt.event_type.startsWith("scorecard");
+
+                          const icon = isNote ? (
+                            <MessageSquarePlus size={13} color="#8b5cf6" />
+                          ) : isOffer ? (
+                            <Gift size={13} color="#a855f7" />
+                          ) : isInterview ? (
+                            <Calendar size={13} color="#0284c7" />
+                          ) : isApproval ? (
+                            <ShieldCheck size={13} color="#10b981" />
+                          ) : (
+                            <CheckCircle2 size={13} color="#64748b" />
+                          );
+
+                          return (
+                            <div key={evt.id} style={{ position: "relative" }}>
+                              {/* Node Circle */}
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: "-28px",
+                                  top: "2px",
+                                  width: "24px",
+                                  height: "24px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#ffffff",
+                                  border: "2px solid #cbd5e1",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                                }}
+                              >
+                                {icon}
+                              </div>
+
+                              {/* Event Card */}
+                              <div
+                                style={{
+                                  padding: "12px 16px",
+                                  borderRadius: "10px",
+                                  backgroundColor: isNote ? "#fbfbfe" : "#ffffff",
+                                  border: `1px solid ${isNote ? "rgba(139, 92, 246, 0.25)" : "var(--border-subtle)"}`,
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text-primary)" }}>
+                                      {evt.title}
+                                    </span>
+                                    {evt.actor_role && (
+                                      <span
+                                        className="badge mono"
+                                        style={{ fontSize: "9.5px", textTransform: "uppercase" }}
+                                      >
+                                        {evt.actor_role}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                                      {new Date(evt.timestamp).toLocaleString([], {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                    {isNote && evt.metadata?.note_id && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteNote(evt.metadata?.note_id)}
+                                        style={{
+                                          background: "transparent",
+                                          border: "none",
+                                          cursor: "pointer",
+                                          color: "var(--text-muted)",
+                                          padding: "2px",
+                                        }}
+                                        title="Delete note"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", margin: "6px 0 0 0", lineHeight: "1.45" }}>
+                                  {evt.description}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2353,6 +2710,86 @@ export const CandidateDossierPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Executive Hiring Packet Modal */}
+      {hiringPacketModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "760px", maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+            <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FileText size={16} color="var(--accent-purple)" />
+                <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Executive Hiring Dossier: {candidate.name || "Candidate"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-subtle btn-sm"
+                onClick={() => setHiringPacketModalOpen(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", backgroundColor: "#fafbfc" }}>
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                Consolidated debrief packet containing candidate qualifications, RAG match rationale, scorecard evaluations, approval signatures, and compensation terms.
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={handleCopyHiringPacket}
+                  className="btn btn-sm"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  {copiedPacket ? <Check size={13} color="var(--accent-green)" /> : <Copy size={13} />}
+                  <span>{copiedPacket ? "Copied Markdown!" : "Copy Markdown"}</span>
+                </button>
+                <a
+                  href={api.getHiringPacketDownloadUrl(candidate.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none" }}
+                >
+                  <Download size={13} />
+                  <span>Download .md File</span>
+                </a>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px", overflowY: "auto", flex: 1, backgroundColor: "#f8fafc" }}>
+              <pre
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  lineHeight: "1.6",
+                  color: "#1e293b",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  backgroundColor: "#ffffff",
+                  padding: "18px 20px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                {hiringPacketMarkdown}
+              </pre>
+            </div>
+
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setHiringPacketModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -472,3 +472,42 @@ class TestEmailRequest(BaseModel):
     subject: str
     message: str
 
+
+# ---- Candidate Notes & Activity Timeline Schemas ----
+
+class CandidateNoteCreate(BaseModel):
+    content: str
+
+
+class CandidateNoteOut(BaseModel):
+    id: str
+    candidate_id: str
+    author_id: str
+    author_name: Optional[str] = None
+    author_role: Optional[str] = None
+    content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TimelineEventOut(BaseModel):
+    id: str
+    event_type: str
+    title: str
+    description: str
+    actor_name: Optional[str] = None
+    actor_role: Optional[str] = None
+    timestamp: datetime
+    metadata: Optional[dict] = None
+
+
+class CandidateTimelineResponse(BaseModel):
+    candidate_id: str
+    events: list[TimelineEventOut]
+    notes: list[CandidateNoteOut]
+
+
+class UnreadCountResponse(BaseModel):
+    unread_count: int
+
