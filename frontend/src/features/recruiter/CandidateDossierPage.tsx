@@ -1001,7 +1001,7 @@ export const CandidateDossierPage: React.FC = () => {
           </div>
 
           <div className="panel-body">
-            {activeTab === "extracted" ? (
+            {activeTab === "extracted" && (
               parsed ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                   {/* Executive Summary */}
@@ -1184,7 +1184,9 @@ export const CandidateDossierPage: React.FC = () => {
                   }
                 />
               )
-            ) : activeTab === "raw" ? (
+            )}
+
+            {activeTab === "raw" && (
               /* Raw Plaintext Preprocessor Viewer */
               <div style={{ padding: "4px" }}>
                 <div className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", marginBottom: "8px", letterSpacing: "0.04em" }}>
@@ -1208,7 +1210,9 @@ export const CandidateDossierPage: React.FC = () => {
                   {candidate.raw_text || "No plaintext captured during ingestion."}
                 </pre>
               </div>
-            ) : (
+            )}
+
+            {activeTab === "offer" && (
               /* Offer Studio Tab */
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 {offerSuccess && (
