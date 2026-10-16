@@ -112,7 +112,7 @@ def get_application_approvals(
                 )
         elif current_user.role == "candidate":
             candidate = db.query(models.Candidate).filter(models.Candidate.id == application.candidate_id).first()
-            if not candidate or candidate.user_id != current_user.id:
+            if not candidate or (candidate.user_id != current_user.id and candidate.email != current_user.email):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access denied: you do not own this application",
@@ -145,7 +145,7 @@ def get_candidate_approvals(
             detail=f"Candidate '{candidate_id}' not found",
         )
 
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     apps_query = db.query(models.Application).filter(models.Application.candidate_id == candidate_id)
@@ -154,7 +154,16 @@ def get_candidate_approvals(
 
     matching_apps = apps_query.all()
     if not matching_apps:
-        if current_user.role in ("recruiter", "hr", "approver"):
+        other_company_app = (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(
+                models.Application.candidate_id == candidate_id,
+                models.Job.company_id != current_user.company_id,
+            )
+            .first()
+        )
+        if other_company_app and current_user.role in ("recruiter", "hr", "approver"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: candidate has no applications in your company",

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.database import get_db
 from app import models, schemas
@@ -22,7 +23,12 @@ def list_candidates(
     - Admin: sees all candidates.
     """
     if current_user.role == "candidate":
-        query = db.query(models.Candidate).filter(models.Candidate.user_id == current_user.id)
+        query = db.query(models.Candidate).filter(
+            or_(
+                models.Candidate.user_id == current_user.id,
+                models.Candidate.email == current_user.email,
+            )
+        )
         if job_id:
             query = query.join(models.Application).filter(models.Application.job_id == job_id)
         return query.order_by(models.Candidate.created_at.desc()).all()
@@ -78,7 +84,7 @@ def get_candidate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
     # Candidate users can only see their own records
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     # HR/approver can only see candidates with applications to their company OR unassigned pool candidates
@@ -124,7 +130,7 @@ def update_candidate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
     # Ownership check
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     if current_user.role not in ("candidate", "hr", "admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
@@ -169,7 +175,12 @@ def get_my_applications(
     return (
         db.query(models.Application)
         .join(models.Candidate, models.Candidate.id == models.Application.candidate_id)
-        .filter(models.Candidate.user_id == current_user.id)
+        .filter(
+            or_(
+                models.Candidate.user_id == current_user.id,
+                models.Candidate.email == current_user.email,
+            )
+        )
         .order_by(models.Application.created_at.desc())
         .all()
     )
@@ -190,7 +201,7 @@ def list_candidate_applications(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
     # Candidate can only see their own applications
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     query = db.query(models.Application).filter(models.Application.candidate_id == candidate_id)

@@ -95,8 +95,17 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=schemas.UserOut)
-def get_me(current_user: models.User = Depends(get_current_user)):
-    """Returns the authenticated user's profile."""
+def get_me(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns the authenticated user's profile and automatically links unlinked candidate records."""
+    if current_user.role == "candidate":
+        db.query(models.Candidate).filter(
+            models.Candidate.email == current_user.email,
+            models.Candidate.user_id == None,
+        ).update({"user_id": current_user.id}, synchronize_session=False)
+        db.commit()
     return current_user
 
 

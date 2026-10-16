@@ -166,7 +166,7 @@ def get_candidate_schedules(
     if not candidate:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     schedules = (
@@ -205,7 +205,12 @@ def get_my_schedules(
     If HR/Admin/Approver: returns schedules where they are interviewer or in their company.
     """
     if current_user.role == "candidate":
-        cand = db.query(models.Candidate).filter(models.Candidate.user_id == current_user.id).first()
+        cand = db.query(models.Candidate).filter(
+            or_(
+                models.Candidate.user_id == current_user.id,
+                models.Candidate.email == current_user.email,
+            )
+        ).first()
         if not cand:
             return []
         return (

@@ -2,6 +2,7 @@ import os
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.database import get_db
 from app import models, schemas
@@ -265,7 +266,12 @@ def apply_for_job(
 
     candidate = (
         db.query(models.Candidate)
-        .filter(models.Candidate.user_id == current_user.id)
+        .filter(
+            or_(
+                models.Candidate.user_id == current_user.id,
+                models.Candidate.email == current_user.email,
+            )
+        )
         .order_by(models.Candidate.created_at.desc())
         .first()
     )
@@ -274,6 +280,10 @@ def apply_for_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You must upload your resume in the Career Portal before applying for a job.",
         )
+
+    if not candidate.user_id:
+        candidate.user_id = current_user.id
+        db.commit()
 
     existing = (
         db.query(models.Application)

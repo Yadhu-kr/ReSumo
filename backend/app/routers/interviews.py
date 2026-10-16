@@ -195,6 +195,11 @@ def delete_interview_score(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Interview score '{score_id}' not found",
         )
+    if current_user.role == "hr" and score.application:
+        job = db.query(models.Job).filter(models.Job.id == score.application.job_id).first()
+        if job and current_user.company_id and job.company_id != current_user.company_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     db.delete(score)
     db.commit()
     return None

@@ -152,7 +152,7 @@ def get_offer(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offer not found")
 
     candidate = db.query(models.Candidate).filter(models.Candidate.id == offer.candidate_id).first()
-    if current_user.role == "candidate" and candidate and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     if current_user.role == "hr" and offer.application:
@@ -195,7 +195,7 @@ def get_candidate_offers(
     if not candidate:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
-    if current_user.role == "candidate" and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return (
@@ -267,7 +267,7 @@ def respond_to_offer(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offer not found")
 
     candidate = db.query(models.Candidate).filter(models.Candidate.id == offer.candidate_id).first()
-    if current_user.role == "candidate" and candidate and candidate.user_id != current_user.id:
+    if current_user.role == "candidate" and candidate and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     if offer.status not in ("sent", "draft"):

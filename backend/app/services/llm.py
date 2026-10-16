@@ -14,6 +14,13 @@ from typing import Protocol, Any
 logger = logging.getLogger(__name__)
 
 
+def _format_skill_list(skills: Any) -> str:
+    if not skills or not isinstance(skills, (list, tuple)):
+        return "None specified"
+    cleaned = [str(s) for s in skills if s]
+    return ", ".join(cleaned) if cleaned else "None specified"
+
+
 class LLMProvider(Protocol):
     provider_name: str
 
@@ -66,8 +73,8 @@ Candidate Profile (from extraction model):
 - Seniority: {candidate_data.get('seniority', 'N/A')}
 - Current Title: {candidate_data.get('current_title', 'N/A')}
 - Years Experience: {candidate_data.get('years_experience', 'N/A')}
-- Core Skills: {', '.join(candidate_data.get('core_skills', []))}
-- Secondary Skills: {', '.join(candidate_data.get('secondary_skills', []))}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Secondary Skills: {_format_skill_list(candidate_data.get('secondary_skills'))}
 - Primary Domain: {candidate_data.get('primary_domain', 'N/A')}
 - Summary: {candidate_data.get('summary', 'N/A')}
 - Semantic Similarity Score: {similarity_score:.2f}
@@ -134,8 +141,8 @@ Candidate Profile (from extraction model):
 - Seniority: {candidate_data.get('seniority', 'N/A')}
 - Current Title: {candidate_data.get('current_title', 'N/A')}
 - Years Experience: {candidate_data.get('years_experience', 'N/A')}
-- Core Skills: {', '.join(candidate_data.get('core_skills', []))}
-- Secondary Skills: {', '.join(candidate_data.get('secondary_skills', []))}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Secondary Skills: {_format_skill_list(candidate_data.get('secondary_skills'))}
 - Primary Domain: {candidate_data.get('primary_domain', 'N/A')}
 - Summary: {candidate_data.get('summary', 'N/A')}
 - Semantic Similarity Score: {similarity_score:.2f}
@@ -175,7 +182,8 @@ class MockLLMProvider:
         seniority = candidate_data.get("seniority", "mid")
         years_exp = candidate_data.get("years_experience", 0.0)
         current_title = candidate_data.get("current_title", "Engineer")
-        core_skills = candidate_data.get("core_skills", [])
+        raw_skills = candidate_data.get("core_skills")
+        core_skills = [str(s) for s in raw_skills] if isinstance(raw_skills, (list, tuple)) else []
         skills_str = ", ".join(core_skills[:3]) if core_skills else "relevant core competencies"
         pct = round(similarity_score * 100, 1)
 

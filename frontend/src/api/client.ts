@@ -39,7 +39,9 @@ import type {
   UnreadCountResponse,
 } from "./types";
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
+// Normalize localhost to 127.0.0.1 to eliminate macOS IPv6 ::1 ECONNREFUSED issues
+const BASE_URL = (rawBaseUrl ? rawBaseUrl.replace("localhost", "127.0.0.1") : "http://127.0.0.1:8000").replace(/\/$/, "");
 const TOKEN_KEY = "resumo_auth_token";
 
 export function getStoredToken(): string | null {
@@ -79,10 +81,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (networkErr: unknown) {
+    // If direct fetch to BASE_URL fails (e.g. cross-origin block or port mismatch), try relative path via Vite dev proxy
+    if (BASE_URL && (url.startsWith("http://") || url.startsWith("https://"))) {
+      try {
+        const relativePath = path.startsWith("/") ? path : `/${path}`;
+        response = await fetch(relativePath, {
+          ...options,
+          headers,
+        });
+      } catch {
+        const msg = networkErr instanceof Error ? networkErr.message : "Network error";
+        throw new ApiError(
+          0,
+          `Unable to connect to ReSumo backend server (${msg}). Please verify that the backend API is running on port 8000.`
+        );
+      }
+    } else {
+      const msg = networkErr instanceof Error ? networkErr.message : "Network error";
+      throw new ApiError(
+        0,
+        `Unable to connect to ReSumo backend server (${msg}). Please verify that the backend API is running on port 8000.`
+      );
+    }
+  }
 
   if (!response.ok) {
     let errorDetail = `Request failed with status ${response.status}`;
@@ -275,8 +303,11 @@ export const api = {
       body: JSON.stringify(req),
     }),
 
-  getOfferDownloadUrl: (offerId: string) =>
-    `${BASE_URL}/offers/${encodeURIComponent(offerId)}/download`,
+  getOfferDownloadUrl: (offerId: string) => {
+    const token = getStoredToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${BASE_URL}/offers/${encodeURIComponent(offerId)}/download${query}`;
+  },
 
   // Phase 5 Interviews & Scorecards
   submitInterviewScorecard: (payload: InterviewScorecardCreate) =>
@@ -348,8 +379,11 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  getScheduleIcsUrl: (scheduleId: string) =>
-    `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics`,
+  getScheduleIcsUrl: (scheduleId: string) => {
+    const token = getStoredToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics${query}`;
+  },
 
   // Phase 6 Notifications
   getMyNotifications: () =>
@@ -393,7 +427,10 @@ export const api = {
   getHiringPacket: (candidateId: string) =>
     request<HiringPacketResponse>(`/candidates/${encodeURIComponent(candidateId)}/hiring-packet`),
 
-  getHiringPacketDownloadUrl: (candidateId: string) =>
-    `${BASE_URL}/candidates/${encodeURIComponent(candidateId)}/hiring-packet/download`,
+  getHiringPacketDownloadUrl: (candidateId: string) => {
+    const token = getStoredToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${BASE_URL}/candidates/${encodeURIComponent(candidateId)}/hiring-packet/download${query}`;
+  },
 };
 
