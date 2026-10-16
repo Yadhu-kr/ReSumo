@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import type { Approval, ApproverRole, Candidate, Job, ApprovalPolicy } from "../../api/types";
+import type { Approval, ApproverRole, Candidate, Job, ApprovalPolicy, CandidateScorecardSummary } from "../../api/types";
 import { EscalationTracker } from "../../components/EscalationTracker";
 import { EmptyState } from "../../components/EmptyState";
+import { ConsensusReportView } from "../../components/ConsensusReportView";
 
 interface OutletContextType {
   refreshPendingCount?: () => void;
@@ -34,6 +35,7 @@ export const ApprovalsPage: React.FC = () => {
     vp: 0,
     ceo: 0,
   });
+  const [scorecardsMap, setScorecardsMap] = useState<Record<string, CandidateScorecardSummary>>({});
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +94,27 @@ export const ApprovalsPage: React.FC = () => {
         jMap[j.id] = j;
       });
       setJobsMap(jMap);
+
+      // Load candidate scorecards for dual consensus analysis
+      const candIds = Array.from(
+        new Set(
+          currentRolePending
+            .map((a) => a.application?.candidate_id || a.candidate_id)
+            .filter(Boolean) as string[]
+        )
+      );
+      const scMap: Record<string, CandidateScorecardSummary> = {};
+      await Promise.allSettled(
+        candIds.map(async (cid) => {
+          try {
+            const sc = await api.getCandidateScorecard(cid);
+            scMap[cid] = sc;
+          } catch {
+            // Ignore if scorecard not found or error
+          }
+        })
+      );
+      setScorecardsMap(scMap);
     } catch (err: unknown) {
       const msg = err instanceof ApiError ? err.detail : "Failed to load pending approvals";
       setError(msg);
@@ -462,6 +485,37 @@ export const ApprovalsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Hiring Manager Consensual Evaluation Report */}
+                  {(() => {
+                    const targetCandId = (candId || appr.candidate_id || "") as string;
+                    const targetScorecard = targetCandId ? scorecardsMap[targetCandId] : null;
+
+                    return (
+                      <div style={{ marginTop: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                          <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
+                            INTERVIEW CONSENSUS & EVALUATION DOSSIER
+                          </span>
+                          {targetScorecard?.total_evaluations ? (
+                            <span style={{ fontSize: "12px", color: "var(--accent-purple)", fontWeight: 600 }}>
+                              {targetScorecard.total_evaluations} Rubric Records
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                              Awaiting Rubric Submissions
+                            </span>
+                          )}
+                        </div>
+
+                        <ConsensusReportView
+                          scorecard={targetScorecard || null}
+                          candidateName={cand?.name}
+                          compact={false}
+                        />
+                      </div>
+                    );
+                  })()}
+
                   {/* Action Bar */}
                   <div
                     style={{
@@ -578,6 +632,26 @@ export const ApprovalsPage: React.FC = () => {
                   ? `Approving as ${activeRole.toUpperCase()} (Step ${selectedApproval.step_order}). If subsequent approval steps exist, candidate will advance to the next tier; otherwise status becomes APPROVED.`
                   : `Rejecting as ${activeRole.toUpperCase()} (Step ${selectedApproval.step_order}). This immediately HALTS the escalation chain and transitions candidate status to REJECTED.`}
               </div>
+
+              {/* Candidate Consensus Report Snapshot in Modal */}
+              {(() => {
+                const selCandId = selectedApproval.application?.candidate_id || selectedApproval.candidate_id;
+                const sc = selCandId ? scorecardsMap[selCandId] : null;
+                const cand = selCandId ? candidatesMap[selCandId] : null;
+                if (!sc || sc.total_evaluations === 0) return null;
+                return (
+                  <div>
+                    <label className="mono" style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", marginBottom: "6px" }}>
+                      EVALUATIVE CONSENSUS RECORD
+                    </label>
+                    <ConsensusReportView
+                      scorecard={sc}
+                      candidateName={cand?.name}
+                      compact={true}
+                    />
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="mono" style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>

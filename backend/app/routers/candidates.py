@@ -33,7 +33,7 @@ def list_candidates(
             query = query.join(models.Application).filter(models.Application.job_id == job_id)
         return query.order_by(models.Candidate.created_at.desc()).all()
 
-    if current_user.role in ("hr", "approver"):
+    if current_user.role in ("hr", "approver", "interviewer"):
         if job_id:
             job = db.query(models.Job).filter(models.Job.id == job_id).first()
             if not job or (current_user.company_id and job.company_id != current_user.company_id):
@@ -87,8 +87,8 @@ def get_candidate(
     if current_user.role == "candidate" and candidate.user_id != current_user.id and candidate.email != current_user.email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    # HR/approver can only see candidates with applications to their company OR unassigned pool candidates
-    if current_user.role in ("hr", "approver"):
+    # HR/approver/interviewer can only see candidates with applications to their company OR unassigned pool candidates
+    if current_user.role in ("hr", "approver", "interviewer"):
         has_company_app = (
             db.query(models.Application)
             .join(models.Job, models.Job.id == models.Application.job_id)
@@ -643,7 +643,7 @@ def get_candidate_timeline(
 def add_candidate_note(
     candidate_id: str,
     payload: schemas.CandidateNoteCreate,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """Adds an internal collaboration note to the candidate dossier."""
@@ -669,7 +669,7 @@ def add_candidate_note(
 def delete_candidate_note(
     candidate_id: str,
     note_id: str,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """Deletes an internal collaboration note."""

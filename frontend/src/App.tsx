@@ -11,11 +11,13 @@ import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AuthPage } from "./pages/AuthPage";
+import { InterviewerConsolePage } from "./pages/InterviewerConsolePage";
 
 /**
  * Smart index router that delivers the correct role landing view:
  * - Candidate -> CandidatePortalPage
  * - Approver -> Redirects to /approvals
+ * - Interviewer -> Redirects to /interviewer
  * - HR / Admin -> DashboardPage (Pipeline Kanban)
  */
 const HomeIndexRoute: React.FC = () => {
@@ -25,6 +27,9 @@ const HomeIndexRoute: React.FC = () => {
   }
   if (user?.role === "approver") {
     return <Navigate to="/approvals" replace />;
+  }
+  if (user?.role === "interviewer") {
+    return <Navigate to="/interviewer" replace />;
   }
   return <DashboardPage />;
 };
@@ -73,9 +78,17 @@ export const App: React.FC = () => {
               }
             />
             <Route
+              path="interviewer"
+              element={
+                <RoleRoute allowedRoles={["interviewer", "hr", "approver", "admin"]}>
+                  <InterviewerConsolePage />
+                </RoleRoute>
+              }
+            />
+            <Route
               path="candidates/:id"
               element={
-                <RoleRoute allowedRoles={["hr", "approver", "admin"]}>
+                <RoleRoute allowedRoles={["hr", "approver", "interviewer", "admin"]}>
                   <CandidateDetailPage />
                 </RoleRoute>
               }

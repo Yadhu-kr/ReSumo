@@ -6,16 +6,34 @@ export type RoleTier = "junior" | "mid" | "senior" | "exec";
 
 export type SeniorityLevel = "junior" | "mid" | "senior" | "lead" | "principal";
 
-export type UserRole = "candidate" | "hr" | "approver" | "admin";
+export type UserRole = "candidate" | "hr" | "approver" | "interviewer" | "admin";
 
 export interface User {
   id: string;
   email: string;
   name?: string | null;
   role: UserRole;
+  secondary_roles?: string[] | null;
   company_id?: string | null;
   approver_role?: ApproverRole | null;
   created_at: string;
+}
+
+export interface UserGovernance {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  secondary_roles?: string[] | null;
+  approver_role?: ApproverRole | null;
+  company_id?: string | null;
+  created_at: string;
+}
+
+export interface UserRoleGovernanceUpdate {
+  role?: string;
+  secondary_roles?: string[];
+  approver_role?: string;
 }
 
 export interface Company {
@@ -246,12 +264,14 @@ export interface DimensionScoreIn {
   dimension: string;
   score: number;
   notes?: string;
+  interview_type?: "technical" | "hr";
 }
 
 export interface InterviewScorecardCreate {
   candidate_id: string;
   application_id?: string;
   interviewer_name?: string;
+  interview_type?: "technical" | "hr";
   recommendation: InterviewRecommendation;
   overall_notes?: string;
   dimensions: DimensionScoreIn[];
@@ -264,6 +284,7 @@ export interface InterviewScore {
   interviewer_id?: string | null;
   interviewer_name?: string | null;
   dimension: string;
+  interview_type?: string | null;
   score: number;
   baseline_score?: number | null;
   finetuned_score?: number | null;
@@ -280,6 +301,17 @@ export interface CandidateScorecardSummary {
   recommendation_consensus: string;
   dimension_averages: Record<string, number>;
   scores: InterviewScore[];
+  // Dual Side-by-Side & Circular Consensus metrics
+  technical_score?: number | null;
+  technical_dimension_averages?: Record<string, number>;
+  technical_scores?: InterviewScore[];
+  technical_consensus?: string;
+  hr_score?: number | null;
+  hr_dimension_averages?: Record<string, number>;
+  hr_scores?: InterviewScore[];
+  hr_consensus?: string;
+  consensus_percentage?: number;
+  consensus_badge?: string;
 }
 
 // ---- AI Dynamic Interview Question Types ----

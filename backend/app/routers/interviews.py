@@ -23,7 +23,7 @@ def compute_scorecard_summary(
     scores: list[models.InterviewScore],
     application_id: Optional[str] = None,
 ) -> schemas.CandidateScorecardSummary:
-    """Helper to compute aggregate metrics across rubric dimensions."""
+    """Helper to compute aggregate metrics across rubric dimensions, with dual technical vs HR breakdown."""
     if not scores:
         return schemas.CandidateScorecardSummary(
             candidate_id=candidate_id,
@@ -33,6 +33,16 @@ def compute_scorecard_summary(
             recommendation_consensus="pending",
             dimension_averages={},
             scores=[],
+            technical_score=None,
+            technical_dimension_averages={},
+            technical_scores=[],
+            technical_consensus="pending",
+            hr_score=None,
+            hr_dimension_averages={},
+            hr_scores=[],
+            hr_consensus="pending",
+            consensus_percentage=0.0,
+            consensus_badge="Pending",
         )
 
     # Dimension averages
@@ -40,7 +50,18 @@ def compute_scorecard_summary(
     dim_counts: dict[str, int] = {}
     recommendations: list[str] = []
 
+    # Segregate technical vs HR scores
+    tech_scores: list[models.InterviewScore] = []
+    hr_scores: list[models.InterviewScore] = []
+    hr_dims = {"communication", "cultural_alignment", "role_fit", "leadership_potential", "culture_fit", "work_ethic"}
+
     for s in scores:
+        itype = getattr(s, "interview_type", None)
+        if itype == "hr" or (itype is None and s.dimension in hr_dims):
+            hr_scores.append(s)
+        else:
+            tech_scores.append(s)
+
         dim = s.dimension
         dim_totals[dim] = dim_totals.get(dim, 0.0) + s.score
         dim_counts[dim] = dim_counts.get(dim, 0) + 1
@@ -56,10 +77,51 @@ def compute_scorecard_summary(
 
     # Determine consensus recommendation (mode or strongest)
     if recommendations:
-        # Most frequent recommendation
         consensus = max(set(recommendations), key=recommendations.count)
     else:
         consensus = "hire" if avg_score >= 3.5 else "no_hire"
+
+    # Technical breakdown
+    tech_avg = round(sum(s.score for s in tech_scores) / len(tech_scores), 2) if tech_scores else None
+    tech_dim_totals: dict[str, float] = {}
+    tech_dim_counts: dict[str, int] = {}
+    tech_recs: list[str] = []
+    for s in tech_scores:
+        d = s.dimension
+        tech_dim_totals[d] = tech_dim_totals.get(d, 0.0) + s.score
+        tech_dim_counts[d] = tech_dim_counts.get(d, 0) + 1
+        if s.recommendation:
+            tech_recs.append(s.recommendation)
+    tech_dim_avgs = {d: round(tech_dim_totals[d] / tech_dim_counts[d], 2) for d in tech_dim_totals}
+    tech_consensus = max(set(tech_recs), key=tech_recs.count) if tech_recs else ("hire" if (tech_avg or 0) >= 3.5 else "pending")
+
+    # HR breakdown
+    hr_avg = round(sum(s.score for s in hr_scores) / len(hr_scores), 2) if hr_scores else None
+    hr_dim_totals: dict[str, float] = {}
+    hr_dim_counts: dict[str, int] = {}
+    hr_recs: list[str] = []
+    for s in hr_scores:
+        d = s.dimension
+        hr_dim_totals[d] = hr_dim_totals.get(d, 0.0) + s.score
+        hr_dim_counts[d] = hr_dim_counts.get(d, 0) + 1
+        if s.recommendation:
+            hr_recs.append(s.recommendation)
+    hr_dim_avgs = {d: round(hr_dim_totals[d] / hr_dim_counts[d], 2) for d in hr_dim_totals}
+    hr_consensus = max(set(hr_recs), key=hr_recs.count) if hr_recs else ("hire" if (hr_avg or 0) >= 3.5 else "pending")
+
+    # Consensual rating percentage (out of 5.0)
+    consensus_percentage = round((avg_score / 5.0) * 100, 1)
+
+    if avg_score >= 4.2 and ("hire" in consensus or "strong_hire" in consensus):
+        consensus_badge = "Strong Consensus"
+    elif avg_score >= 3.5:
+        consensus_badge = "Consensus Hire"
+    elif avg_score >= 2.8:
+        consensus_badge = "Divided Opinion"
+    elif avg_score > 0:
+        consensus_badge = "No Hire Consensus"
+    else:
+        consensus_badge = "Pending Evaluation"
 
     return schemas.CandidateScorecardSummary(
         candidate_id=candidate_id,
@@ -69,17 +131,28 @@ def compute_scorecard_summary(
         recommendation_consensus=consensus,
         dimension_averages=dim_averages,
         scores=[schemas.InterviewScoreOut.model_validate(s) for s in scores],
+        technical_score=tech_avg,
+        technical_dimension_averages=tech_dim_avgs,
+        technical_scores=[schemas.InterviewScoreOut.model_validate(s) for s in tech_scores],
+        technical_consensus=tech_consensus,
+        hr_score=hr_avg,
+        hr_dimension_averages=hr_dim_avgs,
+        hr_scores=[schemas.InterviewScoreOut.model_validate(s) for s in hr_scores],
+        hr_consensus=hr_consensus,
+        consensus_percentage=consensus_percentage,
+        consensus_badge=consensus_badge,
     )
 
 
 @router.post("/scorecards", response_model=schemas.CandidateScorecardSummary)
 def submit_interview_scorecard(
     payload: schemas.InterviewScorecardCreate,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """
     Submits a multi-dimensional rubric evaluation for a candidate.
+    Supports interview_type ("technical" vs "hr").
     Dimensions include: technical_depth, system_design, communication, cultural_alignment, role_fit.
     """
     candidate = db.query(models.Candidate).filter(models.Candidate.id == payload.candidate_id).first()
@@ -116,6 +189,7 @@ def submit_interview_scorecard(
             interviewer_id=current_user.id,
             interviewer_name=interviewer_name,
             dimension=dim_in.dimension,
+            interview_type=dim_in.interview_type or payload.interview_type or "technical",
             score=dim_in.score,
             recommendation=payload.recommendation,
             notes=dim_in.notes or payload.overall_notes,
@@ -140,7 +214,7 @@ def submit_interview_scorecard(
 def get_candidate_scorecard(
     candidate_id: str,
     application_id: Optional[str] = None,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """Retrieves all rubric scores, dimension averages, and recommendation consensus for a candidate."""
@@ -162,7 +236,7 @@ def get_candidate_scorecard(
 @router.get("/application/{application_id}", response_model=schemas.CandidateScorecardSummary)
 def get_application_scorecard(
     application_id: str,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """Retrieves rubric scorecard scoped to a specific application."""
@@ -185,7 +259,7 @@ def get_application_scorecard(
 @router.delete("/{score_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_interview_score(
     score_id: str,
-    current_user: models.User = Depends(require_role("hr", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "admin")),
     db: Session = Depends(get_db),
 ):
     """Deletes an interview score entry."""
@@ -208,7 +282,7 @@ def delete_interview_score(
 @router.post("/generate-questions", response_model=schemas.GenerateInterviewQuestionsResponse)
 def generate_interview_questions(
     payload: schemas.GenerateInterviewQuestionsRequest,
-    current_user: models.User = Depends(require_role("hr", "approver", "admin")),
+    current_user: models.User = Depends(require_role("hr", "interviewer", "approver", "admin")),
     db: Session = Depends(get_db),
 ):
     """

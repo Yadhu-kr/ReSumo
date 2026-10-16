@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
-from app.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,6 +23,7 @@ def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
     - candidate: no company required.
     - hr: requires company_name (creates new) or company_id (joins existing).
     - approver: requires company_id + approver_role.
+    - interviewer: optionally joins existing company_id or defaults to platform company.
     - admin: self-registration allowed.
     """
     # Check duplicate email
@@ -64,6 +65,18 @@ def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Approver role requires approver_role (hiring_manager/director/vp/ceo)",
             )
+    elif payload.role == "interviewer":
+        if payload.company_id:
+            company = db.query(models.Company).filter(models.Company.id == payload.company_id).first()
+            if not company:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Company with id '{payload.company_id}' not found",
+                )
+            company_id = company.id
+        else:
+            first_co = db.query(models.Company).first()
+            company_id = first_co.id if first_co else None
 
     user = models.User(
         email=payload.email,
@@ -130,6 +143,48 @@ def update_me(
     return current_user
 
 
+# ---- Admin Multi-Role Governance Endpoints ----
+
+@router.get("/governance/users", response_model=list[schemas.UserGovernanceOut])
+def list_governance_users(
+    current_user: models.User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: Retrieve all registered users for multi-role governance inspection."""
+    users = db.query(models.User).order_by(models.User.created_at.desc()).all()
+    return users
+
+
+@router.patch("/governance/users/{user_id}/roles", response_model=schemas.UserGovernanceOut)
+def update_user_roles_governance(
+    user_id: str,
+    payload: schemas.UserRoleGovernanceUpdate,
+    current_user: models.User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin-only: Update a user's primary role, secondary roles, and approver tier
+    to empower cross-functional governance and future role expansion.
+    """
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{user_id}' not found",
+        )
+
+    if payload.role is not None:
+        user.role = payload.role
+    if payload.secondary_roles is not None:
+        user.secondary_roles = payload.secondary_roles
+    if payload.approver_role is not None:
+        user.approver_role = payload.approver_role
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def seed_demo_users_if_empty(db: Session):
     """Ensure standard demo accounts exist for interactive evaluation."""
     try:
@@ -146,6 +201,7 @@ def seed_demo_users_if_empty(db: Session):
             ("director@resumo.ai", "Elena Rostova", "approver", company.id, "director"),
             ("vp@resumo.ai", "Marcus Vance", "approver", company.id, "vp"),
             ("admin@resumo.ai", "System Administrator", "admin", company.id, None),
+            ("interviewer@resumo.ai", "Liam Vance", "interviewer", company.id, None),
         ]
 
         for email, name, role, cid, app_role in default_users:
@@ -158,6 +214,7 @@ def seed_demo_users_if_empty(db: Session):
                     role=role,
                     company_id=cid,
                     approver_role=app_role,
+                    secondary_roles=[],
                 )
                 db.add(user)
             elif not user.name:

@@ -67,6 +67,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
           navigate("/portal", { replace: true });
         } else if (me.role === "approver") {
           navigate("/approvals", { replace: true });
+        } else if (me.role === "interviewer") {
+          navigate("/interviewer", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
@@ -78,6 +80,38 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
         setError(err.message);
       } else {
         setError("Invalid email or password. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (demoEmail: string, demoPass: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setError(null);
+    setLoading(true);
+    try {
+      await login({ email: demoEmail, password: demoPass });
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        const me = await api.getMe();
+        if (me.role === "candidate") {
+          navigate("/portal", { replace: true });
+        } else if (me.role === "approver") {
+          navigate("/approvals", { replace: true });
+        } else if (me.role === "interviewer") {
+          navigate("/interviewer", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.detail);
+      } else {
+        setError("Demo login failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -158,12 +192,23 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                   navigate("/portal");
                 } else if (user.role === "approver") {
                   navigate("/approvals");
+                } else if (user.role === "interviewer") {
+                  navigate("/interviewer");
                 } else {
                   navigate("/");
                 }
               }}
             >
-              <span>Go to {user.role === "candidate" ? "Candidate Portal" : "Dashboard"}</span>
+              <span>
+                Go to{" "}
+                {user.role === "candidate"
+                  ? "Candidate Portal"
+                  : user.role === "interviewer"
+                  ? "Interview Console"
+                  : user.role === "approver"
+                  ? "Approvals Queue"
+                  : "Dashboard"}
+              </span>
               <ArrowRight size={14} />
             </button>
             <button
@@ -352,19 +397,15 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
               </button>
             </form>
 
-            {/* Demo Helper & Autofill Shortcuts */}
+            {/* Demo Helper & 1-Click Login Shortcuts */}
             <div className="as-demo-helper">
-              <span className="as-demo-label">Demo credentials autofill:</span>
+              <span className="as-demo-label">1-Click Demo Login Shortcuts:</span>
               <div className="as-demo-links">
                 <button
                   type="button"
                   className="as-demo-fill-btn"
-                  onClick={() => {
-                    setEmail("hr@resumo.ai");
-                    setPassword("Password123!");
-                    setError(null);
-                  }}
-                  title="Autofill Recruiter credentials"
+                  onClick={() => handleQuickLogin("hr@resumo.ai", "Password123!")}
+                  title="1-Click Login as Recruiter / Talent Ops"
                 >
                   Recruiter
                 </button>
@@ -372,25 +413,26 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                 <button
                   type="button"
                   className="as-demo-fill-btn"
-                  onClick={() => {
-                    setEmail("approver@resumo.ai");
-                    setPassword("Password123!");
-                    setError(null);
-                  }}
-                  title="Autofill Approver (Hiring Manager) credentials"
+                  onClick={() => handleQuickLogin("interviewer@resumo.ai", "Password123!")}
+                  title="1-Click Login as Technical Interviewer"
                 >
-                  Approver
+                  Interviewer
                 </button>
                 <span className="as-demo-sep">·</span>
                 <button
                   type="button"
                   className="as-demo-fill-btn"
-                  onClick={() => {
-                    setEmail("admin@resumo.ai");
-                    setPassword("Password123!");
-                    setError(null);
-                  }}
-                  title="Autofill System Administrator credentials"
+                  onClick={() => handleQuickLogin("approver@resumo.ai", "Password123!")}
+                  title="1-Click Login as Hiring Manager (Approver)"
+                >
+                  Hiring Manager
+                </button>
+                <span className="as-demo-sep">·</span>
+                <button
+                  type="button"
+                  className="as-demo-fill-btn"
+                  onClick={() => handleQuickLogin("admin@resumo.ai", "Password123!")}
+                  title="1-Click Login as System Administrator"
                 >
                   Administrator
                 </button>
@@ -398,12 +440,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                 <button
                   type="button"
                   className="as-demo-fill-btn"
-                  onClick={() => {
-                    setEmail("candidate@resumo.ai");
-                    setPassword("Password123!");
-                    setError(null);
-                  }}
-                  title="Autofill Candidate credentials"
+                  onClick={() => handleQuickLogin("candidate@resumo.ai", "Password123!")}
+                  title="1-Click Login as Candidate (Alex Rivera)"
                 >
                   Candidate
                 </button>

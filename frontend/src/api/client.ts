@@ -39,6 +39,8 @@ import type {
   UnreadCountResponse,
   GenerateInterviewQuestionsRequest,
   GenerateInterviewQuestionsResponse,
+  UserGovernance,
+  UserRoleGovernanceUpdate,
 } from "./types";
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -394,6 +396,12 @@ export const api = {
     return `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics${query}`;
   },
 
+  getIcsDownloadUrl: (scheduleId: string) => {
+    const token = getStoredToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics${query}`;
+  },
+
   // Phase 6 Notifications
   getMyNotifications: () =>
     request<AppNotification[]>("/notifications/me"),
@@ -441,5 +449,15 @@ export const api = {
     const query = token ? `?token=${encodeURIComponent(token)}` : "";
     return `${BASE_URL}/candidates/${encodeURIComponent(candidateId)}/hiring-packet/download${query}`;
   },
+
+  // Admin Governance & Multi-Role Expansion
+  listGovernanceUsers: () =>
+    request<UserGovernance[]>("/auth/governance/users"),
+
+  updateUserRolesGovernance: (userId: string, payload: UserRoleGovernanceUpdate) =>
+    request<UserGovernance>(`/auth/governance/users/${encodeURIComponent(userId)}/roles`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
 };
 

@@ -20,6 +20,8 @@ export function getUserDisplayName(
 
   // Demo accounts standard persona mapping
   switch (email) {
+    case "interviewer@resumo.ai":
+      return "Liam Vance";
     case "hr@resumo.ai":
       return "Sarah Jenkins";
     case "admin@resumo.ai":
@@ -65,30 +67,32 @@ export function getUserInitials(
 
 /**
  * Returns human-readable role labels matching the new design language:
+ * - "interviewer" -> "Technical Interviewer"
  * - "hr" -> "Recruiter"
  * - "admin" -> "Administrator"
  * - "candidate" -> "Candidate"
- * - "approver" -> "Approver ({tier})"
+ * - "approver" -> "Hiring Manager"
  */
 export function getRoleBadgeLabel(
   role?: UserRole | string,
   approverRole?: ApproverRole | string | null
 ): string {
   if (role === "candidate") return "Candidate";
+  if (role === "interviewer") return "Technical Interviewer";
   if (role === "hr") return "Recruiter";
   if (role === "admin") return "System Administrator";
   if (role === "approver") {
     switch (approverRole) {
       case "hiring_manager":
-        return "Approver (Hiring Mgr)";
+        return "Hiring Manager";
       case "director":
-        return "Approver (Director)";
+        return "Director Approver";
       case "vp":
-        return "Approver (VP)";
+        return "VP Approver";
       case "ceo":
-        return "Approver (CEO)";
+        return "CEO Approver";
       default:
-        return "Approver";
+        return "Hiring Manager";
     }
   }
   return "Member";

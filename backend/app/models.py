@@ -52,9 +52,10 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
-    role = Column(String, nullable=False)  # candidate / hr / approver / admin
+    role = Column(String, nullable=False)  # candidate / hr / approver / interviewer / admin
+    secondary_roles = Column(JSON, nullable=True, default=list)  # multi-role expansion e.g. ["interviewer", "approver"]
     company_id = Column(UUID_TYPE, ForeignKey("companies.id"), nullable=True)
-    # Only meaningful when role == "approver":
+    # Only meaningful when role == "approver" or "hiring_manager":
     approver_role = Column(String, nullable=True)  # hiring_manager / director / vp / ceo
     created_at = Column(DateTime, default=utc_now)
 
@@ -207,6 +208,7 @@ class InterviewScore(Base):
     interviewer_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=True)
     interviewer_name = Column(String, nullable=True)
     dimension = Column(String, nullable=False)  # technical_depth/communication/role_fit/system_design/cultural_alignment
+    interview_type = Column(String, default="technical", nullable=True)  # technical / hr
     score = Column(Float, nullable=False, default=3.0)  # 1.0 to 5.0
     baseline_score = Column(Float, nullable=True)
     finetuned_score = Column(Float, nullable=True)

@@ -23,6 +23,18 @@ async def lifespan(app: FastAPI):
                 conn.commit()
         except Exception:
             pass
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN secondary_roles JSON"))
+                conn.commit()
+        except Exception:
+            pass
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE interview_scores ADD COLUMN interview_type TEXT DEFAULT 'technical'"))
+                conn.commit()
+        except Exception:
+            pass
         db = SessionLocal()
         seed_default_policies_if_empty(db)
         seed_demo_users_if_empty(db)

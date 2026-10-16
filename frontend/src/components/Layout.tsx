@@ -3,8 +3,9 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { getUserDisplayName, getUserInitials, getRoleBadgeLabel, getAvatarGradient } from "../lib/user";
-import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox, Briefcase, FileText, Compass } from "lucide-react";
+import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox, Briefcase, FileText, Compass, Terminal, Key } from "lucide-react";
 import type { AppNotification } from "../api/types";
+import { AdminGovernanceModal } from "./AdminGovernanceModal";
 
 export const Layout: React.FC = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
@@ -12,6 +13,7 @@ export const Layout: React.FC = () => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notifMenuOpen, setNotifMenuOpen] = useState<boolean>(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [adminGovernanceOpen, setAdminGovernanceOpen] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
@@ -129,6 +131,7 @@ export const Layout: React.FC = () => {
 
   const isCandidate = user?.role === "candidate";
   const isApprover = user?.role === "approver";
+  const isInterviewer = user?.role === "interviewer";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "var(--bg-canvas)" }}>
@@ -152,7 +155,7 @@ export const Layout: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "36px" }}>
           {/* Brand Logo */}
           <Link
-            to={isCandidate ? "/portal" : isApprover ? "/approvals" : "/"}
+            to={isCandidate ? "/portal" : isApprover ? "/approvals" : isInterviewer ? "/interviewer" : "/"}
             style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}
           >
             <span
@@ -199,7 +202,7 @@ export const Layout: React.FC = () => {
                   border: "1px solid var(--border-subtle)",
                 }}
               >
-                {isCandidate ? "CANDIDATE PORTAL" : isApprover ? "GOVERNANCE" : "TALENT OPS"}
+                {isCandidate ? "CANDIDATE PORTAL" : isApprover ? "GOVERNANCE" : isInterviewer ? "INTERVIEW CONSOLE" : "TALENT OPS"}
               </span>
             </div>
           </Link>
@@ -309,6 +312,51 @@ export const Layout: React.FC = () => {
                   <span>Job Requisitions</span>
                 </NavLink>
               </>
+            ) : isInterviewer ? (
+              // Interviewer Navigation
+              <>
+                <NavLink
+                  to="/interviewer"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <Terminal size={15} />
+                  <span>Technical Interview Console</span>
+                </NavLink>
+
+                <NavLink
+                  to="/jobs"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <Briefcase size={15} />
+                  <span>Job Requisitions</span>
+                </NavLink>
+              </>
             ) : (
               // HR & Admin Navigation
               <>
@@ -354,6 +402,27 @@ export const Layout: React.FC = () => {
                   <span>Requisitions & Matching</span>
                 </NavLink>
 
+                <NavLink
+                  to="/interviewer"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <Terminal size={15} />
+                  <span>Interview Console</span>
+                </NavLink>
+
                 {(user?.role === "admin" || user?.role === "hr") && (
                   <NavLink
                     to="/approvals"
@@ -396,6 +465,31 @@ export const Layout: React.FC = () => {
 
         {/* Status & User Bar */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {/* Admin Multi-Role Governance Shortcut */}
+          {user?.role === "admin" && (
+            <button
+              type="button"
+              onClick={() => setAdminGovernanceOpen(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: "var(--accent-purple-subtle)",
+                border: "1px solid var(--accent-purple-border)",
+                color: "var(--accent-purple)",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Key size={13} />
+              <span>Multi-Role Governance</span>
+            </button>
+          )}
+
           {/* API Health */}
           <div
             style={{
@@ -931,6 +1025,61 @@ export const Layout: React.FC = () => {
                       </Link>
                     )}
 
+                    {(user.role === "interviewer" || user.role === "admin" || user.role === "hr" || user.secondary_roles?.includes("interviewer")) && (
+                      <Link
+                        to="/interviewer"
+                        onClick={() => setProfileMenuOpen(false)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-sm)",
+                          color: "var(--text-primary)",
+                          fontSize: "13.5px",
+                          fontWeight: 500,
+                          textDecoration: "none",
+                          transition: "background-color 0.12s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        <Terminal size={16} style={{ color: "var(--accent-purple)" }} />
+                        <span>Technical Interview Console</span>
+                      </Link>
+                    )}
+
+                    {user.role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          setAdminGovernanceOpen(true);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "none",
+                          backgroundColor: "transparent",
+                          color: "var(--text-primary)",
+                          fontSize: "13.5px",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "background-color 0.12s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        <Key size={16} style={{ color: "var(--accent-purple)" }} />
+                        <span>Multi-Role Governance</span>
+                      </button>
+                    )}
+
                     <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "6px 0" }} />
 
                     {/* Sign Out Action */}
@@ -988,6 +1137,12 @@ export const Layout: React.FC = () => {
       <main style={{ flex: 1, padding: "32px 36px", maxWidth: "1560px", margin: "0 auto", width: "100%" }}>
         <Outlet context={{ refreshPendingCount: checkStatus }} />
       </main>
+
+      {/* Enterprise Multi-Role Admin Governance Modal */}
+      <AdminGovernanceModal
+        isOpen={adminGovernanceOpen}
+        onClose={() => setAdminGovernanceOpen(false)}
+      />
     </div>
   );
 };

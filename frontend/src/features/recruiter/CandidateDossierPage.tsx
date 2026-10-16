@@ -22,6 +22,7 @@ import type {
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
 import { EmptyState } from "../../components/EmptyState";
+import { ConsensusReportView } from "../../components/ConsensusReportView";
 import { useAuth } from "../../context/AuthContext";
 import {
   Gift,
@@ -117,6 +118,7 @@ export const CandidateDossierPage: React.FC = () => {
   const [scorecardSuccess, setScorecardSuccess] = useState<string | null>(null);
   const [scorecardForm, setScorecardForm] = useState<{
     interviewer_name: string;
+    interview_type: "hr" | "technical";
     recommendation: "strong_hire" | "hire" | "lean_hire" | "lean_no_hire" | "no_hire";
     overall_notes: string;
     technical_depth: number;
@@ -126,6 +128,7 @@ export const CandidateDossierPage: React.FC = () => {
     role_fit: number;
   }>({
     interviewer_name: "",
+    interview_type: "hr",
     recommendation: "hire",
     overall_notes: "",
     technical_depth: 4.0,
@@ -390,14 +393,15 @@ export const CandidateDossierPage: React.FC = () => {
         candidate_id: id,
         application_id: activeApp?.id,
         interviewer_name: scorecardForm.interviewer_name || undefined,
+        interview_type: scorecardForm.interview_type,
         recommendation: scorecardForm.recommendation,
         overall_notes: scorecardForm.overall_notes || undefined,
         dimensions: [
-          { dimension: "technical_depth", score: Number(scorecardForm.technical_depth) },
-          { dimension: "system_design", score: Number(scorecardForm.system_design) },
-          { dimension: "communication", score: Number(scorecardForm.communication) },
-          { dimension: "cultural_alignment", score: Number(scorecardForm.cultural_alignment) },
-          { dimension: "role_fit", score: Number(scorecardForm.role_fit) },
+          { dimension: "technical_depth", score: Number(scorecardForm.technical_depth), interview_type: scorecardForm.interview_type },
+          { dimension: "system_design", score: Number(scorecardForm.system_design), interview_type: scorecardForm.interview_type },
+          { dimension: "communication", score: Number(scorecardForm.communication), interview_type: scorecardForm.interview_type },
+          { dimension: "cultural_alignment", score: Number(scorecardForm.cultural_alignment), interview_type: scorecardForm.interview_type },
+          { dimension: "role_fit", score: Number(scorecardForm.role_fit), interview_type: scorecardForm.interview_type },
         ],
       };
       const updated = await api.submitInterviewScorecard(payload);
@@ -1602,141 +1606,12 @@ export const CandidateDossierPage: React.FC = () => {
 
             {activeTab === "scorecard" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {/* Scorecard Summary Card */}
-                <div
-                  style={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "14px",
-                    border: "1px solid var(--border-subtle)",
-                    padding: "20px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Star size={18} color="#f59e0b" fill="#f59e0b" />
-                        <span>Interview Consensus & Rubric Evaluation</span>
-                      </h4>
-                      <p style={{ margin: "4px 0 0", fontSize: "12.5px", color: "var(--text-muted)" }}>
-                        Multi-dimensional rubric scoring across technical mastery, system design, and role fit.
-                      </p>
-                    </div>
-
-                    {scorecard && scorecard.total_evaluations > 0 ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div style={{ textAlign: "right" }}>
-                          <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block" }}>
-                            OVERALL RATING
-                          </span>
-                          <span style={{ fontSize: "20px", fontWeight: 800, color: "#b45309" }}>
-                            {scorecard.average_score} <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>/ 5.0</span>
-                          </span>
-                        </div>
-                        <span
-                          className="mono"
-                          style={{
-                            fontSize: "11px",
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            backgroundColor: scorecard.recommendation_consensus.includes("hire") ? "var(--status-approved-bg)" : "var(--status-rejected-bg)",
-                            color: scorecard.recommendation_consensus.includes("hire") ? "var(--status-approved-text)" : "var(--status-rejected-text)",
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {scorecard.recommendation_consensus.replace("_", " ")}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="badge badge-neutral">PENDING EVALUATION</span>
-                    )}
-                  </div>
-
-                  {/* Dimension Bars */}
-                  {scorecard && Object.keys(scorecard.dimension_averages).length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "14px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
-                      {Object.entries(scorecard.dimension_averages).map(([dim, score]) => {
-                        const dimLabels: Record<string, string> = {
-                          technical_depth: "Technical Depth",
-                          system_design: "System Design",
-                          communication: "Communication",
-                          cultural_alignment: "Cultural Alignment",
-                          role_fit: "Role & Experience Fit",
-                        };
-                        return (
-                          <div key={dim} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
-                              <span style={{ fontWeight: 600, color: "var(--text-secondary)" }}>{dimLabels[dim] || dim}</span>
-                              <span className="mono" style={{ fontWeight: 700, color: "#b45309" }}>{score} / 5.0</span>
-                            </div>
-                            <div style={{ height: "6px", backgroundColor: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                              <div
-                                style={{
-                                  height: "100%",
-                                  width: `${(score / 5.0) * 100}%`,
-                                  backgroundColor: "#f59e0b",
-                                  borderRadius: "3px",
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Previous Evaluator Records */}
-                  {scorecard && scorecard.scores.length > 0 && (
-                    <div>
-                      <span className="mono" style={{ fontSize: "10.5px", color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
-                        EVALUATION RECORDS ({scorecard.scores.length})
-                      </span>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {scorecard.scores.map((s) => (
-                          <div
-                            key={s.id}
-                            style={{
-                              padding: "10px 14px",
-                              borderRadius: "8px",
-                              backgroundColor: "#ffffff",
-                              border: "1px solid var(--border-subtle)",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ fontWeight: 600, fontSize: "13px" }}>
-                                  {s.dimension.replace("_", " ").toUpperCase()}
-                                </span>
-                                <span className="mono" style={{ fontSize: "11px", color: "#b45309", fontWeight: 700 }}>
-                                  {s.score}★
-                                </span>
-                                {s.recommendation && (
-                                  <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                                    [{s.recommendation.replace("_", " ").toUpperCase()}]
-                                  </span>
-                                )}
-                              </div>
-                              {s.notes && (
-                                <p style={{ margin: "3px 0 0", fontSize: "12px", color: "var(--text-secondary)", fontStyle: "italic" }}>
-                                  "{s.notes}"
-                                </p>
-                              )}
-                            </div>
-                            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                              {s.interviewer_name || "Interviewer"} • {new Date(s.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Consensual Circular Indicator & Side-by-Side Evaluation Reports */}
+                <ConsensusReportView
+                  scorecard={scorecard}
+                  candidateName={candidate?.name}
+                  compact={false}
+                />
 
                 {/* AI Interview Question Generator */}
                 <div
@@ -2180,7 +2055,21 @@ export const CandidateDossierPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                        Evaluation Track
+                      </label>
+                      <select
+                        value={scorecardForm.interview_type}
+                        onChange={(e) => setScorecardForm({ ...scorecardForm, interview_type: e.target.value as "hr" | "technical" })}
+                        style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px" }}
+                      >
+                        <option value="hr">👥 HR & People Evaluation</option>
+                        <option value="technical">🛠️ Technical Interview Track</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
                         Interviewer Name / Title

@@ -8,7 +8,7 @@ from typing import Optional, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
 RoleTier = Literal["junior", "mid", "senior", "exec"]
-UserRole = Literal["candidate", "hr", "approver", "admin"]
+UserRole = Literal["candidate", "hr", "approver", "interviewer", "admin"]
 ApproverRole = Literal["hiring_manager", "director", "vp", "ceo"]
 ApplicationStatus = Literal[
     "uploaded",
@@ -59,9 +59,29 @@ class UserOut(BaseModel):
     email: str
     name: Optional[str] = None
     role: str
+    secondary_roles: Optional[list[str]] = None
     company_id: Optional[str] = None
     approver_role: Optional[str] = None
     created_at: datetime
+
+
+class UserGovernanceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    name: Optional[str] = None
+    role: str
+    secondary_roles: Optional[list[str]] = None
+    approver_role: Optional[str] = None
+    company_id: Optional[str] = None
+    created_at: datetime
+
+
+class UserRoleGovernanceUpdate(BaseModel):
+    role: Optional[str] = None
+    secondary_roles: Optional[list[str]] = None
+    approver_role: Optional[str] = None
 
 
 # ---- Companies ----
@@ -316,12 +336,14 @@ class DimensionScoreIn(BaseModel):
     dimension: str
     score: float = Field(..., ge=1.0, le=5.0)
     notes: Optional[str] = None
+    interview_type: Optional[Literal["technical", "hr"]] = None
 
 
 class InterviewScorecardCreate(BaseModel):
     candidate_id: str
     application_id: Optional[str] = None
     interviewer_name: Optional[str] = None
+    interview_type: Literal["technical", "hr"] = "technical"
     recommendation: InterviewRecommendation = "hire"
     overall_notes: Optional[str] = None
     dimensions: list[DimensionScoreIn]
@@ -334,6 +356,7 @@ class InterviewScoreOut(BaseModel):
     interviewer_id: Optional[str] = None
     interviewer_name: Optional[str] = None
     dimension: str
+    interview_type: Optional[str] = "technical"
     score: float
     baseline_score: Optional[float] = None
     finetuned_score: Optional[float] = None
@@ -352,6 +375,17 @@ class CandidateScorecardSummary(BaseModel):
     recommendation_consensus: str
     dimension_averages: dict[str, float]
     scores: list[InterviewScoreOut]
+    # Dual Side-by-Side & Circular Consensus metrics
+    technical_score: Optional[float] = None
+    technical_dimension_averages: dict[str, float] = {}
+    technical_scores: list[InterviewScoreOut] = []
+    technical_consensus: str = "pending"
+    hr_score: Optional[float] = None
+    hr_dimension_averages: dict[str, float] = {}
+    hr_scores: list[InterviewScoreOut] = []
+    hr_consensus: str = "pending"
+    consensus_percentage: float = 0.0
+    consensus_badge: str = "Pending"
 
 
 # ---- AI Dynamic Interview Question Schemas ----

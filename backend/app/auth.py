@@ -107,7 +107,13 @@ def require_role(*roles: str) -> Callable:
             ...
     """
     def role_checker(current_user: models.User = Depends(get_current_user)) -> models.User:
-        if current_user.role not in roles:
+        user_roles = {current_user.role}
+        if current_user.secondary_roles and isinstance(current_user.secondary_roles, list):
+            user_roles.update(current_user.secondary_roles)
+        if current_user.approver_role:
+            user_roles.add(current_user.approver_role)
+
+        if not user_roles.intersection(roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied. Required role(s): {', '.join(roles)}. Your role: {current_user.role}",

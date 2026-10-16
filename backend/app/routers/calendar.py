@@ -83,10 +83,10 @@ def schedule_interview(
     Schedule an interview round for a candidate.
     Dispatches automated calendar notifications to candidate and interviewer.
     """
-    if current_user.role not in ("hr", "admin", "approver"):
+    if current_user.role not in ("hr", "admin", "approver", "interviewer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only recruiters, approvers, or admins can schedule interviews",
+            detail="Only recruiters, interviewers, approvers, or admins can schedule interviews",
         )
 
     candidate = db.query(models.Candidate).filter(models.Candidate.id == payload.candidate_id).first()
