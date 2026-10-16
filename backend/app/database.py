@@ -61,6 +61,15 @@ def ensure_schema_compatibility(target_engine):
             if cand_cols and "parsed_status" not in cand_cols:
                 conn.execute(text("ALTER TABLE candidates ADD COLUMN parsed_status VARCHAR DEFAULT 'uploaded'"))
                 conn.commit()
+            if cand_cols and "phone" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN phone VARCHAR"))
+                conn.commit()
+
+            # Check users table
+            user_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+            if user_cols and "name" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN name TEXT"))
+                conn.commit()
 
             # Check offers table
             offer_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(offers)")).fetchall()]

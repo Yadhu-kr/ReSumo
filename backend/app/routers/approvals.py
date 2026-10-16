@@ -47,12 +47,13 @@ def seed_default_policies_if_empty(db: Session) -> None:
 @router.get("/pending", response_model=list[schemas.ApprovalOut])
 def list_pending_approvals(
     role: Optional[str] = None,
-    current_user: models.User = Depends(require_role("approver", "admin")),
+    current_user: models.User = Depends(require_role("approver", "admin", "hr")),
     db: Session = Depends(get_db),
 ):
     """
     Lists pending approval tasks. Role and company come from the authenticated user:
     - Approvers see only pending approvals matching their approver_role, scoped to their company's jobs.
+    - HR sees pending approvals scoped to their company.
     - Admins see all pending approvals or filter by the optional role parameter.
     """
     query = db.query(models.Approval).filter(models.Approval.action == "pending")
@@ -70,6 +71,16 @@ def list_pending_approvals(
                 .join(models.Job, models.Job.id == models.Application.job_id)
                 .filter(models.Job.company_id == current_user.company_id)
             )
+    elif current_user.role == "hr":
+        if current_user.company_id:
+            query = (
+                query
+                .join(models.Application, models.Application.id == models.Approval.application_id)
+                .join(models.Job, models.Job.id == models.Application.job_id)
+                .filter(models.Job.company_id == current_user.company_id)
+            )
+        if role:
+            query = query.filter(models.Approval.approver_role == role)
     elif current_user.role == "admin" and role:
         query = query.filter(models.Approval.approver_role == role)
 
