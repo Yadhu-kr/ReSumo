@@ -30,6 +30,9 @@ import type {
   OnboardingTaskUpdate,
   OnboardingTask,
   OnboardingSummary,
+  InterviewSchedule,
+  InterviewScheduleCreate,
+  AppNotification,
 } from "./types";
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -317,5 +320,50 @@ export const api = {
   verifyOnboardingTask: (taskId: string) =>
     request<OnboardingTask>(`/onboarding/tasks/${encodeURIComponent(taskId)}/verify`, {
       method: "POST",
+    }),
+
+  // Phase 6 Interview Calendar
+  scheduleInterview: (payload: InterviewScheduleCreate) =>
+    request<InterviewSchedule>("/calendar/schedule", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getCandidateSchedules: (candidateId: string) =>
+    request<InterviewSchedule[]>(`/calendar/candidate/${encodeURIComponent(candidateId)}`),
+
+  getApplicationSchedules: (applicationId: string) =>
+    request<InterviewSchedule[]>(`/calendar/application/${encodeURIComponent(applicationId)}`),
+
+  getMySchedules: () =>
+    request<InterviewSchedule[]>("/calendar/my-schedules"),
+
+  updateSchedule: (scheduleId: string, payload: { status?: string; meeting_link?: string; notes?: string }) =>
+    request<InterviewSchedule>(`/calendar/schedules/${encodeURIComponent(scheduleId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  getScheduleIcsUrl: (scheduleId: string) =>
+    `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics`,
+
+  // Phase 6 Notifications
+  getMyNotifications: () =>
+    request<AppNotification[]>("/notifications/me"),
+
+  markNotificationRead: (notificationId: string) =>
+    request<AppNotification>(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+      method: "PATCH",
+    }),
+
+  markAllNotificationsRead: () =>
+    request<{ message: string }>("/notifications/mark-all-read", {
+      method: "POST",
+    }),
+
+  sendTestEmail: (payload: { recipient_email: string; subject: string; message: string }) =>
+    request<AppNotification>("/notifications/test-email", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 };

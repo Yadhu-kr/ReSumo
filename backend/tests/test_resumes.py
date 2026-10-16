@@ -26,9 +26,9 @@ def test_upload_resume_mock_extraction_enabled(client, candidate_auth, monkeypat
     candidate = candidate_res.json()
     assert candidate["raw_resume_filename"] == "jane_doe.txt"
     assert candidate["raw_text"] == resume_text
-    # Name and email are not in the extraction model schema (handled separately)
-    assert candidate["name"] is None
-    assert candidate["email"] is None
+    # Name and email extracted from resume / linked user account
+    assert candidate["name"] == "Jane Doe"
+    assert candidate["email"] == "candidate@test.com"
 
     # Verify parsed_data conforms to integration contract
     parsed = candidate["parsed_data"]

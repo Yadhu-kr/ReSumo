@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_role
+from app.services.notifications import notify_onboarding_verified
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -294,4 +295,18 @@ def verify_onboarding_task(
 
     db.commit()
     db.refresh(task)
+
+    try:
+        cand = db.query(models.Candidate).filter(models.Candidate.id == task.candidate_id).first()
+        cand_email = (cand.email if cand else None) or (cand.user.email if cand and cand.user else None)
+        if cand and cand_email:
+            notify_onboarding_verified(
+                db=db,
+                task=task,
+                candidate=cand,
+                candidate_email=cand_email,
+            )
+    except Exception:
+        pass
+
     return task

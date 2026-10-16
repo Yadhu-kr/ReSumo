@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, resumes, candidates, jobs, approvals, offers, interviews, onboarding
+from app.routers import auth, resumes, candidates, jobs, approvals, offers, interviews, onboarding, calendar, notifications
 from app.routers.approvals import seed_default_policies_if_empty
 from app.routers.auth import seed_demo_users_if_empty
 from app.routers.jobs import seed_demo_jobs_and_applications_if_empty
@@ -59,6 +59,8 @@ app.include_router(approvals.router)
 app.include_router(offers.router)
 app.include_router(interviews.router)
 app.include_router(onboarding.router)
+app.include_router(calendar.router)
+app.include_router(notifications.router)
 
 
 @app.get("/", tags=["root"])

@@ -133,6 +133,7 @@ class ParsedResumeData(BaseModel):
 class CandidateUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
     raw_text: Optional[str] = None
     parsed_data: Optional[ParsedResumeData | dict[str, Any]] = None
     parsed_status: Optional[str] = None
@@ -192,6 +193,7 @@ class CandidateOut(BaseModel):
     user_id: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
     raw_resume_filename: str
     raw_text: Optional[str] = None
     parsed_data: Optional[ParsedResumeData | dict[str, Any]] = None
@@ -402,3 +404,71 @@ class OnboardingSummaryOut(BaseModel):
     progress_percentage: float
     is_complete: bool
     tasks: list[OnboardingTaskOut]
+
+
+# ---- Interview Calendar Schemas ----
+
+class InterviewScheduleCreate(BaseModel):
+    candidate_id: str
+    job_id: Optional[str] = None
+    application_id: Optional[str] = None
+    interviewer_id: Optional[str] = None
+    interviewer_name: Optional[str] = None
+    title: Optional[str] = "Technical Architecture & Coding Interview"
+    round_type: Optional[str] = "technical"
+    start_time: datetime
+    duration_minutes: Optional[int] = 45
+    meeting_link: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class InterviewScheduleUpdate(BaseModel):
+    status: Optional[str] = None  # scheduled/completed/cancelled
+    meeting_link: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class InterviewScheduleOut(BaseModel):
+    id: str
+    company_id: Optional[str] = None
+    job_id: Optional[str] = None
+    candidate_id: str
+    application_id: Optional[str] = None
+    interviewer_id: Optional[str] = None
+    interviewer_name: Optional[str] = None
+    title: str
+    round_type: str
+    start_time: datetime
+    end_time: datetime
+    duration_minutes: int
+    meeting_link: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---- Notification Schemas ----
+
+class NotificationOut(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    recipient_email: str
+    subject: str
+    body_text: str
+    body_html: Optional[str] = None
+    notification_type: str
+    reference_id: Optional[str] = None
+    is_read: bool
+    delivery_status: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TestEmailRequest(BaseModel):
+    recipient_email: str
+    subject: str
+    message: str
+

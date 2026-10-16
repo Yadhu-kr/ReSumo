@@ -146,6 +146,7 @@ export interface Candidate {
   job_id?: string | null;
   name?: string | null;
   email?: string | null;
+  phone?: string | null;
   raw_resume_filename: string;
   raw_text?: string | null;
   parsed_data?: ParsedResumeData | null;
@@ -336,5 +337,53 @@ export interface OnboardingSummary {
 
 export type OnboardingSummaryOut = OnboardingSummary;
 export type OnboardingTaskOut = OnboardingTask;
+
+// ---- Phase 6 Interview Calendar & Notification Types ----
+
+export interface InterviewSchedule {
+  id: string;
+  company_id?: string | null;
+  job_id?: string | null;
+  candidate_id: string;
+  application_id?: string | null;
+  interviewer_id?: string | null;
+  interviewer_name?: string | null;
+  title: string;
+  round_type: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  meeting_link?: string | null;
+  status: "scheduled" | "completed" | "cancelled";
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface InterviewScheduleCreate {
+  candidate_id: string;
+  application_id?: string | null;
+  interviewer_id?: string | null;
+  interviewer_name?: string | null;
+  title?: string;
+  round_type?: string;
+  start_time: string;
+  duration_minutes?: number;
+  meeting_link?: string | null;
+  notes?: string | null;
+}
+
+export interface AppNotification {
+  id: string;
+  user_id?: string | null;
+  recipient_email: string;
+  subject: string;
+  body_text: string;
+  body_html?: string | null;
+  notification_type: string;
+  reference_id?: string | null;
+  is_read: boolean;
+  delivery_status: string;
+  created_at: string;
+}
 
 

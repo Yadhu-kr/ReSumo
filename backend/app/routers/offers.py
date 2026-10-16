@@ -19,6 +19,7 @@ from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_role
 from app.services.offers import generate_offer_letter_text
+from app.services.notifications import notify_offer_extended, notify_offer_responded
 
 router = APIRouter(prefix="/offers", tags=["offers"])
 
@@ -236,6 +237,16 @@ def send_offer(
 
     db.commit()
     db.refresh(offer)
+
+    # Automated email notification to candidate
+    try:
+        cand = db.query(models.Candidate).filter(models.Candidate.id == offer.candidate_id).first()
+        cand_email = (cand.email if cand else None) or (cand.user.email if cand and cand.user else None)
+        if cand and cand_email:
+            notify_offer_extended(db=db, offer=offer, candidate=cand, recipient_email=cand_email)
+    except Exception:
+        pass
+
     return offer
 
 
@@ -299,6 +310,29 @@ def respond_to_offer(
 
     db.commit()
     db.refresh(offer)
+
+    # Automated email notification to recruiter
+    try:
+        recruiter_email = current_user.email
+        if application and application.job:
+            hr_user = (
+                db.query(models.User)
+                .filter(models.User.company_id == application.job.company_id, models.User.role == "hr")
+                .first()
+            )
+            if hr_user:
+                recruiter_email = hr_user.email
+        if candidate:
+            notify_offer_responded(
+                db=db,
+                offer=offer,
+                candidate=candidate,
+                action=payload.action,
+                recruiter_email=recruiter_email,
+            )
+    except Exception:
+        pass
+
     return offer
 
 

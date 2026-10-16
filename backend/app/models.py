@@ -12,7 +12,7 @@ Restructured:
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, JSON, Integer
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, JSON, Integer, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -89,6 +89,7 @@ class Candidate(Base):
     # of the User record (e.g. from resume parsing or manual entry).
     name = Column(String, nullable=True)
     email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     raw_resume_filename = Column(String, nullable=False)
 
     # Plaintext extracted during ingestion pre-processing; feeds into QLoRA model.
@@ -238,3 +239,49 @@ class OnboardingTask(Base):
     candidate = relationship("Candidate", backref="onboarding_tasks")
     application = relationship("Application", backref="onboarding_tasks")
     company = relationship("Company", foreign_keys=[company_id])
+
+
+class InterviewSchedule(Base):
+    __tablename__ = "interview_schedules"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    company_id = Column(UUID_TYPE, ForeignKey("companies.id"), nullable=True)
+    job_id = Column(UUID_TYPE, ForeignKey("jobs.id"), nullable=True)
+    candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
+    application_id = Column(UUID_TYPE, ForeignKey("applications.id"), nullable=True)
+    interviewer_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=True)
+    interviewer_name = Column(String, nullable=True)
+    title = Column(String, nullable=False, default="Technical Architecture & Coding Interview")
+    round_type = Column(String, nullable=False, default="technical")  # screening/technical/system_design/cultural_fit/executive
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    duration_minutes = Column(Integer, default=45)
+    meeting_link = Column(String, nullable=True)
+    status = Column(String, default="scheduled")  # available/scheduled/completed/cancelled
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="schedules")
+    application = relationship("Application", backref="schedules")
+    job = relationship("Job", foreign_keys=[job_id])
+    company = relationship("Company", foreign_keys=[company_id])
+    interviewer = relationship("User", foreign_keys=[interviewer_id])
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    user_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=True)
+    recipient_email = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    body_text = Column(Text, nullable=False)
+    body_html = Column(Text, nullable=True)
+    notification_type = Column(String, nullable=False)  # offer_extended/offer_accepted/interview_scheduled/onboarding_update/general
+    reference_id = Column(String, nullable=True)
+    is_read = Column(Boolean, default=False)
+    delivery_status = Column(String, default="sent")  # sent/logged/failed
+    created_at = Column(DateTime, default=utc_now)
+
+    user = relationship("User", backref="notifications")
+

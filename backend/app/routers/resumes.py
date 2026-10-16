@@ -9,6 +9,7 @@ from app.database import get_db
 from app import models, schemas
 from app.auth import require_role
 from app.services.parser import extract_text
+from app.services.contact_extraction import extract_contact_info
 
 router = APIRouter(tags=["resumes"])
 
@@ -17,7 +18,7 @@ MAX_RESUME_SIZE_MB = int(os.getenv("MAX_RESUME_SIZE_MB", "5"))
 MAX_RESUME_SIZE_BYTES = MAX_RESUME_SIZE_MB * 1024 * 1024
 ALLOWED_EXTENSIONS = {
     ext.strip().lower()
-    for ext in os.getenv("ALLOWED_EXTENSIONS", ".pdf,.docx,.doc,.txt").split(",")
+    for ext in os.getenv("ALLOWED_EXTENSIONS", ".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg").split(",")
     if ext.strip()
 }
 
@@ -113,15 +114,29 @@ async def upload_resume(
     with open(stored_path, "wb") as f:
         f.write(contents)
 
-    # 4. Extract plaintext (binary -> plaintext pre-processing step for QLoRA model)
+    # 4. Extract plaintext (with automatic OCR fallback for scanned documents)
     raw_text = extract_text(stored_path)
+    contact_info = extract_contact_info(raw_text)
 
     # 5. Database transaction with rollback and file cleanup on error
     try:
+        cand_email = None
+        if current_user.role == "candidate":
+            cand_email = current_user.email
+        elif contact_info.get("email"):
+            cand_email = contact_info.get("email")
+
+        cand_name = contact_info.get("name")
+        if not cand_name and current_user.role == "candidate" and current_user.name:
+            cand_name = current_user.name
+
         candidate = models.Candidate(
             user_id=current_user.id if current_user.role == "candidate" else None,
             raw_resume_filename=os.path.basename(file.filename),
             raw_text=raw_text,
+            name=cand_name,
+            email=cand_email,
+            phone=contact_info.get("phone"),
             parsed_status="uploaded",
         )
         db.add(candidate)
@@ -165,7 +180,18 @@ async def upload_resume(
                 if isinstance(extracted, schemas.ParsedResumeData):
                     candidate.parsed_data = extracted.model_dump()
                 else:
-                    candidate.parsed_data = extracted
+                    candidate.parsed_data = dict(extracted)
+
+                # Ensure extracted contact information is embedded in parsed_data
+                if isinstance(candidate.parsed_data, dict):
+                    candidate.parsed_data["contact_info"] = {
+                        "name": candidate.name,
+                        "email": candidate.email,
+                        "phone": candidate.phone,
+                        "linkedin_url": contact_info.get("linkedin_url"),
+                        "github_url": contact_info.get("github_url"),
+                    }
+
                 candidate.parsed_status = "parsed"
                 if app_record:
                     app_record.status = "parsed"

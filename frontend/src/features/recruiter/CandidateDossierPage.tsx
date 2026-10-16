@@ -11,6 +11,8 @@ import type {
   CandidateScorecardSummary,
   InterviewScorecardCreate,
   OnboardingSummary,
+  InterviewSchedule,
+  InterviewScheduleCreate,
 } from "../../api/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EscalationTracker } from "../../components/EscalationTracker";
@@ -28,6 +30,12 @@ import {
   Star,
   ClipboardList,
   ShieldCheck,
+  Calendar,
+  Video,
+  Phone,
+  Mail,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
 
 interface OutletContextType {
@@ -47,8 +55,31 @@ export const CandidateDossierPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Tab: 'extracted' vs 'raw_text' vs 'scorecard' vs 'offer' vs 'onboarding'
-  const [activeTab, setActiveTab] = useState<"extracted" | "raw" | "scorecard" | "offer" | "onboarding">("extracted");
+  // Tab: 'extracted' vs 'raw_text' vs 'scorecard' vs 'calendar' vs 'offer' vs 'onboarding'
+  const [activeTab, setActiveTab] = useState<"extracted" | "raw" | "scorecard" | "calendar" | "offer" | "onboarding">("extracted");
+
+  // Interview Calendar state
+  const [schedules, setSchedules] = useState<InterviewSchedule[]>([]);
+  const [scheduling, setScheduling] = useState<boolean>(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
+  const [scheduleForm, setScheduleForm] = useState<{
+    title: string;
+    round_type: string;
+    start_time: string;
+    duration_minutes: number;
+    interviewer_name: string;
+    meeting_link: string;
+    notes: string;
+  }>({
+    title: "Technical Architecture & Coding Interview",
+    round_type: "technical",
+    start_time: "",
+    duration_minutes: 45,
+    interviewer_name: "",
+    meeting_link: "https://meet.google.com/resumo-interview",
+    notes: "Focus on system design fundamentals, algorithms, and microservice resilience.",
+  });
 
   // Scorecard state
   const [scorecard, setScorecard] = useState<CandidateScorecardSummary | null>(null);
@@ -176,6 +207,14 @@ export const CandidateDossierPage: React.FC = () => {
         // Scorecard fallback
       }
 
+      // Load interview schedules
+      try {
+        const candScheds = await api.getCandidateSchedules(id);
+        setSchedules(candScheds);
+      } catch {
+        // Calendar fallback
+      }
+
       // Load onboarding tasks
       try {
         const onb = await api.getCandidateOnboarding(id);
@@ -188,6 +227,49 @@ export const CandidateDossierPage: React.FC = () => {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleScheduleInterview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    try {
+      setScheduling(true);
+      setScheduleError(null);
+      setScheduleSuccess(null);
+      const activeApp = applications[0];
+      const payload: InterviewScheduleCreate = {
+        candidate_id: id,
+        application_id: activeApp?.id,
+        title: scheduleForm.title,
+        round_type: scheduleForm.round_type,
+        start_time: scheduleForm.start_time || new Date(Date.now() + 86400000 * 2).toISOString(),
+        duration_minutes: Number(scheduleForm.duration_minutes) || 45,
+        interviewer_name: scheduleForm.interviewer_name || undefined,
+        meeting_link: scheduleForm.meeting_link || undefined,
+        notes: scheduleForm.notes || undefined,
+      };
+      await api.scheduleInterview(payload);
+      setScheduleSuccess("Interview scheduled successfully! Universal .ics calendar invites and email notifications dispatched.");
+      const updatedScheds = await api.getCandidateSchedules(id);
+      setSchedules(updatedScheds);
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.detail : "Failed to schedule interview";
+      setScheduleError(msg);
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const handleUpdateScheduleStatus = async (schedId: string, status: "completed" | "cancelled") => {
+    try {
+      await api.updateSchedule(schedId, { status });
+      if (id) {
+        const updatedScheds = await api.getCandidateSchedules(id);
+        setSchedules(updatedScheds);
+      }
+    } catch (err: unknown) {
+      console.error("Failed to update interview schedule status:", err);
     }
   };
 
@@ -381,10 +463,36 @@ export const CandidateDossierPage: React.FC = () => {
           <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
             ID: {candidate.id} • INGESTED: {new Date(candidate.created_at).toLocaleString()} • FILE: {candidate.raw_resume_filename}
           </div>
+
+          {/* Candidate Extracted Contact Info */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "6px", flexWrap: "wrap" }}>
+            {candidate.email && (
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <Mail size={13} color="var(--accent-purple)" />
+                <a href={`mailto:${candidate.email}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 500 }}>
+                  {candidate.email}
+                </a>
+              </span>
+            )}
+            {candidate.phone && (
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <Phone size={13} color="#10b981" />
+                <a href={`tel:${candidate.phone}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 500 }}>
+                  {candidate.phone}
+                </a>
+              </span>
+            )}
+            {candidate.parsed_data?.location && (
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <MapPin size={13} color="#f59e0b" />
+                <span>{candidate.parsed_data.location}</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Quick Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           {["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
             <button
               className="btn btn-primary"
@@ -409,6 +517,16 @@ export const CandidateDossierPage: React.FC = () => {
           >
             <Star size={14} color="#f59e0b" fill={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "none"} />
             <span>Scorecard {scorecard && scorecard.total_evaluations > 0 ? `(${scorecard.average_score}★)` : ""}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("calendar")}
+            className="btn btn-secondary"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <Calendar size={14} color="#6366f1" />
+            <span>Interview Calendar {schedules.length > 0 ? `(${schedules.length})` : ""}</span>
           </button>
 
           <button
@@ -573,6 +691,41 @@ export const CandidateDossierPage: React.FC = () => {
                     }}
                   >
                     {scorecard.average_score}★
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="btn-sm"
+                onClick={() => setActiveTab("calendar")}
+                style={{
+                  border: "none",
+                  borderRadius: "var(--radius-pill)",
+                  backgroundColor: activeTab === "calendar" ? "#ffffff" : "transparent",
+                  color: activeTab === "calendar" ? "var(--accent-purple)" : "var(--text-secondary)",
+                  fontWeight: activeTab === "calendar" ? 700 : 500,
+                  boxShadow: activeTab === "calendar" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
+                  transition: "all 0.2s ease",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <Calendar size={12} color={activeTab === "calendar" ? "var(--accent-purple)" : "currentColor"} />
+                <span>Calendar</span>
+                {schedules.length > 0 && (
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: "10px",
+                      padding: "1px 6px",
+                      borderRadius: "10px",
+                      backgroundColor: activeTab === "calendar" ? "var(--accent-purple)" : "var(--border-subtle)",
+                      color: activeTab === "calendar" ? "#ffffff" : "var(--text-secondary)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {schedules.length}
                   </span>
                 )}
               </button>
@@ -1510,6 +1663,397 @@ export const CandidateDossierPage: React.FC = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {activeTab === "calendar" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Calendar Header Card */}
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "14px",
+                    border: "1px solid var(--border-subtle)",
+                    padding: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Calendar size={18} color="var(--accent-purple)" />
+                        <span>Interview Scheduling & Calendar Hub</span>
+                      </h4>
+                      <p style={{ margin: "4px 0 0", fontSize: "12.5px", color: "var(--text-muted)" }}>
+                        Schedule interview rounds with automatic RFC 5545 universal <code className="mono">.ics</code> calendar invitations (Google Calendar, Apple, Outlook) and instant email notifications.
+                      </p>
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block" }}>
+                        TOTAL ROUNDS
+                      </span>
+                      <span style={{ fontSize: "18px", fontWeight: 800, color: "var(--accent-purple)" }}>
+                        {schedules.length} Scheduled
+                      </span>
+                    </div>
+                  </div>
+
+                  {scheduleSuccess && (
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        backgroundColor: "var(--status-approved-bg)",
+                        border: "1px solid var(--status-approved-border)",
+                        borderRadius: "8px",
+                        color: "var(--status-approved-text)",
+                        fontSize: "12.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <CheckCircle2 size={15} />
+                      <span>{scheduleSuccess}</span>
+                    </div>
+                  )}
+
+                  {scheduleError && (
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        backgroundColor: "var(--status-rejected-bg)",
+                        border: "1px solid var(--status-rejected-border)",
+                        borderRadius: "8px",
+                        color: "var(--status-rejected-text)",
+                        fontSize: "12.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <AlertCircle size={15} />
+                      <span>{scheduleError}</span>
+                    </div>
+                  )}
+
+                  {/* Schedule New Session Form */}
+                  <form onSubmit={handleScheduleInterview} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "6px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "12px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Round Title *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={scheduleForm.title}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
+                          placeholder="e.g. Senior Backend Architecture & Live Coding"
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Round Type
+                        </label>
+                        <select
+                          value={scheduleForm.round_type}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, round_type: e.target.value })}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                            backgroundColor: "#ffffff",
+                          }}
+                        >
+                          <option value="screening">Initial Screening Call</option>
+                          <option value="technical">Technical Coding & Mastery</option>
+                          <option value="system_design">System Architecture & Scalability</option>
+                          <option value="cultural_fit">Cultural Alignment & Leadership</option>
+                          <option value="executive">Executive & Final Fit</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Date & Time (UTC / Local) *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={scheduleForm.start_time}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, start_time: e.target.value })}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Duration
+                        </label>
+                        <select
+                          value={scheduleForm.duration_minutes}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, duration_minutes: Number(e.target.value) })}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                            backgroundColor: "#ffffff",
+                          }}
+                        >
+                          <option value={30}>30 Minutes</option>
+                          <option value={45}>45 Minutes (Standard)</option>
+                          <option value={60}>60 Minutes (Deep Dive)</option>
+                          <option value={90}>90 Minutes (Architecture)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Interviewer Name / Team
+                        </label>
+                        <input
+                          type="text"
+                          value={scheduleForm.interviewer_name}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, interviewer_name: e.target.value })}
+                          placeholder="e.g. Lead Engineer / Hiring Manager"
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                          Video Call Link
+                        </label>
+                        <input
+                          type="url"
+                          value={scheduleForm.meeting_link}
+                          onChange={(e) => setScheduleForm({ ...scheduleForm, meeting_link: e.target.value })}
+                          placeholder="https://meet.google.com/xyz or Zoom URL"
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            fontSize: "13px",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                        Preparation Notes & Focus Rubric
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={scheduleForm.notes}
+                        onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
+                        placeholder="Topics to prepare, agenda, instructions for the candidate..."
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--border-subtle)",
+                          fontSize: "13px",
+                          resize: "vertical",
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+                      <button
+                        type="submit"
+                        disabled={scheduling}
+                        className="btn btn-primary"
+                        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                      >
+                        <Calendar size={14} />
+                        <span>{scheduling ? "Booking Session..." : "Schedule Session & Dispatch .ics Invites"}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Scheduled Sessions List */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Booked Interview Rounds ({schedules.length})
+                  </h4>
+
+                  {schedules.length === 0 ? (
+                    <EmptyState
+                      title="No Interview Rounds Scheduled Yet"
+                      description="Use the scheduling studio above to book an interview slot for this candidate. Both candidate and interviewer will immediately receive calendar invites."
+                    />
+                  ) : (
+                    schedules.map((sched) => (
+                      <div
+                        key={sched.id}
+                        style={{
+                          backgroundColor: "#ffffff",
+                          borderRadius: "12px",
+                          border: "1px solid var(--border-subtle)",
+                          padding: "16px 20px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "10px",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <h5 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                                {sched.title}
+                              </h5>
+                              <span
+                                className="mono"
+                                style={{
+                                  fontSize: "10.5px",
+                                  padding: "2px 8px",
+                                  borderRadius: "12px",
+                                  backgroundColor: "var(--accent-purple-subtle)",
+                                  color: "var(--accent-purple)",
+                                  fontWeight: 700,
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {sched.round_type}
+                              </span>
+                              <span
+                                className="mono"
+                                style={{
+                                  fontSize: "10.5px",
+                                  padding: "2px 8px",
+                                  borderRadius: "12px",
+                                  fontWeight: 700,
+                                  textTransform: "uppercase",
+                                  backgroundColor:
+                                    sched.status === "completed"
+                                      ? "var(--status-approved-bg)"
+                                      : sched.status === "cancelled"
+                                      ? "var(--status-rejected-bg)"
+                                      : "#eff6ff",
+                                  color:
+                                    sched.status === "completed"
+                                      ? "var(--status-approved-text)"
+                                      : sched.status === "cancelled"
+                                      ? "var(--status-rejected-text)"
+                                      : "#1d4ed8",
+                                }}
+                              >
+                                {sched.status}
+                              </span>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "6px", fontSize: "12px", color: "var(--text-secondary)", flexWrap: "wrap" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Clock size={13} color="var(--accent-purple)" />
+                                <strong>{new Date(sched.start_time).toLocaleString()}</strong> ({sched.duration_minutes} min)
+                              </span>
+                              <span>
+                                Interviewer: <strong>{sched.interviewer_name || "Hiring Team"}</strong>
+                              </span>
+                              {sched.meeting_link && (
+                                <a
+                                  href={sched.meeting_link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    color: "var(--accent-purple)",
+                                    fontWeight: 600,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  <Video size={13} />
+                                  <span>Join Call</span>
+                                  <ExternalLink size={11} />
+                                </a>
+                              )}
+                            </div>
+
+                            {sched.notes && (
+                              <p style={{ margin: "8px 0 0", fontSize: "12px", color: "var(--text-muted)", backgroundColor: "#f8fafc", padding: "8px 12px", borderRadius: "6px" }}>
+                                <strong>Notes:</strong> {sched.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <a
+                              href={api.getScheduleIcsUrl(sched.id)}
+                              download={`interview-${sched.id}.ics`}
+                              className="btn btn-sm btn-secondary"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}
+                            >
+                              <Download size={13} />
+                              <span>Add to Calendar (.ics)</span>
+                            </a>
+
+                            {sched.status === "scheduled" && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateScheduleStatus(sched.id, "completed")}
+                                  className="btn btn-sm btn-subtle"
+                                  style={{ color: "#10b981", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                >
+                                  <CheckCircle2 size={13} />
+                                  <span>Mark Completed</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateScheduleStatus(sched.id, "cancelled")}
+                                  className="btn btn-sm btn-subtle"
+                                  style={{ color: "#ef4444", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                >
+                                  <XCircle size={13} />
+                                  <span>Cancel</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 

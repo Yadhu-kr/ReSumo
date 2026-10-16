@@ -2,7 +2,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import type { Candidate, Application, Offer, OnboardingSummaryOut, OnboardingTaskOut } from "../../api/types";
+import type {
+  Candidate,
+  Application,
+  Offer,
+  OnboardingSummaryOut,
+  OnboardingTaskOut,
+  InterviewSchedule,
+  AppNotification,
+} from "../../api/types";
 import { getUserDisplayName } from "../../lib/user";
 import { StatusBadge } from "../../components/StatusBadge";
 import { EmptyState } from "../../components/EmptyState";
@@ -26,6 +34,12 @@ import {
   FileCheck,
   CreditCard,
   Calendar,
+  Bell,
+  Mail,
+  Phone,
+  MapPin,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 
 export const CandidatePortalPage: React.FC = () => {
@@ -35,6 +49,11 @@ export const CandidatePortalPage: React.FC = () => {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Calendar & Notifications State
+  const [schedules, setSchedules] = useState<InterviewSchedule[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [markingNotification, setMarkingNotification] = useState<boolean>(false);
 
   // Onboarding State
   const [onboardingSummary, setOnboardingSummary] = useState<OnboardingSummaryOut | null>(null);
@@ -59,14 +78,18 @@ export const CandidatePortalPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [cands, apps, onbSummary] = await Promise.all([
+      const [cands, apps, onbSummary, mySchedules, myNotifs] = await Promise.all([
         api.listCandidates(),
         api.getMyApplications().catch(() => [] as Application[]),
         api.getMyOnboarding().catch(() => null),
+        api.getMySchedules().catch(() => [] as InterviewSchedule[]),
+        api.getMyNotifications().catch(() => [] as AppNotification[]),
       ]);
       setCandidates(cands);
       setApplications(apps);
       setOnboardingSummary(onbSummary);
+      setSchedules(mySchedules);
+      setNotifications(myNotifs);
 
       if (cands.length > 0) {
         try {
@@ -82,6 +105,29 @@ export const CandidatePortalPage: React.FC = () => {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkNotificationRead = async (notifId: string) => {
+    try {
+      await api.markNotificationRead(notifId);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n))
+      );
+    } catch (err: unknown) {
+      console.error("Failed to mark notification read:", err);
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      setMarkingNotification(true);
+      await api.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (err: unknown) {
+      console.error("Failed to mark all notifications read:", err);
+    } finally {
+      setMarkingNotification(false);
     }
   };
 
@@ -414,7 +460,7 @@ export const CandidatePortalPage: React.FC = () => {
               type="file"
               ref={fileInputRef}
               style={{ display: "none" }}
-              accept=".pdf,.docx,.doc,.txt"
+              accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   handleFileUpload(e.target.files[0]);
@@ -443,7 +489,7 @@ export const CandidatePortalPage: React.FC = () => {
                 {uploading ? "Extracting & Embedding Resume..." : "Click to select or drag and drop your resume"}
               </p>
               <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
-                Structured profile will be updated immediately upon ingestion
+                Supports PDF (digital & OCR scanned), Word (.docx), TXT, and PNG/JPG images up to 5MB
               </p>
             </div>
           </div>
@@ -524,6 +570,42 @@ export const CandidatePortalPage: React.FC = () => {
             />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Extracted Contact Info Bar */}
+              {(latestCandidate?.email || latestCandidate?.phone || parsed.location) && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "14px",
+                    flexWrap: "wrap",
+                    padding: "10px 14px",
+                    backgroundColor: "var(--bg-canvas)",
+                    borderRadius: "10px",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "12px",
+                  }}
+                >
+                  {latestCandidate?.email && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--text-secondary)" }}>
+                      <Mail size={13} color="var(--accent-purple)" />
+                      <strong>{latestCandidate.email}</strong>
+                    </span>
+                  )}
+                  {latestCandidate?.phone && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--text-secondary)" }}>
+                      <Phone size={13} color="#10b981" />
+                      <strong>{latestCandidate.phone}</strong>
+                    </span>
+                  )}
+                  {parsed.location && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--text-muted)" }}>
+                      <MapPin size={13} color="#f59e0b" />
+                      <span>{parsed.location}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Primary Attributes Bar */}
               <div
                 style={{
@@ -644,6 +726,273 @@ export const CandidatePortalPage: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Upcoming Interviews & Calendar Invites Hub */}
+      {schedules.length > 0 && (
+        <div
+          style={{
+            borderRadius: "16px",
+            backgroundColor: "#ffffff",
+            border: "1.5px solid rgba(99, 102, 241, 0.2)",
+            padding: "24px",
+            boxShadow: "0 6px 20px rgba(99, 102, 241, 0.06)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "18px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(99, 102, 241, 0.1)",
+                  color: "#4f46e5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Calendar size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "17px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                  Scheduled Interviews & Calendar Invites
+                </h3>
+                <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                  Universal calendar invites for Google Calendar, Apple Calendar, and Outlook (.ics format).
+                </p>
+              </div>
+            </div>
+
+            <span
+              className="mono"
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+                padding: "4px 10px",
+                borderRadius: "20px",
+              }}
+            >
+              {schedules.filter((s) => s.status === "scheduled").length} Active Sessions
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "14px" }}>
+            {schedules.map((sched) => (
+              <div
+                key={sched.id}
+                style={{
+                  padding: "16px",
+                  borderRadius: "12px",
+                  backgroundColor: "var(--bg-canvas)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: "10.5px",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        color: "var(--accent-purple)",
+                        backgroundColor: "var(--accent-purple-subtle)",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      {sched.round_type.replace(/_/g, " ")}
+                    </span>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: "10.5px",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        color: sched.status === "completed" ? "var(--status-approved-text)" : "#1d4ed8",
+                        backgroundColor: sched.status === "completed" ? "var(--status-approved-bg)" : "#eff6ff",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      {sched.status}
+                    </span>
+                  </div>
+
+                  <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {sched.title}
+                  </h4>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Clock size={13} color="var(--accent-purple)" />
+                      <strong>{new Date(sched.start_time).toLocaleString()}</strong> ({sched.duration_minutes} min)
+                    </div>
+                    <div>
+                      Interviewer: <strong>{sched.interviewer_name || "Hiring Team"}</strong>
+                    </div>
+                    {sched.notes && (
+                      <p style={{ margin: "6px 0 0", fontSize: "11.5px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                        "{sched.notes}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", paddingTop: "10px", borderTop: "1px solid var(--border-subtle)", flexWrap: "wrap" }}>
+                  {sched.meeting_link ? (
+                    <a
+                      href={sched.meeting_link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-sm btn-primary"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "5px", textDecoration: "none" }}
+                    >
+                      <Video size={13} />
+                      <span>Join Video Call</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Meeting link will be shared prior</span>
+                  )}
+
+                  <a
+                    href={api.getScheduleIcsUrl(sched.id)}
+                    download={`interview-${sched.id}.ics`}
+                    className="btn btn-sm btn-secondary"
+                    style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}
+                  >
+                    <Download size={13} />
+                    <span>Add to Calendar (.ics)</span>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notifications & Communications Feed */}
+      <div
+        style={{
+          borderRadius: "16px",
+          backgroundColor: "#ffffff",
+          border: "1px solid var(--border-subtle)",
+          padding: "20px 24px",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Bell size={18} color="var(--accent-purple)" />
+            <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+              Notifications & Email Dispatch Logs
+            </h3>
+            {notifications.filter((n) => !n.is_read).length > 0 && (
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  backgroundColor: "#ef4444",
+                  color: "#ffffff",
+                  padding: "1px 7px",
+                  borderRadius: "20px",
+                }}
+              >
+                {notifications.filter((n) => !n.is_read).length} New
+              </span>
+            )}
+          </div>
+
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              disabled={markingNotification || notifications.every((n) => n.is_read)}
+              onClick={handleMarkAllNotificationsRead}
+              className="btn btn-sm btn-subtle"
+              style={{ fontSize: "12px" }}
+            >
+              {markingNotification ? "Marking..." : "Mark All as Read"}
+            </button>
+          )}
+        </div>
+
+        {notifications.length === 0 ? (
+          <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic" }}>
+            No notifications yet. You will receive real-time alerts and email confirmations when interview slots are booked, offers are extended, or documents are verified.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: notif.is_read ? "var(--bg-canvas)" : "#f5f3ff",
+                  border: `1px solid ${notif.is_read ? "var(--border-subtle)" : "rgba(100, 82, 206, 0.25)"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: notif.is_read ? 600 : 700, color: "var(--text-primary)" }}>
+                      {notif.subject}
+                    </span>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      {new Date(notif.created_at).toLocaleString()}
+                    </span>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: "9.5px",
+                        padding: "1px 6px",
+                        borderRadius: "8px",
+                        backgroundColor: notif.delivery_status === "sent" ? "var(--status-approved-bg)" : "#f1f5f9",
+                        color: notif.delivery_status === "sent" ? "var(--status-approved-text)" : "#64748b",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {notif.delivery_status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+                    {notif.body_text.slice(0, 160)}
+                    {notif.body_text.length > 160 ? "..." : ""}
+                  </p>
+                </div>
+
+                {!notif.is_read && (
+                  <button
+                    type="button"
+                    onClick={() => handleMarkNotificationRead(notif.id)}
+                    className="btn btn-sm btn-subtle"
+                    style={{ fontSize: "11px", padding: "4px 8px", color: "var(--accent-purple)", whiteSpace: "nowrap" }}
+                  >
+                    Mark read
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Active Offer Banner */}
