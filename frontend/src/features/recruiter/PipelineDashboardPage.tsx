@@ -11,7 +11,6 @@ import {
   FileText,
   UploadCloud,
   X,
-  Plus,
   Filter,
   Sparkles,
   GripVertical,
@@ -253,28 +252,30 @@ export const PipelineDashboardPage: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Top Header & Executive Stats */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "20px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <span
               style={{
-                fontSize: "11px",
+                fontSize: "11.5px",
                 fontWeight: 700,
                 color: "var(--accent-purple)",
                 backgroundColor: "var(--accent-purple-subtle)",
-                padding: "2px 8px",
-                borderRadius: "50px",
+                padding: "3px 10px",
+                borderRadius: "var(--radius-pill)",
                 textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                border: "1px solid var(--accent-purple-border)",
               }}
             >
-              Talent Acquisition Ops
+              Talent Operations
             </span>
           </div>
-          <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
-            Recruitment Pipeline
+          <h1 style={{ fontSize: "26px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
+            Candidate Pipeline
           </h1>
-          <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
-            Real-time candidate workflow, verification dossier inspection, and multi-tier approval routing.
+          <p style={{ fontSize: "14.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
+            Manage lifecycle progression, trigger automated verification, and track multi-tier approvals.
           </p>
         </div>
 
@@ -286,25 +287,28 @@ export const PipelineDashboardPage: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              padding: "5px 12px",
+              padding: "7px 14px",
               backgroundColor: "#ffffff",
-              borderRadius: "50px",
+              borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-subtle)",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+              boxShadow: "var(--shadow-xs)",
+              height: "40px",
             }}
           >
-            <Filter size={13} style={{ color: "var(--text-muted)" }} />
+            <Filter size={15} style={{ color: "var(--text-muted)" }} />
             <select
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
               style={{
                 border: "none",
                 outline: "none",
-                fontSize: "12.5px",
+                fontSize: "13.5px",
                 fontWeight: 500,
                 color: "var(--text-primary)",
                 backgroundColor: "transparent",
                 cursor: "pointer",
+                padding: 0,
+                boxShadow: "none",
               }}
             >
               <option value="">All Requisitions ({jobs.length})</option>
@@ -320,25 +324,28 @@ export const PipelineDashboardPage: React.FC = () => {
           <div
             style={{
               display: "flex",
-              backgroundColor: "#f1f5f9",
+              backgroundColor: "var(--bg-surface-elevated)",
               padding: "3px",
-              borderRadius: "50px",
-              gap: "2px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-subtle)",
+              gap: "3px",
+              height: "40px",
+              alignItems: "center",
             }}
           >
             <button
               type="button"
               onClick={() => setViewMode("board")}
               style={{
-                padding: "5px 14px",
-                fontSize: "12px",
+                padding: "6px 16px",
+                fontSize: "13px",
                 fontWeight: viewMode === "board" ? 700 : 500,
-                borderRadius: "50px",
+                borderRadius: "var(--radius-sm)",
                 border: "none",
                 cursor: "pointer",
                 backgroundColor: viewMode === "board" ? "#ffffff" : "transparent",
-                color: viewMode === "board" ? "var(--accent-purple)" : "var(--text-secondary)",
-                boxShadow: viewMode === "board" ? "0 2px 6px rgba(0, 0, 0, 0.08)" : "none",
+                color: viewMode === "board" ? "var(--text-primary)" : "var(--text-secondary)",
+                boxShadow: viewMode === "board" ? "var(--shadow-xs)" : "none",
                 transition: "all 0.15s ease",
               }}
             >
@@ -348,23 +355,23 @@ export const PipelineDashboardPage: React.FC = () => {
               type="button"
               onClick={() => setViewMode("table")}
               style={{
-                padding: "5px 14px",
-                fontSize: "12px",
+                padding: "6px 16px",
+                fontSize: "13px",
                 fontWeight: viewMode === "table" ? 700 : 500,
-                borderRadius: "50px",
+                borderRadius: "var(--radius-sm)",
                 border: "none",
                 cursor: "pointer",
                 backgroundColor: viewMode === "table" ? "#ffffff" : "transparent",
-                color: viewMode === "table" ? "var(--accent-purple)" : "var(--text-secondary)",
-                boxShadow: viewMode === "table" ? "0 2px 6px rgba(0, 0, 0, 0.08)" : "none",
+                color: viewMode === "table" ? "var(--text-primary)" : "var(--text-secondary)",
+                boxShadow: viewMode === "table" ? "var(--shadow-xs)" : "none",
                 transition: "all 0.15s ease",
               }}
             >
-              Dense Table
+              Table View
             </button>
           </div>
 
-          {/* Optional Source Candidate Modal Button */}
+          {/* Source Candidate Modal Button */}
           {canManagePipeline && (
             <button
               type="button"
@@ -374,15 +381,16 @@ export const PipelineDashboardPage: React.FC = () => {
               }}
               className="btn btn-primary"
               style={{
-                padding: "8px 16px",
-                fontSize: "12.5px",
-                borderRadius: "50px",
+                height: "40px",
+                padding: "0 18px",
+                fontSize: "13.5px",
+                borderRadius: "var(--radius-sm)",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "8px",
               }}
             >
-              <Plus size={15} />
+              <UploadCloud size={16} />
               <span>Source Resume</span>
             </button>
           )}
@@ -393,20 +401,20 @@ export const PipelineDashboardPage: React.FC = () => {
       {!canManagePipeline && (
         <div
           style={{
-            padding: "10px 16px",
+            padding: "12px 18px",
             backgroundColor: "#f0f9ff",
             border: "1px solid #bae6fd",
             borderRadius: "var(--radius-md)",
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            fontSize: "12.5px",
+            gap: "12px",
+            fontSize: "13.5px",
             color: "#0369a1",
           }}
         >
-          <span style={{ fontWeight: 700 }}>Observation Mode:</span>
+          <span style={{ fontWeight: 700 }}>Observer Mode:</span>
           <span>
-            You are viewing the recruitment pipeline in read-only mode. Candidate stage transitions and requisition assignments are managed by HR recruiters.
+            You are viewing the recruitment pipeline in read-only mode. Candidate stage transitions and job assignments are managed by HR recruiters.
           </span>
         </div>
       )}
@@ -416,104 +424,140 @@ export const PipelineDashboardPage: React.FC = () => {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(6, 1fr)",
-          gap: "12px",
+          gap: "16px",
         }}
       >
+        {/* Total Pool */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>Total Talent Pool</span>
-            <Users size={13} style={{ color: "var(--accent-purple)" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>Total Pool</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Users size={16} style={{ color: "#2563eb" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>{totalCount}</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{totalCount}</div>
         </div>
 
+        {/* Sourced */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>Sourced / Parsed</span>
-            <FileText size={13} style={{ color: "#64748b" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>Sourced / Parsed</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <FileText size={16} style={{ color: "#475569" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>{parsedCount}</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{parsedCount}</div>
         </div>
 
+        {/* Shortlisted */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>Shortlisted</span>
-            <Sparkles size={13} style={{ color: "var(--accent-purple)" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>Shortlisted</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "var(--accent-purple-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Sparkles size={16} style={{ color: "var(--accent-purple)" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--accent-purple)" }}>{shortlistedCount}</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "var(--accent-purple)", letterSpacing: "-0.02em" }}>{shortlistedCount}</div>
         </div>
 
+        {/* In Approvals */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>In Approvals</span>
-            <Clock size={13} style={{ color: "#f59e0b" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>In Governance</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Clock size={16} style={{ color: "#d97706" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "#d97706" }}>{pendingCount}</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#b45309", letterSpacing: "-0.02em" }}>{pendingCount}</div>
         </div>
 
+        {/* Approved */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>Approved</span>
-            <CheckCircle2 size={13} style={{ color: "#059669" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>Approved</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CheckCircle2 size={16} style={{ color: "#059669" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "#059669" }}>{approvedCount}</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#047857", letterSpacing: "-0.02em" }}>{approvedCount}</div>
         </div>
 
+        {/* Offered / Hired */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "18px 20px",
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 1px 4px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>Offered / Hired</span>
-            <Gift size={13} style={{ color: "#7c3aed" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>Offered / Hired</span>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Gift size={16} style={{ color: "#7c3aed" }} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "#7c3aed" }}>
-            {offeredCount} / {hiredCount}
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#6d28d9", letterSpacing: "-0.02em" }}>
+            {offeredCount} <span style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-muted)" }}>/ {hiredCount}</span>
           </div>
         </div>
       </div>
@@ -535,18 +579,18 @@ export const PipelineDashboardPage: React.FC = () => {
 
       {/* Main Interactive Kanban Pipeline View */}
       {loading ? (
-        <div style={{ padding: "60px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+        <div style={{ padding: "80px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
           Loading candidate pipeline...
         </div>
       ) : viewMode === "board" ? (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(7, minmax(240px, 1fr))",
-            gap: "14px",
+            gridTemplateColumns: "repeat(7, minmax(285px, 1fr))",
+            gap: "18px",
             alignItems: "start",
             overflowX: "auto",
-            paddingBottom: "16px",
+            paddingBottom: "24px",
           }}
         >
           {LIFECYCLE_STAGES.map((stage) => {
@@ -560,39 +604,40 @@ export const PipelineDashboardPage: React.FC = () => {
                 onDragLeave={handleStageDragLeave}
                 onDrop={(e) => handleStageDrop(e, stage.key)}
                 style={{
-                  backgroundColor: isHovered ? "var(--accent-purple-subtle)" : "#ffffff",
-                  borderRadius: "14px",
+                  backgroundColor: isHovered ? "var(--accent-purple-subtle)" : "#f8fafc",
+                  borderRadius: "var(--radius-lg)",
                   border: isHovered ? "2px dashed var(--accent-purple)" : "1px solid var(--border-subtle)",
-                  boxShadow: isHovered ? "0 4px 16px rgba(100, 82, 206, 0.15)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                  boxShadow: isHovered ? "0 4px 20px rgba(79, 70, 229, 0.15)" : "var(--shadow-xs)",
                   display: "flex",
                   flexDirection: "column",
-                  maxHeight: "calc(100vh - 230px)",
+                  maxHeight: "calc(100vh - 220px)",
                   transition: "all 0.15s ease",
                 }}
               >
                 {/* Stage Header */}
                 <div
                   style={{
-                    padding: "12px 14px",
+                    padding: "14px 16px",
                     borderBottom: "1px solid var(--border-subtle)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    backgroundColor: isHovered ? "rgba(100, 82, 206, 0.08)" : "var(--bg-canvas)",
-                    borderRadius: "14px 14px 0 0",
+                    backgroundColor: isHovered ? "rgba(79, 70, 229, 0.08)" : "#ffffff",
+                    borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
                   }}
                 >
-                  <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.02em" }}>
                     {stage.label}
                   </span>
                   <span
                     style={{
-                      fontSize: "11px",
+                      fontSize: "12px",
                       fontWeight: 700,
-                      padding: "2px 7px",
-                      borderRadius: "50px",
+                      padding: "3px 9px",
+                      borderRadius: "var(--radius-pill)",
                       backgroundColor: stageCandidates.length > 0 ? "var(--accent-purple-subtle)" : "#f1f5f9",
                       color: stageCandidates.length > 0 ? "var(--accent-purple)" : "var(--text-muted)",
+                      border: stageCandidates.length > 0 ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     }}
                   >
                     {stageCandidates.length}
@@ -602,16 +647,16 @@ export const PipelineDashboardPage: React.FC = () => {
                 {/* Cards Container */}
                 <div
                   style={{
-                    padding: "10px",
+                    padding: "12px",
                     overflowY: "auto",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "10px",
-                    minHeight: "120px",
+                    gap: "12px",
+                    minHeight: "140px",
                   }}
                 >
                   {stageCandidates.length === 0 ? (
-                    <div style={{ padding: "30px 10px", textAlign: "center", color: "var(--text-muted)", fontSize: "11.5px" }}>
+                    <div style={{ padding: "36px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: "12.5px", lineHeight: 1.5 }}>
                       Drop candidate here to move to {stage.label.toLowerCase()}
                     </div>
                   ) : (
@@ -627,28 +672,28 @@ export const PipelineDashboardPage: React.FC = () => {
                           draggable={canManagePipeline && !isUpdating}
                           onDragStart={(e) => canManagePipeline && handleDragStart(e, cand)}
                           style={{
-                            padding: "12px 14px",
+                            padding: "14px 16px",
                             backgroundColor: "#ffffff",
-                            borderRadius: "10px",
+                            borderRadius: "var(--radius-md)",
                             border: "1px solid var(--border-subtle)",
-                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                            boxShadow: "var(--shadow-xs)",
                             display: "flex",
                             flexDirection: "column",
-                            gap: "8px",
+                            gap: "10px",
                             cursor: canManagePipeline ? "grab" : "default",
                             opacity: isUpdating ? 0.6 : 1,
-                            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                            transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
                           }}
                         >
                           {/* Card Top: Drag Handle + Status + ID */}
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               {canManagePipeline && (
-                                <GripVertical size={13} style={{ color: "var(--text-muted)", cursor: "grab" }} />
+                                <GripVertical size={14} style={{ color: "var(--text-muted)", cursor: "grab" }} />
                               )}
                               <StatusBadge status={candStatus} />
                             </div>
-                            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                            <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
                               #{cand.id.slice(0, 6)}
                             </span>
                           </div>
@@ -658,27 +703,32 @@ export const PipelineDashboardPage: React.FC = () => {
                             <Link
                               to={`/candidates/${cand.id}`}
                               style={{
-                                fontSize: "13px",
+                                fontSize: "14.5px",
                                 fontWeight: 700,
                                 color: "var(--text-primary)",
                                 textDecoration: "none",
                                 display: "block",
+                                lineHeight: 1.4,
                               }}
                             >
                               {cand.name || parsed?.current_title || cand.raw_resume_filename}
                             </Link>
                             {candJob ? (
-                              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                              <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "3px", fontWeight: 500 }}>
                                 Target: {candJob.title}
                               </div>
                             ) : (
                               <span
                                 style={{
-                                  fontSize: "10.5px",
-                                  color: "#d97706",
+                                  fontSize: "11.5px",
+                                  color: "#b45309",
+                                  backgroundColor: "#fffbeb",
+                                  border: "1px solid #fde68a",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
                                   fontWeight: 600,
                                   display: "inline-block",
-                                  marginTop: "2px",
+                                  marginTop: "4px",
                                 }}
                               >
                                 ⚠️ No Requisition Assigned
@@ -688,16 +738,18 @@ export const PipelineDashboardPage: React.FC = () => {
 
                           {/* Skills Preview */}
                           {parsed?.core_skills && parsed.core_skills.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                               {parsed.core_skills.slice(0, 3).map((skill, idx) => (
                                 <span
                                   key={idx}
                                   style={{
-                                    fontSize: "10px",
-                                    padding: "2px 6px",
-                                    borderRadius: "4px",
+                                    fontSize: "11.5px",
+                                    padding: "2px 8px",
+                                    borderRadius: "var(--radius-pill)",
                                     backgroundColor: "#f1f5f9",
-                                    color: "#475569",
+                                    color: "#334155",
+                                    fontWeight: 500,
+                                    border: "1px solid #e2e8f0",
                                   }}
                                 >
                                   {skill}
@@ -711,10 +763,10 @@ export const PipelineDashboardPage: React.FC = () => {
                             <div
                               style={{
                                 borderTop: "1px solid var(--border-subtle)",
-                                paddingTop: "8px",
+                                paddingTop: "10px",
                                 display: "flex",
                                 flexDirection: "column",
-                                gap: "6px",
+                                gap: "8px",
                               }}
                             >
                               {/* Unassigned Candidate Action */}
@@ -726,21 +778,21 @@ export const PipelineDashboardPage: React.FC = () => {
                                     setAssignTargetJobId(jobs[0]?.id || "");
                                   }}
                                   className="btn btn-purple btn-sm"
-                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "12px", padding: "6px 12px" }}
                                 >
-                                  <Briefcase size={12} />
-                                  <span>Assign to Job Requisition</span>
+                                  <Briefcase size={14} />
+                                  <span>Assign Requisition</span>
                                 </button>
                               )}
 
                               {/* Stage-Specific Contextual Actions */}
                               {["uploaded", "parsed", "extraction_failed"].includes(candStatus) && candJob && (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateStatus(cand, "shortlisted")}
                                     className="btn btn-sm btn-primary"
-                                    style={{ fontSize: "11px", padding: "4px 8px" }}
+                                    style={{ fontSize: "12px", padding: "6px 12px", justifyContent: "center" }}
                                   >
                                     Shortlist
                                   </button>
@@ -748,7 +800,7 @@ export const PipelineDashboardPage: React.FC = () => {
                                     type="button"
                                     onClick={() => handleUpdateStatus(cand, "rejected")}
                                     className="btn btn-sm btn-danger"
-                                    style={{ fontSize: "11px", padding: "4px 8px" }}
+                                    style={{ fontSize: "12px", padding: "6px 12px", justifyContent: "center" }}
                                   >
                                     Reject
                                   </button>
@@ -756,37 +808,37 @@ export const PipelineDashboardPage: React.FC = () => {
                               )}
 
                               {candStatus === "shortlisted" && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                                   <button
                                     type="button"
                                     onClick={() => handleSubmitForApproval(cand.id)}
                                     disabled={submittingId === cand.id}
                                     className="btn btn-primary btn-sm"
-                                    style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
+                                    style={{ width: "100%", justifyContent: "center", fontSize: "12.5px", padding: "6px 12px" }}
                                   >
                                     {submittingId === cand.id ? "Routing..." : "Route for Approval →"}
                                   </button>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "2px" }}>
                                     <Link
                                       to={`/candidates/${cand.id}`}
                                       style={{
-                                        fontSize: "10.5px",
+                                        fontSize: "12px",
                                         color: "var(--accent-purple)",
                                         textDecoration: "none",
                                         fontWeight: 600,
                                         display: "inline-flex",
                                         alignItems: "center",
-                                        gap: "3px",
+                                        gap: "4px",
                                       }}
                                     >
-                                      <Star size={11} />
+                                      <Star size={13} />
                                       <span>Score Interview</span>
                                     </Link>
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(cand, "rejected")}
                                       className="btn btn-danger btn-sm"
-                                      style={{ fontSize: "10px", padding: "1px 6px" }}
+                                      style={{ fontSize: "11px", padding: "3px 8px" }}
                                     >
                                       Reject
                                     </button>
@@ -798,9 +850,9 @@ export const PipelineDashboardPage: React.FC = () => {
                                 <Link
                                   to={`/candidates/${cand.id}`}
                                   className="btn btn-purple btn-sm"
-                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none" }}
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "12.5px", padding: "6px 12px", textDecoration: "none" }}
                                 >
-                                  <Gift size={12} />
+                                  <Gift size={14} />
                                   <span>Generate Offer Letter →</span>
                                 </Link>
                               )}
@@ -810,9 +862,9 @@ export const PipelineDashboardPage: React.FC = () => {
                                   type="button"
                                   onClick={() => handleUpdateStatus(cand, "hired")}
                                   className="btn btn-success btn-sm"
-                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px" }}
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "12.5px", padding: "6px 12px" }}
                                 >
-                                  <CheckCircle2 size={12} />
+                                  <CheckCircle2 size={14} />
                                   <span>Mark as Hired</span>
                                 </button>
                               )}
@@ -821,27 +873,29 @@ export const PipelineDashboardPage: React.FC = () => {
                                 <Link
                                   to={`/candidates/${cand.id}`}
                                   className="btn btn-secondary btn-sm"
-                                  style={{ width: "100%", justifyContent: "center", fontSize: "11px", textDecoration: "none", gap: "4px" }}
+                                  style={{ width: "100%", justifyContent: "center", fontSize: "12.5px", padding: "6px 12px", textDecoration: "none", gap: "6px" }}
                                 >
-                                  <CheckSquare size={12} style={{ color: "#059669" }} />
+                                  <CheckSquare size={14} style={{ color: "#059669" }} />
                                   <span>Track Onboarding Hub →</span>
                                 </Link>
                               )}
 
                               {/* Manual Move Dropdown */}
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>Stage:</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                                <span style={{ fontSize: "11.5px", color: "var(--text-muted)", fontWeight: 500 }}>Stage:</span>
                                 <select
                                   value={candStatus}
                                   onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
                                   style={{
-                                    fontSize: "10.5px",
-                                    padding: "2px 8px",
-                                    borderRadius: "4px",
+                                    fontSize: "12px",
+                                    padding: "4px 8px",
+                                    borderRadius: "var(--radius-sm)",
                                     backgroundColor: "#f8fafc",
                                     border: "1px solid var(--border-subtle)",
                                     width: "100%",
                                     cursor: "pointer",
+                                    color: "var(--text-primary)",
+                                    fontWeight: 500,
                                   }}
                                 >
                                   <option value="parsed">Sourced / Parsed</option>
@@ -869,28 +923,28 @@ export const PipelineDashboardPage: React.FC = () => {
         <div
           style={{
             backgroundColor: "#ffffff",
-            borderRadius: "14px",
+            borderRadius: "var(--radius-lg)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+            boxShadow: "var(--shadow-xs)",
             overflow: "hidden",
           }}
         >
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
             <thead>
-              <tr style={{ backgroundColor: "var(--bg-canvas)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Candidate</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Assigned Requisition</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Current Title / Domain</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Experience</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Status</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Quick Transition</th>
-                <th style={{ padding: "12px 16px", fontWeight: 600, color: "var(--text-secondary)" }}>Action</th>
+              <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Candidate</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Assigned Requisition</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Current Title / Domain</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Experience</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Status</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Quick Transition</th>
+                <th style={{ padding: "14px 18px", fontWeight: 700, color: "var(--text-secondary)", fontSize: "12.5px", textTransform: "uppercase", letterSpacing: "0.04em" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {candidates.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>
+                  <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                     No candidates found.
                   </td>
                 </tr>
@@ -901,14 +955,14 @@ export const PipelineDashboardPage: React.FC = () => {
 
                   return (
                     <tr key={cand.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                      <td style={{ padding: "12px 16px" }}>
-                        <Link to={`/candidates/${cand.id}`} style={{ fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>
+                      <td style={{ padding: "14px 18px" }}>
+                        <Link to={`/candidates/${cand.id}`} style={{ fontWeight: 700, color: "var(--text-primary)", textDecoration: "none" }}>
                           {cand.name || cand.raw_resume_filename}
                         </Link>
                       </td>
-                      <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-secondary)" }}>
                         {candJob ? (
-                          <span style={{ fontWeight: 600 }}>{candJob.title}</span>
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{candJob.title}</span>
                         ) : canManagePipeline ? (
                           <button
                             type="button"
@@ -917,32 +971,32 @@ export const PipelineDashboardPage: React.FC = () => {
                               setAssignTargetJobId(jobs[0]?.id || "");
                             }}
                             className="btn btn-sm btn-purple"
-                            style={{ fontSize: "11px", padding: "3px 10px" }}
+                            style={{ fontSize: "12px", padding: "4px 12px" }}
                           >
                             + Assign Requisition
                           </button>
                         ) : (
-                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Unassigned</span>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Unassigned</span>
                         )}
                       </td>
-                      <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-secondary)" }}>
                         {cand.parsed_data?.current_title || "General Candidate"}
                       </td>
-                      <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
+                      <td style={{ padding: "14px 18px", color: "var(--text-secondary)" }}>
                         {cand.parsed_data?.years_experience ? `${cand.parsed_data.years_experience} yrs` : "N/A"}
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td style={{ padding: "14px 18px" }}>
                         <StatusBadge status={candStatus} />
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td style={{ padding: "14px 18px" }}>
                         {canManagePipeline ? (
                           <select
                             value={candStatus}
                             onChange={(e) => handleUpdateStatus(cand, e.target.value as CandidateStatus)}
                             style={{
-                              fontSize: "11px",
-                              padding: "4px 8px",
-                              borderRadius: "6px",
+                              fontSize: "12.5px",
+                              padding: "5px 10px",
+                              borderRadius: "var(--radius-sm)",
                               backgroundColor: "#f8fafc",
                               border: "1px solid var(--border-subtle)",
                               cursor: "pointer",
@@ -957,13 +1011,13 @@ export const PipelineDashboardPage: React.FC = () => {
                             <option value="rejected">Rejected</option>
                           </select>
                         ) : (
-                          <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", fontWeight: 500 }}>
+                          <span style={{ fontSize: "12.5px", color: "var(--text-secondary)", fontWeight: 500 }}>
                             {LIFECYCLE_STAGES.find((s) => s.statuses.includes(candStatus))?.label || candStatus}
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <Link to={`/candidates/${cand.id}`} style={{ fontSize: "12px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}>
+                      <td style={{ padding: "14px 18px" }}>
+                        <Link to={`/candidates/${cand.id}`} style={{ fontSize: "13px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}>
                           View Dossier →
                         </Link>
                       </td>
@@ -979,40 +1033,40 @@ export const PipelineDashboardPage: React.FC = () => {
       {/* Assign Candidate to Requisition Modal */}
       {assignModalCandidate && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "480px" }}>
+          <div className="modal-content" style={{ maxWidth: "520px" }}>
             <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+              <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Assign Candidate to Requisition
               </span>
               <button
                 type="button"
                 className="btn-subtle"
                 onClick={() => setAssignModalCandidate(null)}
-                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+                style={{ border: "none", background: "transparent", cursor: "pointer", padding: "4px" }}
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
+            <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+              <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
                 Link candidate <strong>{assignModalCandidate.name || assignModalCandidate.raw_resume_filename}</strong> to an active requisition to calculate vector matching and enable pipeline progression.
               </p>
 
               {assignError && (
-                <div style={{ padding: "10px 14px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "8px", fontSize: "12.5px" }}>
+                <div style={{ padding: "12px 16px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
                   {assignError}
                 </div>
               )}
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                   Target Job Opening
                 </label>
                 <select
                   value={assignTargetJobId}
                   onChange={(e) => setAssignTargetJobId(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "13.5px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}
                 >
                   {jobs.map((j) => (
                     <option key={j.id} value={j.id}>
@@ -1022,11 +1076,12 @@ export const PipelineDashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", paddingTop: "6px" }}>
                 <button
                   type="button"
                   onClick={() => setAssignModalCandidate(null)}
                   className="btn btn-subtle"
+                  style={{ padding: "8px 18px", fontSize: "13.5px" }}
                 >
                   Cancel
                 </button>
@@ -1035,6 +1090,7 @@ export const PipelineDashboardPage: React.FC = () => {
                   disabled={assigning || !assignTargetJobId}
                   onClick={handleAssignCandidate}
                   className="btn btn-purple"
+                  style={{ padding: "8px 20px", fontSize: "13.5px" }}
                 >
                   {assigning ? "Assigning..." : "Confirm & Assign"}
                 </button>
@@ -1044,50 +1100,50 @@ export const PipelineDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Manual Sourcing Modal (Uncluttered & Clean) */}
+      {/* Manual Sourcing Modal */}
       {showIngestModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "520px" }}>
+          <div className="modal-content" style={{ maxWidth: "540px" }}>
             <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+              <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
                 Source & Ingest External Resume
               </span>
               <button
                 type="button"
                 className="btn-subtle"
                 onClick={() => setShowIngestModal(false)}
-                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+                style={{ border: "none", background: "transparent", cursor: "pointer", padding: "4px" }}
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
+            <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+              <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
                 Directly upload a sourced candidate resume (.pdf, .docx, .txt) to parse their experience and add them to the ATS pipeline.
               </p>
 
               {uploadStatus?.success && (
-                <div style={{ padding: "10px 14px", backgroundColor: "var(--status-approved-bg)", color: "var(--status-approved-text)", borderRadius: "8px", fontSize: "12.5px" }}>
+                <div style={{ padding: "12px 16px", backgroundColor: "var(--status-approved-bg)", color: "var(--status-approved-text)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
                   {uploadStatus.success}
                 </div>
               )}
 
               {uploadStatus?.error && (
-                <div style={{ padding: "10px 14px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "8px", fontSize: "12.5px" }}>
+                <div style={{ padding: "12px 16px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
                   {uploadStatus.error}
                 </div>
               )}
 
               {/* Target Job Selector */}
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                   Associate with Target Requisition (Optional)
                 </label>
                 <select
                   value={uploadJobId}
                   onChange={(e) => setUploadJobId(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "13.5px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}
                 >
                   <option value="">General Talent Pool (No Job Assigned)</option>
                   {jobs.map((j) => (
@@ -1109,11 +1165,12 @@ export const PipelineDashboardPage: React.FC = () => {
                 onClick={() => fileInputRef.current?.click()}
                 style={{
                   border: `2px dashed ${isDragging ? "var(--accent-purple)" : "var(--border-subtle)"}`,
-                  borderRadius: "12px",
-                  padding: "28px 16px",
+                  borderRadius: "var(--radius-lg)",
+                  padding: "32px 20px",
                   textAlign: "center",
                   cursor: "pointer",
                   backgroundColor: isDragging ? "var(--accent-purple-subtle)" : "var(--bg-canvas)",
+                  transition: "all 0.15s ease",
                 }}
               >
                 <input
@@ -1128,28 +1185,21 @@ export const PipelineDashboardPage: React.FC = () => {
                   }}
                   disabled={uploading}
                 />
-                <UploadCloud size={28} style={{ color: "var(--accent-purple)", margin: "0 auto 8px auto" }} />
-                <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                <UploadCloud size={32} style={{ color: "var(--accent-purple)", margin: "0 auto 10px auto" }} />
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
                   {uploading ? "Extracting & Embedding..." : "Click to select or drag resume here"}
                 </div>
-                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
                   PDF, DOCX, TXT up to 5MB
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", paddingTop: "6px" }}>
                 <button
                   type="button"
                   onClick={() => setShowIngestModal(false)}
-                  style={{
-                    padding: "6px 16px",
-                    borderRadius: "50px",
-                    border: "1px solid var(--border-subtle)",
-                    backgroundColor: "#ffffff",
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="btn btn-subtle"
+                  style={{ padding: "8px 18px", fontSize: "13.5px" }}
                 >
                   Close
                 </button>

@@ -151,24 +151,25 @@ export const ApprovalsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, letterSpacing: "-0.01em" }}>
+          <h1 style={{ fontSize: "26px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
             HITL Tiered Approval Queue
           </h1>
-          <p className="text-secondary" style={{ fontSize: "13px" }}>
+          <p style={{ fontSize: "14.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
             Data-driven human-in-the-loop review. Submissions escalate sequentially according to the requisition's role tier policy.
           </p>
         </div>
 
         <button
-          className="btn btn-subtle btn-sm mono"
+          className="btn btn-secondary"
           onClick={() => {
             setShowPolicyDemo(!showPolicyDemo);
             if (!showPolicyDemo) loadPolicies();
           }}
+          style={{ fontSize: "13px", padding: "8px 16px" }}
         >
           {showPolicyDemo ? "Hide Routing Matrix" : "Inspect Routing Matrix (Viva)"}
         </button>
@@ -178,14 +179,14 @@ export const ApprovalsPage: React.FC = () => {
       {user?.role === "hr" && (
         <div
           style={{
-            padding: "10px 16px",
+            padding: "14px 18px",
             backgroundColor: "#f5f3ff",
             border: "1px solid #ddd6fe",
             borderRadius: "var(--radius-md)",
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            fontSize: "12.5px",
+            gap: "12px",
+            fontSize: "13.5px",
             color: "#6b21a8",
           }}
         >
@@ -197,15 +198,15 @@ export const ApprovalsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Configurable Policy Demonstration Panel (Viva Architecture Differentiator) */}
+      {/* Configurable Policy Demonstration Panel */}
       {showPolicyDemo && (
-        <div className="panel" style={{ borderColor: "var(--accent-ops-border)" }}>
-          <div className="panel-header" style={{ backgroundColor: "var(--accent-ops-subtle)" }}>
+        <div className="panel" style={{ borderColor: "var(--border-subtle)" }}>
+          <div className="panel-header" style={{ backgroundColor: "#f8fafc", padding: "16px 20px" }}>
             <div>
-              <span className="mono" style={{ fontSize: "11px", color: "var(--accent-ops)", fontWeight: 700 }}>
+              <span className="mono" style={{ fontSize: "12px", color: "var(--accent-purple)", fontWeight: 700, letterSpacing: "0.04em" }}>
                 PERSISTENT APPROVAL POLICY ROUTING MATRIX (POSTGRES TABLE: approval_policies)
               </span>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px", margin: 0 }}>
                 Notice: Escalation chains are fully data-driven records, not hardcoded dicts. Configurable per role tier.
               </p>
             </div>
@@ -213,7 +214,7 @@ export const ApprovalsPage: React.FC = () => {
 
           <div className="panel-body" style={{ padding: "0" }}>
             {policiesLoading ? (
-              <div style={{ padding: "16px", color: "var(--text-muted)", fontSize: "12px" }}>Loading policy table...</div>
+              <div style={{ padding: "24px", color: "var(--text-muted)", fontSize: "13.5px" }}>Loading policy table...</div>
             ) : (
               <table className="ops-table">
                 <thead>
@@ -227,14 +228,14 @@ export const ApprovalsPage: React.FC = () => {
                 <tbody>
                   {policies.map((p) => (
                     <tr key={p.id}>
-                      <td className="mono" style={{ fontWeight: 600 }}>{p.role_tier.toUpperCase()}</td>
-                      <td className="mono">Step {p.step_order}</td>
+                      <td className="mono" style={{ fontWeight: 700 }}>{p.role_tier.toUpperCase()}</td>
+                      <td className="mono" style={{ fontWeight: 600 }}>Step {p.step_order}</td>
                       <td>
-                        <span className="mono" style={{ color: "var(--accent-ops)" }}>
+                        <span className="mono" style={{ color: "var(--accent-purple)", fontWeight: 600 }}>
                           {p.approver_role}
                         </span>
                       </td>
-                      <td className="text-secondary" style={{ fontSize: "12px" }}>
+                      <td className="text-secondary" style={{ fontSize: "13px" }}>
                         {p.role_tier === "senior" && p.step_order === 1
                           ? "Passes to VP upon signoff; Rejection halts chain immediately"
                           : p.role_tier === "senior" && p.step_order === 2
@@ -255,10 +256,11 @@ export const ApprovalsPage: React.FC = () => {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "8px",
-          backgroundColor: "#f0f2f5",
-          padding: "6px",
+          gap: "12px",
+          backgroundColor: "#f1f5f9",
+          padding: "8px",
           borderRadius: "var(--radius-lg)",
+          border: "1px solid var(--border-subtle)",
         }}
       >
         {ROLES.map((r) => {
@@ -273,29 +275,29 @@ export const ApprovalsPage: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-start",
-                padding: "12px 16px",
+                padding: "16px 18px",
                 borderRadius: "var(--radius-md)",
-                border: isSelected ? "1px solid rgba(100, 82, 206, 0.25)" : "1px solid transparent",
+                border: isSelected ? "1px solid rgba(79, 70, 229, 0.3)" : "1px solid transparent",
                 backgroundColor: isSelected ? "#ffffff" : "transparent",
-                color: isSelected ? "var(--accent-purple)" : "var(--text-secondary)",
-                boxShadow: isSelected ? "0 4px 14px rgba(100, 82, 206, 0.08)" : "none",
+                color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
+                boxShadow: isSelected ? "var(--shadow-sm)" : "none",
                 textAlign: "left",
                 cursor: "pointer",
-                transition: "all 0.2s ease",
+                transition: "all 0.15s ease",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                <span style={{ fontSize: "13px", fontWeight: isSelected ? 700 : 600 }}>
+                <span style={{ fontSize: "14.5px", fontWeight: isSelected ? 800 : 600, color: isSelected ? "var(--accent-purple)" : "var(--text-primary)" }}>
                   {r.label}
                 </span>
                 <span
                   className={`badge ${count > 0 ? "badge-pending" : "badge-neutral"}`}
-                  style={{ fontSize: "10px", padding: "1px 8px" }}
+                  style={{ fontSize: "11.5px", padding: "3px 9px", borderRadius: "var(--radius-pill)" }}
                 >
                   {count} PENDING
                 </span>
               </div>
-              <span style={{ fontSize: "11px", color: isSelected ? "var(--text-secondary)" : "var(--text-muted)", marginTop: "4px" }}>
+              <span style={{ fontSize: "12.5px", color: isSelected ? "var(--text-secondary)" : "var(--text-muted)", marginTop: "6px", lineHeight: 1.4 }}>
                 {r.desc}
               </span>
             </button>
@@ -306,12 +308,12 @@ export const ApprovalsPage: React.FC = () => {
       {error && (
         <div
           style={{
-            padding: "10px 14px",
+            padding: "12px 16px",
             borderRadius: "var(--radius-sm)",
             backgroundColor: "var(--status-rejected-bg)",
             border: "1px solid var(--status-rejected-border)",
             color: "var(--status-rejected-text)",
-            fontSize: "13px",
+            fontSize: "13.5px",
           }}
         >
           {error}
@@ -320,8 +322,8 @@ export const ApprovalsPage: React.FC = () => {
 
       {/* Approvals List for Selected Role */}
       {loading ? (
-        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", fontFamily: "var(--font-mono)" }}>
-          LOADING APPROVAL QUEUE...
+        <div style={{ padding: "60px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
+          Loading approval queue...
         </div>
       ) : approvals.length === 0 ? (
         <EmptyState
@@ -329,7 +331,7 @@ export const ApprovalsPage: React.FC = () => {
           description={`All candidate approval requests assigned to the ${activeRole} role have been processed. Switch roles above to inspect other queues.`}
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {approvals.map((appr) => {
             const candId = appr.application?.candidate_id || appr.candidate_id;
             const cand = candId ? candidatesMap[candId] : undefined;
@@ -345,30 +347,31 @@ export const ApprovalsPage: React.FC = () => {
                   display: "flex",
                   flexDirection: "column",
                   gap: "0",
-                  borderLeft: "3px solid var(--status-pending-text)",
+                  borderLeft: "4px solid #f59e0b",
+                  boxShadow: "var(--shadow-xs)",
                 }}
               >
                 {/* Header */}
-                <div className="panel-header">
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span className="mono" style={{ fontSize: "11px", color: "var(--status-pending-text)", fontWeight: 700 }}>
+                <div className="panel-header" style={{ padding: "16px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <span className="mono" style={{ fontSize: "12px", color: "#b45309", backgroundColor: "#fffbeb", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>
                       TASK #{appr.id.slice(0, 8)}
                     </span>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>
                       {cand?.name || parsed?.current_title || cand?.raw_resume_filename || "Candidate"}
                     </span>
-                    {cand && <span className="mono text-muted" style={{ fontSize: "11px" }}>({cand.raw_resume_filename})</span>}
+                    {cand && <span className="mono text-muted" style={{ fontSize: "12px" }}>({cand.raw_resume_filename})</span>}
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span className="mono text-muted" style={{ fontSize: "11px" }}>
-                      QUEUED: {new Date(appr.created_at).toLocaleString()}
+                    <span className="mono text-muted" style={{ fontSize: "12px" }}>
+                      Queued: {new Date(appr.created_at).toLocaleDateString()} {new Date(appr.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
                 </div>
 
                 {/* Body */}
-                <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "18px 20px" }}>
                   {/* Requisition & Escalation Chain Progress */}
                   <div
                     style={{
@@ -376,29 +379,29 @@ export const ApprovalsPage: React.FC = () => {
                       alignItems: "center",
                       justifyContent: "space-between",
                       flexWrap: "wrap",
-                      gap: "12px",
+                      gap: "16px",
                       backgroundColor: "#f8fafc",
-                      padding: "12px 16px",
+                      padding: "16px 20px",
                       borderRadius: "var(--radius-md)",
                       border: "1px solid var(--border-subtle)",
                     }}
                   >
                     <div>
-                      <div className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <div className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         TARGET REQUISITION & TIER
                       </div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {job ? job.title : "Unassigned Job"}{" "}
                         {job && (
-                          <span className="mono" style={{ color: "var(--accent-purple)", fontSize: "11px", fontWeight: 600 }}>
-                            ({job.role_tier.toUpperCase()})
+                          <span style={{ color: "var(--accent-purple)", fontSize: "12px", fontWeight: 700, backgroundColor: "var(--accent-purple-subtle)", padding: "2px 8px", borderRadius: "var(--radius-pill)", border: "1px solid var(--accent-purple-border)", marginLeft: "6px" }}>
+                            {job.role_tier.toUpperCase()} TIER
                           </span>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", marginBottom: "4px" }}>
+                      <div className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", marginBottom: "6px", letterSpacing: "0.04em" }}>
                         MULTI-TIER ESCALATION PROGRESS
                       </div>
                       {job ? (
@@ -409,44 +412,43 @@ export const ApprovalsPage: React.FC = () => {
                           activeApproverRole={appr.approver_role}
                         />
                       ) : (
-                        <span className="mono text-muted" style={{ fontSize: "11px" }}>—</span>
+                        <span className="mono text-muted" style={{ fontSize: "12px" }}>—</span>
                       )}
                     </div>
                   </div>
 
                   {/* Candidate Extracted Qualifications Snapshot */}
                   {parsed && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", fontSize: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", fontSize: "13.5px" }}>
                       <div>
-                        <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                        <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                           EXPERIENCE & SENIORITY
                         </span>
-                        <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>
+                        <div style={{ color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
                           <strong style={{ color: "var(--text-primary)" }}>{parsed.current_title}</strong> at{" "}
                           {parsed.current_company || "Company N/A"} •{" "}
-                          <span className="mono" style={{ fontWeight: 600 }}>{parsed.seniority}</span> ({parsed.years_experience}y exp)
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{parsed.seniority}</span> ({parsed.years_experience}y exp)
                         </div>
                         {parsed.summary && (
-                          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", lineHeight: "1.4" }}>
+                          <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "6px", lineHeight: "1.5" }}>
                             {parsed.summary}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                        <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                           VERIFIED CORE COMPETENCIES
                         </span>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
                           {parsed.core_skills.map((skill, i) => (
                             <span
                               key={i}
-                              className="mono"
                               style={{
-                                fontSize: "10px",
-                                padding: "2px 7px",
-                                backgroundColor: "#f5f3ff",
-                                border: "1px solid rgba(100, 82, 206, 0.12)",
+                                fontSize: "11.5px",
+                                padding: "3px 9px",
+                                backgroundColor: "var(--accent-purple-subtle)",
+                                border: "1px solid var(--accent-purple-border)",
                                 borderRadius: "var(--radius-pill)",
                                 color: "var(--accent-purple)",
                                 fontWeight: 600,
@@ -466,18 +468,19 @@ export const ApprovalsPage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      paddingTop: "10px",
+                      paddingTop: "14px",
                       borderTop: "1px solid var(--border-subtle)",
                     }}
                   >
-                    <Link to={`/candidates/${candId || appr.candidate_id}`} className="btn btn-subtle btn-sm">
+                    <Link to={`/candidates/${candId || appr.candidate_id}`} style={{ fontSize: "13.5px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}>
                       Inspect Full Dossier & Plaintext →
                     </Link>
 
                     {canActOnApproval(appr) ? (
-                      <div style={{ display: "flex", gap: "8px" }}>
+                      <div style={{ display: "flex", gap: "10px" }}>
                         <button
                           className="btn btn-danger btn-sm"
+                          style={{ fontSize: "13px", padding: "7px 16px" }}
                           onClick={() => {
                             setSelectedApproval(appr);
                             setActionType("reject");
@@ -490,6 +493,7 @@ export const ApprovalsPage: React.FC = () => {
 
                         <button
                           className="btn btn-success btn-sm"
+                          style={{ fontSize: "13px", padding: "7px 16px" }}
                           onClick={() => {
                             setSelectedApproval(appr);
                             setActionType("approve");
@@ -505,9 +509,9 @@ export const ApprovalsPage: React.FC = () => {
                         <span
                           className="badge badge-neutral"
                           style={{
-                            fontSize: "11px",
-                            padding: "4px 10px",
-                            borderRadius: "50px",
+                            fontSize: "12px",
+                            padding: "5px 12px",
+                            borderRadius: "var(--radius-pill)",
                             fontWeight: 600,
                           }}
                         >
@@ -528,26 +532,31 @@ export const ApprovalsPage: React.FC = () => {
       {/* Decision Action Modal */}
       {selectedApproval && canActOnApproval(selectedApproval) && (
         <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="panel-header">
-              <span style={{ fontSize: "14px", fontWeight: 700 }}>
+          <div className="modal-content" style={{ maxWidth: "540px" }}>
+            <div className="panel-header" style={{ padding: "18px 24px" }}>
+              <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
                 {actionType === "approve" ? "Confirm Candidate Approval" : "Confirm Candidate Rejection"}
               </span>
-              <button className="btn btn-subtle btn-sm" onClick={() => setSelectedApproval(null)}>
+              <button
+                type="button"
+                className="btn-subtle"
+                onClick={() => setSelectedApproval(null)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "16px", padding: "4px" }}
+              >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAction} style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <form onSubmit={handleAction} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "18px" }}>
               {actionError && (
                 <div
                   style={{
-                    padding: "8px 12px",
+                    padding: "12px 16px",
                     borderRadius: "var(--radius-sm)",
                     backgroundColor: "var(--status-rejected-bg)",
                     border: "1px solid var(--status-rejected-border)",
                     color: "var(--status-rejected-text)",
-                    fontSize: "12px",
+                    fontSize: "13px",
                   }}
                 >
                   {actionError}
@@ -556,12 +565,13 @@ export const ApprovalsPage: React.FC = () => {
 
               <div
                 style={{
-                  padding: "10px 12px",
+                  padding: "14px 16px",
                   borderRadius: "var(--radius-sm)",
                   backgroundColor: actionType === "approve" ? "var(--status-approved-bg)" : "var(--status-rejected-bg)",
                   border: `1px solid ${actionType === "approve" ? "var(--status-approved-border)" : "var(--status-rejected-border)"}`,
                   color: actionType === "approve" ? "var(--status-approved-text)" : "var(--status-rejected-text)",
-                  fontSize: "12px",
+                  fontSize: "13.5px",
+                  lineHeight: 1.5,
                 }}
               >
                 {actionType === "approve"
@@ -570,7 +580,7 @@ export const ApprovalsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="mono" style={{ display: "block", fontSize: "11px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                <label className="mono" style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
                   DECISION AUDIT NOTES (SAVED TO AUDIT TRAIL)
                 </label>
                 <textarea
@@ -582,15 +592,16 @@ export const ApprovalsPage: React.FC = () => {
                   }
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
-                  style={{ width: "100%", resize: "vertical" }}
+                  style={{ width: "100%", resize: "vertical", padding: "10px 14px", fontSize: "13.5px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}
                 />
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", paddingTop: "6px" }}>
                 <button
                   type="button"
                   className="btn btn-subtle"
                   onClick={() => setSelectedApproval(null)}
+                  style={{ padding: "8px 18px", fontSize: "13.5px" }}
                 >
                   Cancel
                 </button>
@@ -598,6 +609,7 @@ export const ApprovalsPage: React.FC = () => {
                   type="submit"
                   className={actionType === "approve" ? "btn btn-success" : "btn btn-danger"}
                   disabled={actionLoading}
+                  style={{ padding: "8px 20px", fontSize: "13.5px" }}
                 >
                   {actionLoading
                     ? "Recording Decision..."

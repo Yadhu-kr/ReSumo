@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { getUserDisplayName, getUserInitials, getRoleBadgeLabel, getAvatarGradient } from "../lib/user";
-import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox } from "lucide-react";
+import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox, Briefcase, FileText, Compass } from "lucide-react";
 import type { AppNotification } from "../api/types";
 
 export const Layout: React.FC = () => {
@@ -136,95 +136,119 @@ export const Layout: React.FC = () => {
       <header
         style={{
           borderBottom: "1px solid var(--border-subtle)",
-          backgroundColor: "#ffffff",
-          padding: "0 28px",
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          backdropFilter: "blur(12px)",
+          padding: "0 32px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          height: "56px",
+          height: "64px",
           position: "sticky",
           top: 0,
           zIndex: 50,
-          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
+          boxShadow: "var(--shadow-xs)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "36px" }}>
           {/* Brand Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Link
+            to={isCandidate ? "/portal" : isApprover ? "/approvals" : "/"}
+            style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}
+          >
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: "22px",
-                height: "22px",
-                borderRadius: "6px",
-                background: "linear-gradient(135deg, #6452ce 0%, #533eb6 100%)",
-                boxShadow: "0 2px 6px rgba(100, 82, 206, 0.35)",
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                background: "linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)",
+                boxShadow: "0 2px 6px rgba(30, 27, 75, 0.25)",
               }}
             >
               <span
                 style={{
-                  width: "6px",
-                  height: "6px",
+                  width: "8px",
+                  height: "8px",
                   borderRadius: "2px",
                   backgroundColor: "#ffffff",
                 }}
               />
             </span>
-            <span
-              className="mono"
-              style={{
-                fontWeight: 800,
-                fontSize: "15px",
-                letterSpacing: "0.04em",
-                color: "var(--text-primary)",
-              }}
-            >
-              RESUMO
-              <span style={{ color: "var(--accent-purple)", fontWeight: 500 }}>
-                {isCandidate ? "::PORTAL" : "::OPS"}
+            <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+              <span
+                style={{
+                  fontWeight: 800,
+                  fontSize: "17px",
+                  letterSpacing: "-0.02em",
+                  color: "var(--text-primary)",
+                }}
+              >
+                ReSumo
               </span>
-            </span>
-          </div>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  padding: "2px 7px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--bg-surface-elevated)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                {isCandidate ? "CANDIDATE PORTAL" : isApprover ? "GOVERNANCE" : "TALENT OPS"}
+              </span>
+            </div>
+          </Link>
 
           {/* Navigation Tabs (Role Scoped) */}
-          <nav style={{ display: "flex", gap: "6px" }}>
+          <nav style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {isCandidate ? (
               // Candidate Navigation
               <>
                 <NavLink
                   to="/portal"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  My Resume & Status
+                  <FileText size={15} />
+                  <span>My Career Profile</span>
                 </NavLink>
 
                 <NavLink
                   to="/jobs"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  Browse Open Jobs
+                  <Compass size={15} />
+                  <span>Browse Open Requisitions</span>
                 </NavLink>
               </>
             ) : isApprover ? (
@@ -233,28 +257,30 @@ export const Layout: React.FC = () => {
                 <NavLink
                   to="/approvals"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
-                    gap: "6px",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  <span>Approval Queue</span>
+                  <ShieldCheck size={15} />
+                  <span>Executive Approval Queue</span>
                   {pendingCount > 0 && (
                     <span
                       className="badge badge-pending"
                       style={{
-                        fontSize: "10.5px",
-                        padding: "2px 7px",
-                        borderRadius: "50px",
+                        fontSize: "11px",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        fontWeight: 700,
                       }}
                     >
                       {pendingCount}
@@ -265,18 +291,22 @@ export const Layout: React.FC = () => {
                 <NavLink
                   to="/jobs"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  Requisitions
+                  <Briefcase size={15} />
+                  <span>Job Requisitions</span>
                 </NavLink>
               </>
             ) : (
@@ -285,63 +315,73 @@ export const Layout: React.FC = () => {
                 <NavLink
                   to="/"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  Pipeline Dashboard
+                  <Layers size={15} />
+                  <span>Talent Pipeline</span>
                 </NavLink>
 
                 <NavLink
                   to="/jobs"
                   style={({ isActive }) => ({
-                    padding: "7px 16px",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "13px",
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
                     fontWeight: isActive ? 600 : 500,
                     color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                     backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                     border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                     textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
                     transition: "all 0.15s ease",
                   })}
                 >
-                  Jobs & RAG Matching
+                  <Briefcase size={15} />
+                  <span>Requisitions & Matching</span>
                 </NavLink>
 
                 {(user?.role === "admin" || user?.role === "hr") && (
                   <NavLink
                     to="/approvals"
                     style={({ isActive }) => ({
-                      padding: "7px 16px",
-                      borderRadius: "var(--radius-pill)",
-                      fontSize: "13px",
+                      padding: "8px 16px",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "13.5px",
                       fontWeight: isActive ? 600 : 500,
                       color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
                       backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
                       border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
                       textDecoration: "none",
-                      display: "flex",
+                      display: "inline-flex",
                       alignItems: "center",
-                      gap: "6px",
+                      gap: "7px",
                       transition: "all 0.15s ease",
                     })}
                   >
-                    <span>{user?.role === "hr" ? "Approvals Track" : "Approval Queue"}</span>
+                    <ShieldCheck size={15} />
+                    <span>{user?.role === "hr" ? "Approvals Tracking" : "Governance Queue"}</span>
                     {pendingCount > 0 && (
                       <span
                         className="badge badge-pending"
                         style={{
-                          fontSize: "10.5px",
-                          padding: "2px 7px",
-                          borderRadius: "50px",
+                          fontSize: "11px",
+                          padding: "2px 8px",
+                          borderRadius: "9999px",
+                          fontWeight: 700,
                         }}
                       >
                         {pendingCount}
@@ -355,23 +395,23 @@ export const Layout: React.FC = () => {
         </div>
 
         {/* Status & User Bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           {/* API Health */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              padding: "4px 10px",
-              borderRadius: "50px",
+              gap: "7px",
+              padding: "5px 12px",
+              borderRadius: "var(--radius-pill)",
               backgroundColor: "var(--bg-surface-elevated)",
               border: "1px solid var(--border-subtle)",
             }}
           >
             <span
               style={{
-                width: "7px",
-                height: "7px",
+                width: "8px",
+                height: "8px",
                 borderRadius: "50%",
                 backgroundColor:
                   backendOnline === true
@@ -381,8 +421,8 @@ export const Layout: React.FC = () => {
                     : "var(--text-muted)",
               }}
             />
-            <span className="mono" style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)" }}>
-              API: {backendOnline === true ? "ONLINE" : backendOnline === false ? "UNREACHABLE" : "CONNECTING"}
+            <span className="mono" style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
+              {backendOnline === true ? "API Active" : backendOnline === false ? "Offline" : "Connecting"}
             </span>
           </div>
 
@@ -442,11 +482,11 @@ export const Layout: React.FC = () => {
                     position: "absolute",
                     top: "calc(100% + 10px)",
                     right: 0,
-                    width: "360px",
-                    maxHeight: "440px",
+                    width: "390px",
+                    maxHeight: "480px",
                     backgroundColor: "#ffffff",
-                    borderRadius: "14px",
-                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)",
+                    borderRadius: "var(--radius-lg)",
+                    boxShadow: "var(--shadow-xl)",
                     border: "1px solid var(--border-subtle)",
                     zIndex: 100,
                     overflow: "hidden",
@@ -457,28 +497,29 @@ export const Layout: React.FC = () => {
                   {/* Popover Header */}
                   <div
                     style={{
-                      padding: "12px 16px",
+                      padding: "14px 18px",
                       borderBottom: "1px solid var(--border-subtle)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      backgroundColor: "#fafbfc",
+                      backgroundColor: "var(--bg-canvas)",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
                         Notifications
                       </span>
                       {unreadNotifications > 0 && (
                         <span
                           className="mono"
                           style={{
-                            fontSize: "10px",
+                            fontSize: "11px",
                             backgroundColor: "var(--accent-purple-subtle)",
                             color: "var(--accent-purple)",
-                            padding: "2px 6px",
-                            borderRadius: "10px",
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
                             fontWeight: 700,
+                            border: "1px solid var(--accent-purple-border)",
                           }}
                         >
                           {unreadNotifications} new
@@ -491,7 +532,7 @@ export const Layout: React.FC = () => {
                         type="button"
                         onClick={handleMarkAllRead}
                         style={{
-                          fontSize: "11px",
+                          fontSize: "12px",
                           color: "var(--accent-purple)",
                           background: "transparent",
                           border: "none",
@@ -499,22 +540,22 @@ export const Layout: React.FC = () => {
                           fontWeight: 600,
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "4px",
+                          gap: "5px",
                         }}
                       >
-                        <CheckCheck size={12} />
+                        <CheckCheck size={14} />
                         <span>Mark all read</span>
                       </button>
                     )}
                   </div>
 
                   {/* Popover Body / Feed */}
-                  <div style={{ overflowY: "auto", flex: 1, maxHeight: "380px" }}>
+                  <div style={{ overflowY: "auto", flex: 1, maxHeight: "400px" }}>
                     {notifications.length === 0 ? (
-                      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-muted)" }}>
-                        <Inbox size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
-                        <div style={{ fontSize: "12.5px", fontWeight: 600 }}>No notifications yet</div>
-                        <div style={{ fontSize: "11px", marginTop: "4px" }}>
+                      <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)" }}>
+                        <Inbox size={32} style={{ margin: "0 auto 10px auto", opacity: 0.4 }} />
+                        <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>No notifications yet</div>
+                        <div style={{ fontSize: "12px", marginTop: "4px", color: "var(--text-secondary)" }}>
                           You'll receive alerts here when candidate actions or stage updates happen.
                         </div>
                       </div>
@@ -522,13 +563,13 @@ export const Layout: React.FC = () => {
                       notifications.slice(0, 15).map((notif) => {
                         const isUnread = !notif.is_read;
                         const icon = notif.notification_type.includes("offer") ? (
-                          <Gift size={14} color="#a855f7" />
+                          <Gift size={15} color="#4f46e5" />
                         ) : notif.notification_type.includes("interview") ? (
-                          <Calendar size={14} color="#6366f1" />
+                          <Calendar size={15} color="#2563eb" />
                         ) : notif.notification_type.includes("onboarding") ? (
-                          <ShieldCheck size={14} color="#10b981" />
+                          <ShieldCheck size={15} color="#059669" />
                         ) : (
-                          <Bell size={14} color="#f59e0b" />
+                          <Bell size={15} color="#d97706" />
                         );
 
                         return (
@@ -536,29 +577,29 @@ export const Layout: React.FC = () => {
                             key={notif.id}
                             onClick={() => handleNotificationClick(notif)}
                             style={{
-                              padding: "10px 14px",
+                              padding: "12px 16px",
                               borderBottom: "1px solid var(--border-subtle)",
-                              backgroundColor: isUnread ? "rgba(100, 82, 206, 0.04)" : "#ffffff",
+                              backgroundColor: isUnread ? "rgba(79, 70, 229, 0.04)" : "#ffffff",
                               cursor: "pointer",
                               display: "flex",
-                              gap: "10px",
+                              gap: "12px",
                               alignItems: "flex-start",
                               transition: "background 0.15s ease",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "rgba(100, 82, 206, 0.08)";
+                              e.currentTarget.style.backgroundColor = "rgba(79, 70, 229, 0.07)";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = isUnread ? "rgba(100, 82, 206, 0.04)" : "#ffffff";
+                              e.currentTarget.style.backgroundColor = isUnread ? "rgba(79, 70, 229, 0.04)" : "#ffffff";
                             }}
                           >
                             <div
                               style={{
                                 marginTop: "2px",
-                                width: "26px",
-                                height: "26px",
+                                width: "30px",
+                                height: "30px",
                                 borderRadius: "8px",
-                                backgroundColor: isUnread ? "rgba(100, 82, 206, 0.12)" : "var(--bg-canvas)",
+                                backgroundColor: isUnread ? "rgba(79, 70, 229, 0.12)" : "var(--bg-canvas)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -572,7 +613,7 @@ export const Layout: React.FC = () => {
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
                                 <span
                                   style={{
-                                    fontSize: "12px",
+                                    fontSize: "13px",
                                     fontWeight: isUnread ? 700 : 600,
                                     color: "var(--text-primary)",
                                     overflow: "hidden",
@@ -585,8 +626,8 @@ export const Layout: React.FC = () => {
                                 {isUnread && (
                                   <span
                                     style={{
-                                      width: "6px",
-                                      height: "6px",
+                                      width: "7px",
+                                      height: "7px",
                                       borderRadius: "50%",
                                       backgroundColor: "var(--accent-purple)",
                                       flexShrink: 0,
@@ -597,10 +638,10 @@ export const Layout: React.FC = () => {
 
                               <p
                                 style={{
-                                  fontSize: "11.5px",
+                                  fontSize: "12.5px",
                                   color: "var(--text-secondary)",
-                                  margin: "2px 0 4px 0",
-                                  lineHeight: "1.4",
+                                  margin: "4px 0 6px 0",
+                                  lineHeight: "1.45",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   display: "-webkit-box",
@@ -611,7 +652,7 @@ export const Layout: React.FC = () => {
                                 {notif.body_text}
                               </p>
 
-                              <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                              <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                                 {new Date(notif.created_at).toLocaleString([], {
                                   month: "short",
                                   day: "numeric",
@@ -634,21 +675,19 @@ export const Layout: React.FC = () => {
           {user ? (
             <div style={{ display: "flex", alignItems: "center" }}>
               <div ref={menuRef} style={{ position: "relative" }}>
-                {/* Rightmost corner trigger: ONLY Avatar + Name + chevron */}
+                {/* Rightmost corner trigger: Avatar + Name + chevron */}
                 <button
                   type="button"
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
-                    padding: "4px 12px 4px 6px",
-                    borderRadius: "50px",
+                    gap: "9px",
+                    padding: "5px 14px 5px 6px",
+                    borderRadius: "var(--radius-pill)",
                     backgroundColor: profileMenuOpen ? "#ffffff" : "var(--bg-surface-elevated)",
                     border: profileMenuOpen ? "1px solid var(--accent-purple-border)" : "1px solid var(--border-subtle)",
-                    boxShadow: profileMenuOpen
-                      ? "0 3px 12px rgba(100, 82, 206, 0.12)"
-                      : "0 1px 3px rgba(0, 0, 0, 0.04)",
+                    boxShadow: profileMenuOpen ? "var(--shadow-sm)" : "var(--shadow-xs)",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                   }}
@@ -669,19 +708,19 @@ export const Layout: React.FC = () => {
                   {/* Profile Avatar */}
                   <div
                     style={{
-                      width: "28px",
-                      height: "28px",
+                      width: "30px",
+                      height: "30px",
                       borderRadius: "50%",
                       background: getAvatarGradient(getUserDisplayName(user)),
                       color: "#ffffff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "11px",
+                      fontSize: "12px",
                       fontWeight: 700,
                       letterSpacing: "0.2px",
                       flexShrink: 0,
-                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.15)",
                     }}
                   >
                     {getUserInitials(user)}
@@ -690,10 +729,10 @@ export const Layout: React.FC = () => {
                   {/* ONLY THE NAME */}
                   <span
                     style={{
-                      fontSize: "13px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       color: "var(--text-primary)",
-                      maxWidth: "150px",
+                      maxWidth: "160px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -712,44 +751,44 @@ export const Layout: React.FC = () => {
                   />
                 </button>
 
-                {/* Dropdown Menu: Revealed on click containing badges, view profile, and sign-off */}
+                {/* Dropdown Menu */}
                 {profileMenuOpen && (
                   <div
                     style={{
                       position: "absolute",
                       top: "calc(100% + 8px)",
                       right: 0,
-                      width: "250px",
+                      width: "270px",
                       backgroundColor: "#ffffff",
-                      borderRadius: "16px",
+                      borderRadius: "var(--radius-lg)",
                       border: "1px solid var(--border-subtle)",
-                      boxShadow: "0 10px 30px rgba(35, 15, 75, 0.12)",
-                      padding: "8px",
+                      boxShadow: "var(--shadow-xl)",
+                      padding: "10px",
                       zIndex: 1000,
                     }}
                   >
                     {/* User Profile Card with Role Badges */}
                     <div
                       style={{
-                        padding: "10px 12px",
-                        borderRadius: "12px",
-                        backgroundColor: "#f8fafc",
+                        padding: "12px 14px",
+                        borderRadius: "var(--radius-md)",
+                        backgroundColor: "var(--bg-canvas)",
                         border: "1px solid var(--border-subtle)",
-                        marginBottom: "6px",
+                        marginBottom: "8px",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div
                           style={{
-                            width: "36px",
-                            height: "36px",
+                            width: "38px",
+                            height: "38px",
                             borderRadius: "50%",
                             background: getAvatarGradient(getUserDisplayName(user)),
                             color: "#ffffff",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "13px",
+                            fontSize: "14px",
                             fontWeight: 700,
                             flexShrink: 0,
                           }}
@@ -759,7 +798,7 @@ export const Layout: React.FC = () => {
                         <div style={{ overflow: "hidden" }}>
                           <div
                             style={{
-                              fontSize: "13px",
+                              fontSize: "14px",
                               fontWeight: 700,
                               color: "var(--text-primary)",
                               overflow: "hidden",
@@ -771,7 +810,7 @@ export const Layout: React.FC = () => {
                           </div>
                           <div
                             style={{
-                              fontSize: "11px",
+                              fontSize: "12px",
                               color: "var(--text-muted)",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -783,17 +822,17 @@ export const Layout: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Role Badge (Candidate, Recruiter, Administrator) */}
+                      {/* Role Badge */}
                       <div style={{ marginTop: "10px" }}>
                         <span
                           style={{
                             display: "inline-block",
-                            fontSize: "10px",
+                            fontSize: "11px",
                             fontWeight: 700,
                             textTransform: "uppercase",
-                            letterSpacing: "0.03em",
-                            padding: "2px 9px",
-                            borderRadius: "50px",
+                            letterSpacing: "0.04em",
+                            padding: "3px 10px",
+                            borderRadius: "9999px",
                             backgroundColor: "var(--accent-purple-subtle)",
                             color: "var(--accent-purple)",
                             border: "1px solid var(--accent-purple-border)",
@@ -812,18 +851,18 @@ export const Layout: React.FC = () => {
                         display: "flex",
                         alignItems: "center",
                         gap: "10px",
-                        padding: "9px 12px",
-                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
                         color: "var(--text-primary)",
-                        fontSize: "13px",
+                        fontSize: "13.5px",
                         fontWeight: 500,
                         textDecoration: "none",
                         transition: "background-color 0.12s ease",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <UserIcon size={15} style={{ color: "var(--text-secondary)" }} />
+                      <UserIcon size={16} style={{ color: "var(--text-secondary)" }} />
                       <span>Profile & Settings</span>
                     </Link>
 
@@ -835,18 +874,18 @@ export const Layout: React.FC = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: "10px",
-                          padding: "9px 12px",
-                          borderRadius: "8px",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-sm)",
                           color: "var(--text-primary)",
-                          fontSize: "13px",
+                          fontSize: "13.5px",
                           fontWeight: 500,
                           textDecoration: "none",
                           transition: "background-color 0.12s ease",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                       >
-                        <Sparkles size={15} style={{ color: "var(--accent-purple)" }} />
+                        <Sparkles size={16} style={{ color: "var(--accent-purple)" }} />
                         <span>Candidate Career Hub</span>
                       </Link>
                     ) : (
@@ -857,23 +896,23 @@ export const Layout: React.FC = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: "10px",
-                          padding: "9px 12px",
-                          borderRadius: "8px",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-sm)",
                           color: "var(--text-primary)",
-                          fontSize: "13px",
+                          fontSize: "13.5px",
                           fontWeight: 500,
                           textDecoration: "none",
                           transition: "background-color 0.12s ease",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                       >
-                        <Layers size={15} style={{ color: "var(--accent-purple)" }} />
-                        <span>Pipeline Dashboard</span>
+                        <Layers size={16} style={{ color: "var(--accent-purple)" }} />
+                        <span>Talent Pipeline</span>
                       </Link>
                     )}
 
-                    <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "4px 0" }} />
+                    <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "6px 0" }} />
 
                     {/* Sign Out Action */}
                     <button
@@ -887,12 +926,12 @@ export const Layout: React.FC = () => {
                         alignItems: "center",
                         gap: "10px",
                         width: "100%",
-                        padding: "9px 12px",
-                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
                         border: "none",
                         backgroundColor: "transparent",
                         color: "var(--status-rejected-text)",
-                        fontSize: "13px",
+                        fontSize: "13.5px",
                         fontWeight: 600,
                         cursor: "pointer",
                         textAlign: "left",
@@ -901,7 +940,7 @@ export const Layout: React.FC = () => {
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--status-rejected-bg)")}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <LogOut size={15} />
+                      <LogOut size={16} />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -911,15 +950,13 @@ export const Layout: React.FC = () => {
           ) : (
             <NavLink
               to="/login"
+              className="btn btn-primary"
               style={{
-                padding: "6px 16px",
-                fontSize: "12.5px",
+                padding: "8px 20px",
+                fontSize: "13.5px",
                 fontWeight: 600,
-                backgroundColor: "var(--accent-ops)",
-                color: "#ffffff",
-                borderRadius: "50px",
+                borderRadius: "var(--radius-pill)",
                 textDecoration: "none",
-                boxShadow: "0 4px 12px rgba(89, 149, 253, 0.35)",
               }}
             >
               Sign In
@@ -929,7 +966,7 @@ export const Layout: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: "28px", maxWidth: "1440px", margin: "0 auto", width: "100%" }}>
+      <main style={{ flex: 1, padding: "32px 36px", maxWidth: "1560px", margin: "0 auto", width: "100%" }}>
         <Outlet context={{ refreshPendingCount: checkStatus }} />
       </main>
     </div>

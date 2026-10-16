@@ -20,19 +20,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, acti
       }}
     >
       <div
-        className="mono"
         style={{
-          fontSize: "12px",
-          color: "var(--text-secondary)",
-          fontWeight: 600,
-          letterSpacing: "0.02em",
-          marginBottom: description ? "6px" : "0",
+          fontSize: "14.5px",
+          color: "var(--text-primary)",
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+          marginBottom: description ? "8px" : "0",
         }}
       >
-        {title.toUpperCase()}
+        {title}
       </div>
       {description && (
-        <p style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "420px", margin: "0 auto 16px auto" }}>
+        <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", maxWidth: "460px", margin: "0 auto 18px auto", lineHeight: "1.5" }}>
           {description}
         </p>
       )}

@@ -532,145 +532,80 @@ export const CandidateDossierPage: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Top Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <div style={{ marginBottom: "6px" }}>
-            <Link to="/" className="text-secondary" style={{ fontSize: "12px", textDecoration: "none" }}>
+          <div style={{ marginBottom: "8px" }}>
+            <Link to="/" className="text-secondary" style={{ fontSize: "13px", fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}>
               ← Back to Pipeline Dashboard
             </Link>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <h1 style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.01em" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "26px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
               {candidate.name || parsed?.current_title || candidate.raw_resume_filename}
             </h1>
             <StatusBadge status={effectiveStatus} />
           </div>
 
-          <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
-            ID: {candidate.id} • INGESTED: {new Date(candidate.created_at).toLocaleString()} • FILE: {candidate.raw_resume_filename}
+          <div className="mono" style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
+            ID: {candidate.id.slice(0, 8)}... • Ingested: {new Date(candidate.created_at).toLocaleDateString()} • File: {candidate.raw_resume_filename}
           </div>
 
           {/* Candidate Extracted Contact Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "6px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "10px", flexWrap: "wrap" }}>
             {candidate.email && (
-              <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <Mail size={13} color="var(--accent-purple)" />
-                <a href={`mailto:${candidate.email}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 500 }}>
+              <span style={{ fontSize: "13px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Mail size={15} color="var(--accent-purple)" />
+                <a href={`mailto:${candidate.email}`} style={{ color: "var(--text-primary)", textDecoration: "none", fontWeight: 600 }}>
                   {candidate.email}
                 </a>
               </span>
             )}
             {candidate.phone && (
-              <span style={{ fontSize: "12px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <Phone size={13} color="#10b981" />
-                <a href={`tel:${candidate.phone}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 500 }}>
+              <span style={{ fontSize: "13px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Phone size={15} color="#059669" />
+                <a href={`tel:${candidate.phone}`} style={{ color: "var(--text-primary)", textDecoration: "none", fontWeight: 600 }}>
                   {candidate.phone}
                 </a>
               </span>
             )}
             {candidate.parsed_data?.location && (
-              <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <MapPin size={13} color="#f59e0b" />
-                <span>{candidate.parsed_data.location}</span>
+              <span style={{ fontSize: "13px", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <MapPin size={15} color="#d97706" />
+                <span style={{ fontWeight: 500 }}>{candidate.parsed_data.location}</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        {/* Quick Actions (Primary & Secondary) */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           {isHRorAdmin && ["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
             <button
               className="btn btn-primary"
               disabled={submitting}
               onClick={handleSubmitForApproval}
+              style={{ padding: "9px 20px", fontSize: "13.5px" }}
             >
               {submitting ? "Submitting..." : "Submit for Approval →"}
             </button>
           )}
 
           {effectiveStatus === "pending_approval" && (
-            <Link to="/approvals" className="btn btn-primary">
+            <Link to="/approvals" className="btn btn-primary" style={{ padding: "9px 20px", fontSize: "13.5px", textDecoration: "none" }}>
               Review in Approval Queue →
             </Link>
           )}
 
           <button
             type="button"
-            onClick={() => setActiveTab("scorecard")}
-            className="btn btn-secondary"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <Star size={14} color="#f59e0b" fill={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "none"} />
-            <span>Scorecard {scorecard && scorecard.total_evaluations > 0 ? `(${scorecard.average_score}★)` : ""}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("calendar")}
-            className="btn btn-secondary"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <Calendar size={14} color="#6366f1" />
-            <span>Interview Calendar {schedules.length > 0 ? `(${schedules.length})` : ""}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("offer")}
-            className="btn btn-purple"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <Gift size={14} />
-            <span>Offer Studio {activeOffer ? `(${activeOffer.status.toUpperCase()})` : ""}</span>
-          </button>
-
-          {effectiveStatus === "hired" && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("onboarding")}
-              className="btn"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                backgroundColor: "var(--status-approved-bg)",
-                color: "var(--status-approved-text)",
-                border: "1px solid var(--status-approved-border)",
-              }}
-            >
-              <ClipboardList size={14} />
-              <span>Onboarding {onboarding ? `(${onboarding.completed_tasks}/${onboarding.total_tasks})` : ""}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("timeline")}
-            className="btn btn-secondary"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: activeTab === "timeline" ? "var(--accent-purple-subtle)" : undefined,
-              borderColor: activeTab === "timeline" ? "var(--accent-purple-border)" : undefined,
-              color: activeTab === "timeline" ? "var(--accent-purple)" : undefined,
-            }}
-          >
-            <History size={14} color="#0284c7" />
-            <span>Activity Trail {timelineEvents.length > 0 ? `(${timelineEvents.length})` : ""}</span>
-          </button>
-
-          <button
-            type="button"
             onClick={handleOpenHiringPacket}
             disabled={loadingPacket}
-            className="btn btn-subtle"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", border: "1px solid var(--border-subtle)" }}
+            className="btn btn-secondary"
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "9px 18px", fontSize: "13.5px" }}
             title="Generate and export comprehensive executive hiring packet"
           >
-            <FileText size={14} color="var(--accent-purple)" />
+            <FileText size={15} color="var(--accent-purple)" />
             <span>{loadingPacket ? "Compiling..." : "Export Hiring Packet (.md)"}</span>
           </button>
         </div>
@@ -679,12 +614,12 @@ export const CandidateDossierPage: React.FC = () => {
       {submitError && (
         <div
           style={{
-            padding: "10px 14px",
+            padding: "12px 16px",
             borderRadius: "var(--radius-sm)",
             backgroundColor: "var(--status-rejected-bg)",
             border: "1px solid var(--status-rejected-border)",
             color: "var(--status-rejected-text)",
-            fontSize: "13px",
+            fontSize: "13.5px",
           }}
         >
           {submitError}
@@ -694,32 +629,32 @@ export const CandidateDossierPage: React.FC = () => {
       {/* Target Requisition Context Card */}
       <div
         style={{
-          padding: "16px 20px",
+          padding: "18px 24px",
           backgroundColor: "#ffffff",
           border: "1px solid var(--border-subtle)",
           borderRadius: "var(--radius-lg)",
-          boxShadow: "0 4px 20px rgba(35, 15, 75, 0.03)",
+          boxShadow: "var(--shadow-xs)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "14px",
+          gap: "18px",
         }}
       >
         <div>
-          <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+          <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}>
             LINKED REQUISITION & ROUTING POLICY
           </span>
-          <div style={{ fontSize: "14px", fontWeight: 600, marginTop: "2px" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, marginTop: "4px", color: "var(--text-primary)" }}>
             {job ? (
               <>
                 {job.title}{" "}
-                <span className="mono" style={{ color: "var(--accent-purple)", fontSize: "12px", fontWeight: 600 }}>
-                  [{job.role_tier.toUpperCase()} TIER]
+                <span style={{ color: "var(--accent-purple)", fontSize: "12.5px", fontWeight: 700, backgroundColor: "var(--accent-purple-subtle)", padding: "2px 8px", borderRadius: "var(--radius-pill)", border: "1px solid var(--accent-purple-border)", marginLeft: "6px" }}>
+                  {job.role_tier.toUpperCase()} TIER
                 </span>
               </>
             ) : (
-              <span className="text-secondary" style={{ fontStyle: "italic" }}>
+              <span className="text-secondary" style={{ fontStyle: "italic", fontWeight: 500 }}>
                 Unlinked Candidate (Not linked to any job requisition)
               </span>
             )}
@@ -728,7 +663,7 @@ export const CandidateDossierPage: React.FC = () => {
 
         {job && (
           <div>
-            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+            <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
               CURRENT ESCALATION STATUS
             </span>
             <EscalationTracker roleTier={job.role_tier} status={effectiveStatus} />
@@ -736,225 +671,276 @@ export const CandidateDossierPage: React.FC = () => {
         )}
       </div>
 
+      {/* Dedicated Section Navigation Tab Bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px",
+          backgroundColor: "#f1f5f9",
+          borderRadius: "var(--radius-lg)",
+          overflowX: "auto",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveTab("extracted")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "extracted" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "extracted" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "extracted" ? "#ffffff" : "transparent",
+            color: activeTab === "extracted" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "extracted" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <FileText size={15} color={activeTab === "extracted" ? "var(--accent-purple)" : "currentColor"} />
+          <span>Model Extraction</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("raw")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "raw" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "raw" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "raw" ? "#ffffff" : "transparent",
+            color: activeTab === "raw" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "raw" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span>Raw Text & OCR</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("scorecard")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "scorecard" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "scorecard" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "scorecard" ? "#ffffff" : "transparent",
+            color: activeTab === "scorecard" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "scorecard" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Star size={15} fill={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "none"} color={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "currentColor"} />
+          <span>Interview Scorecard</span>
+          {scorecard && scorecard.total_evaluations > 0 && (
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: "#fef3c7",
+                color: "#92400e",
+                fontWeight: 700,
+                border: "1px solid #fde68a",
+              }}
+            >
+              {scorecard.average_score}★
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("calendar")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "calendar" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "calendar" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "calendar" ? "#ffffff" : "transparent",
+            color: activeTab === "calendar" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "calendar" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Calendar size={15} color={activeTab === "calendar" ? "var(--accent-purple)" : "currentColor"} />
+          <span>Interview Calendar</span>
+          {schedules.length > 0 && (
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: activeTab === "calendar" ? "var(--accent-purple-subtle)" : "#e2e8f0",
+                color: activeTab === "calendar" ? "var(--accent-purple)" : "var(--text-secondary)",
+                fontWeight: 700,
+              }}
+            >
+              {schedules.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("offer")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "offer" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "offer" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "offer" ? "#ffffff" : "transparent",
+            color: activeTab === "offer" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "offer" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Gift size={15} color={activeTab === "offer" ? "var(--accent-purple)" : "currentColor"} />
+          <span>Offer Studio</span>
+          {offers.length > 0 && (
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: activeTab === "offer" ? "var(--accent-purple-subtle)" : "#e2e8f0",
+                color: activeTab === "offer" ? "var(--accent-purple)" : "var(--text-secondary)",
+                fontWeight: 700,
+              }}
+            >
+              {offers.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("onboarding")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "onboarding" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "onboarding" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "onboarding" ? "#ffffff" : "transparent",
+            color: activeTab === "onboarding" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "onboarding" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <ClipboardList size={15} color={activeTab === "onboarding" ? "var(--accent-purple)" : "currentColor"} />
+          <span>Onboarding</span>
+          {onboarding && onboarding.total_tasks > 0 && (
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: onboarding.is_complete ? "#ecfdf5" : "#e2e8f0",
+                color: onboarding.is_complete ? "#047857" : "var(--text-secondary)",
+                fontWeight: 700,
+                border: onboarding.is_complete ? "1px solid #a7f3d0" : "none",
+              }}
+            >
+              {onboarding.completed_tasks}/{onboarding.total_tasks}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("timeline")}
+          style={{
+            padding: "8px 18px",
+            fontSize: "13px",
+            fontWeight: activeTab === "timeline" ? 700 : 500,
+            borderRadius: "var(--radius-sm)",
+            border: activeTab === "timeline" ? "1px solid var(--border-subtle)" : "1px solid transparent",
+            backgroundColor: activeTab === "timeline" ? "#ffffff" : "transparent",
+            color: activeTab === "timeline" ? "var(--text-primary)" : "var(--text-secondary)",
+            boxShadow: activeTab === "timeline" ? "var(--shadow-xs)" : "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <History size={15} color={activeTab === "timeline" ? "var(--accent-purple)" : "currentColor"} />
+          <span>Activity Timeline</span>
+          {timelineEvents.length > 0 && (
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "var(--radius-pill)",
+                backgroundColor: activeTab === "timeline" ? "var(--accent-purple-subtle)" : "#e2e8f0",
+                color: activeTab === "timeline" ? "var(--accent-purple)" : "var(--text-secondary)",
+                fontWeight: 700,
+              }}
+            >
+              {timelineEvents.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Main Two-Column Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "20px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "24px", alignItems: "start" }}>
         {/* Left Column: Extraction Model Output & Raw Text */}
         <div className="panel">
-          <div className="panel-header">
-            {/* View Switcher Tabs */}
-            <div style={{ display: "flex", backgroundColor: "#f0f2f5", padding: "3px", borderRadius: "var(--radius-pill)", gap: "2px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("extracted")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "extracted" ? "#ffffff" : "transparent",
-                  color: activeTab === "extracted" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "extracted" ? 600 : 500,
-                  boxShadow: activeTab === "extracted" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                Model Extraction
-              </button>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("raw")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "raw" ? "#ffffff" : "transparent",
-                  color: activeTab === "raw" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "raw" ? 600 : 500,
-                  boxShadow: activeTab === "raw" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                Preprocessed Plaintext
-              </button>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("scorecard")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "scorecard" ? "#ffffff" : "transparent",
-                  color: activeTab === "scorecard" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "scorecard" ? 700 : 500,
-                  boxShadow: activeTab === "scorecard" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <Star size={12} fill={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "none"} color={scorecard && scorecard.total_evaluations > 0 ? "#f59e0b" : "currentColor"} />
-                <span>Scorecard</span>
-                {scorecard && scorecard.total_evaluations > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 5px",
-                      borderRadius: "10px",
-                      backgroundColor: "#fef3c7",
-                      color: "#92400e",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {scorecard.average_score}★
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("calendar")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "calendar" ? "#ffffff" : "transparent",
-                  color: activeTab === "calendar" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "calendar" ? 700 : 500,
-                  boxShadow: activeTab === "calendar" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <Calendar size={12} color={activeTab === "calendar" ? "var(--accent-purple)" : "currentColor"} />
-                <span>Calendar</span>
-                {schedules.length > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 6px",
-                      borderRadius: "10px",
-                      backgroundColor: activeTab === "calendar" ? "var(--accent-purple)" : "var(--border-subtle)",
-                      color: activeTab === "calendar" ? "#ffffff" : "var(--text-secondary)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {schedules.length}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("offer")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "offer" ? "#ffffff" : "transparent",
-                  color: activeTab === "offer" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "offer" ? 700 : 500,
-                  boxShadow: activeTab === "offer" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <Gift size={12} />
-                <span>Offer Studio</span>
-                {offers.length > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 6px",
-                      borderRadius: "10px",
-                      backgroundColor: activeTab === "offer" ? "var(--accent-purple)" : "var(--border-subtle)",
-                      color: activeTab === "offer" ? "#ffffff" : "var(--text-secondary)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {offers.length}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("onboarding")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "onboarding" ? "#ffffff" : "transparent",
-                  color: activeTab === "onboarding" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "onboarding" ? 700 : 500,
-                  boxShadow: activeTab === "onboarding" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <ClipboardList size={12} />
-                <span>Onboarding</span>
-                {onboarding && onboarding.total_tasks > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 6px",
-                      borderRadius: "10px",
-                      backgroundColor: onboarding.is_complete ? "var(--status-approved-bg)" : "var(--border-subtle)",
-                      color: onboarding.is_complete ? "var(--status-approved-text)" : "var(--text-secondary)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {onboarding.completed_tasks}/{onboarding.total_tasks}
-                  </span>
-                )}
-              </button>
+          <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.01em" }}>
+              {activeTab === "extracted" && "Extracted Dossier Profile"}
+              {activeTab === "raw" && "Preprocessed Plaintext & OCR Metadata"}
+              {activeTab === "scorecard" && "Interview Scorecard Evaluation"}
+              {activeTab === "calendar" && "Interview Scheduling & Cal Integration"}
+              {activeTab === "offer" && "Offer Letter Studio"}
+              {activeTab === "onboarding" && "Post-Offer Onboarding Checklist"}
+              {activeTab === "timeline" && "Candidate Activity Trail & Notes"}
+            </span>
 
-              <button
-                type="button"
-                className="btn-sm"
-                onClick={() => setActiveTab("timeline")}
-                style={{
-                  border: "none",
-                  borderRadius: "var(--radius-pill)",
-                  backgroundColor: activeTab === "timeline" ? "#ffffff" : "transparent",
-                  color: activeTab === "timeline" ? "var(--accent-purple)" : "var(--text-secondary)",
-                  fontWeight: activeTab === "timeline" ? 700 : 500,
-                  boxShadow: activeTab === "timeline" ? "0 2px 6px rgba(100, 82, 206, 0.12)" : "none",
-                  transition: "all 0.2s ease",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <History size={12} color={activeTab === "timeline" ? "var(--accent-purple)" : "currentColor"} />
-                <span>Timeline & Notes</span>
-                {timelineEvents.length > 0 && (
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "10px",
-                      padding: "1px 6px",
-                      borderRadius: "10px",
-                      backgroundColor: activeTab === "timeline" ? "var(--accent-purple)" : "var(--border-subtle)",
-                      color: activeTab === "timeline" ? "#ffffff" : "var(--text-secondary)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {timelineEvents.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <span className="mono text-muted" style={{ fontSize: "10px" }}>
-              CONTRACT: sandeeppanem/5k
+            <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)", fontWeight: 500 }}>
+              DOC SCHEMA: ISO-HR-2024
             </span>
           </div>
 
@@ -978,46 +964,46 @@ export const CandidateDossierPage: React.FC = () => {
                       <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
                         CURRENT TITLE
                       </span>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {parsed.current_title}
                       </div>
                     </div>
 
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         CURRENT COMPANY
                       </span>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {parsed.current_company || "N/A"}
                       </div>
                     </div>
 
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         SENIORITY & EXP
                       </span>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--accent-purple)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--accent-purple)", marginTop: "4px" }}>
                         {parsed.seniority.toUpperCase()} • {parsed.years_experience}y
                       </div>
                     </div>
                   </div>
 
                   {/* Domain & Industries */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         PRIMARY DOMAIN
                       </span>
-                      <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
                         {parsed.primary_domain || "N/A"}
                       </div>
                     </div>
 
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         INDUSTRIES
                       </span>
-                      <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
                         {parsed.industries.join(", ") || "N/A"}
                       </div>
                     </div>
@@ -1025,19 +1011,18 @@ export const CandidateDossierPage: React.FC = () => {
 
                   {/* Core & Secondary Skills */}
                   <div>
-                    <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                    <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                       CORE TECHNICAL SKILLS
                     </span>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
                       {parsed.core_skills.map((skill, i) => (
                         <span
                           key={i}
-                          className="mono"
                           style={{
-                            fontSize: "11px",
-                            padding: "3px 9px",
-                            backgroundColor: "#f5f3ff",
-                            border: "1px solid rgba(100, 82, 206, 0.12)",
+                            fontSize: "12px",
+                            padding: "4px 10px",
+                            backgroundColor: "var(--accent-purple-subtle)",
+                            border: "1px solid var(--accent-purple-border)",
                             borderRadius: "var(--radius-pill)",
                             color: "var(--accent-purple)",
                             fontWeight: 600,
@@ -1051,21 +1036,21 @@ export const CandidateDossierPage: React.FC = () => {
 
                   {parsed.secondary_skills && parsed.secondary_skills.length > 0 && (
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         SECONDARY COMPETENCIES
                       </span>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
                         {parsed.secondary_skills.map((skill, i) => (
                           <span
                             key={i}
-                            className="mono"
                             style={{
-                              fontSize: "11px",
-                              padding: "3px 8px",
+                              fontSize: "12px",
+                              padding: "4px 10px",
                               backgroundColor: "#f8fafc",
                               border: "1px solid var(--border-subtle)",
                               borderRadius: "var(--radius-pill)",
                               color: "var(--text-secondary)",
+                              fontWeight: 500,
                             }}
                           >
                             {skill}
@@ -1076,42 +1061,42 @@ export const CandidateDossierPage: React.FC = () => {
                   )}
 
                   {/* Tools & Leadership */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         TOOLS & INFRASTRUCTURE
                       </span>
-                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
                         {parsed.tools && parsed.tools.length > 0 ? parsed.tools.join(", ") : "None specified"}
                       </div>
                     </div>
 
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         LEADERSHIP EXPERIENCE
                       </span>
-                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
                         {parsed.leadership_experience ? "Verified leadership track record" : "Individual contributor"}
                       </div>
                     </div>
                   </div>
 
                   {/* Previous Titles & Companies */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         PREVIOUS TITLES
                       </span>
-                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
                         {parsed.previous_titles.length > 0 ? parsed.previous_titles.join(" → ") : "None listed"}
                       </div>
                     </div>
 
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         PREVIOUS ORGANIZATIONS
                       </span>
-                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
                         {parsed.previous_companies.length > 0 ? parsed.previous_companies.join(", ") : "None listed"}
                       </div>
                     </div>
@@ -1120,12 +1105,12 @@ export const CandidateDossierPage: React.FC = () => {
                   {/* Key Achievements */}
                   {parsed.key_achievements && parsed.key_achievements.length > 0 && (
                     <div>
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                         KEY VERIFIED ACHIEVEMENTS
                       </span>
-                      <ul style={{ paddingLeft: "18px", marginTop: "4px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                      <ul style={{ paddingLeft: "20px", marginTop: "6px", fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
                         {parsed.key_achievements.map((ach, i) => (
-                          <li key={i} style={{ marginBottom: "3px" }}>
+                          <li key={i} style={{ marginBottom: "6px" }}>
                             {ach}
                           </li>
                         ))}
@@ -1145,20 +1130,20 @@ export const CandidateDossierPage: React.FC = () => {
               )
             ) : activeTab === "raw" ? (
               /* Raw Plaintext Preprocessor Viewer */
-              <div>
-                <div className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", marginBottom: "6px" }}>
+              <div style={{ padding: "4px" }}>
+                <div className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", marginBottom: "8px", letterSpacing: "0.04em" }}>
                   PLAINTEXT EXTRACTED BY PYPDF / PYTHON-DOCX PREPROCESSOR (STAGE 1)
                 </div>
                 <pre
                   className="mono"
                   style={{
                     backgroundColor: "#f8fafc",
-                    padding: "16px",
+                    padding: "18px",
                     borderRadius: "var(--radius-md)",
                     border: "1px solid var(--border-subtle)",
-                    fontSize: "11.5px",
-                    lineHeight: "1.5",
-                    maxHeight: "480px",
+                    fontSize: "12.5px",
+                    lineHeight: "1.6",
+                    maxHeight: "520px",
                     overflowY: "auto",
                     whiteSpace: "pre-wrap",
                     color: "var(--text-secondary)",
@@ -2634,13 +2619,13 @@ export const CandidateDossierPage: React.FC = () => {
 
         {/* Right Column: Approval Chain Audit Trail & Timeline */}
         <div className="panel">
-          <div className="panel-header">
-            <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>
+          <div className="panel-header" style={{ padding: "16px 20px" }}>
+            <span className="mono" style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.04em" }}>
               APPROVAL AUDIT TRAIL ({approvals.length} RECORDS)
             </span>
           </div>
 
-          <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "18px 20px" }}>
             {approvals.length === 0 ? (
               <EmptyState
                 title="NO APPROVALS INITIATED"
@@ -2661,47 +2646,48 @@ export const CandidateDossierPage: React.FC = () => {
                   <div
                     key={appr.id}
                     style={{
-                      padding: "14px",
+                      padding: "16px 18px",
                       backgroundColor: "#ffffff",
                       border: "1px solid var(--border-subtle)",
                       borderRadius: "var(--radius-md)",
-                      boxShadow: "0 2px 8px rgba(35, 15, 75, 0.03)",
+                      boxShadow: "var(--shadow-xs)",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "8px",
+                      gap: "10px",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)", fontWeight: 700 }}>
                           #{idx + 1}
                         </span>
-                        <span style={{ fontWeight: 600, fontSize: "13px" }}>
+                        <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>
                           Step {appr.step_order}: {appr.approver_role.toUpperCase()}
                         </span>
                       </div>
-                      <span className={`badge ${badgeClass}`}>{appr.action.toUpperCase()}</span>
+                      <span className={`badge ${badgeClass}`} style={{ fontSize: "12px", padding: "3px 10px" }}>{appr.action.toUpperCase()}</span>
                     </div>
 
                     {appr.notes && (
                       <div
                         style={{
-                          fontSize: "12px",
+                          fontSize: "13px",
                           color: "var(--text-secondary)",
                           backgroundColor: "#f8fafc",
-                          padding: "8px 12px",
+                          padding: "10px 14px",
                           borderRadius: "var(--radius-sm)",
                           border: "1px solid var(--border-subtle)",
                           fontStyle: "italic",
+                          lineHeight: 1.5,
                         }}
                       >
                         "{appr.notes}"
                       </div>
                     )}
 
-                    <div className="mono text-muted" style={{ fontSize: "10px", marginTop: "2px" }}>
-                      CREATED: {new Date(appr.created_at).toLocaleString()}
-                      {appr.acted_at && ` • ACTED: ${new Date(appr.acted_at).toLocaleString()}`}
+                    <div className="mono text-muted" style={{ fontSize: "11.5px", marginTop: "2px" }}>
+                      Created: {new Date(appr.created_at).toLocaleDateString()} {new Date(appr.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {appr.acted_at && ` • Acted: ${new Date(appr.acted_at).toLocaleDateString()} ${new Date(appr.acted_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                     </div>
                   </div>
                 );

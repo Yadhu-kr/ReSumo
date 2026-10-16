@@ -121,16 +121,16 @@ export const RecruiterJobsPage: React.FC = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <span
               style={{
-                fontSize: "11px",
+                fontSize: "12px",
                 fontWeight: 700,
                 color: "var(--accent-purple)",
                 backgroundColor: "var(--accent-purple-subtle)",
-                padding: "2px 8px",
+                padding: "3px 10px",
                 borderRadius: "50px",
                 textTransform: "uppercase",
               }}
@@ -138,10 +138,10 @@ export const RecruiterJobsPage: React.FC = () => {
               Requisitions & Matching
             </span>
           </div>
-          <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+          <h1 style={{ fontSize: "24px", fontWeight: 800, margin: 0, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
             Job Requisitions & Semantic Matching
           </h1>
-          <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
             Define role requisitions, compute vector embeddings in Chroma, and evaluate candidate similarity with LLM rationales.
           </p>
         </div>
@@ -150,9 +150,9 @@ export const RecruiterJobsPage: React.FC = () => {
           <button
             className="btn btn-primary"
             onClick={() => setShowCreateModal(true)}
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "50px" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "50px", padding: "10px 22px", fontSize: "13.5px", fontWeight: 600 }}
           >
-            <Plus size={15} />
+            <Plus size={16} />
             <span>New Job Opening</span>
           </button>
         )}
@@ -161,12 +161,12 @@ export const RecruiterJobsPage: React.FC = () => {
       {error && (
         <div
           style={{
-            padding: "12px 16px",
+            padding: "14px 18px",
             backgroundColor: "var(--status-rejected-bg)",
             border: "1px solid var(--status-rejected-border)",
             borderRadius: "10px",
             color: "var(--status-rejected-text)",
-            fontSize: "13px",
+            fontSize: "13.5px",
           }}
         >
           {error}
@@ -174,22 +174,22 @@ export const RecruiterJobsPage: React.FC = () => {
       )}
 
       {/* Main Split Layout: Left Requisitions List, Right Matching Console */}
-      <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: "22px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(330px, 380px) 1fr", gap: "24px", alignItems: "start" }}>
         {/* Left Panel: Job List */}
         <div className="panel" style={{ borderRadius: "16px" }}>
-          <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>
+          <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px" }}>
+            <span className="mono" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
               ACTIVE REQUISITIONS ({jobs.length})
             </span>
           </div>
 
           <div style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
             {loading ? (
-              <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+              <div style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13.5px" }}>
                 Loading requisitions...
               </div>
             ) : jobs.length === 0 ? (
-              <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+              <div style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13.5px" }}>
                 No job openings created. Click "+ New Job Opening" to define your first requisition.
               </div>
             ) : (
@@ -205,7 +205,7 @@ export const RecruiterJobsPage: React.FC = () => {
                       setMatchError(null);
                     }}
                     style={{
-                      padding: "14px 18px",
+                      padding: "16px 20px",
                       borderBottom: "1px solid var(--border-subtle)",
                       cursor: "pointer",
                       backgroundColor: isSelected ? "var(--accent-purple-subtle)" : "transparent",
@@ -213,29 +213,30 @@ export const RecruiterJobsPage: React.FC = () => {
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                      <span className="badge mono" style={{ fontSize: "10px", textTransform: "uppercase" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <span className="badge mono" style={{ fontSize: "11px", textTransform: "uppercase", padding: "3px 8px" }}>
                         {job.role_tier}
                       </span>
-                      <span className="mono text-muted" style={{ fontSize: "10.5px" }}>
+                      <span className="mono text-muted" style={{ fontSize: "11.5px" }}>
                         {new Date(job.created_at).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "14px", fontWeight: isSelected ? 700 : 600, color: "var(--text-primary)" }}>
+                    <div style={{ fontSize: "15px", fontWeight: isSelected ? 700 : 600, color: "var(--text-primary)" }}>
                       {job.title}
                     </div>
 
                     <div
                       style={{
-                        fontSize: "12px",
+                        fontSize: "13px",
                         color: "var(--text-secondary)",
-                        marginTop: "4px",
+                        marginTop: "5px",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical",
+                        lineHeight: 1.45,
                       }}
                     >
                       {job.description}
@@ -252,38 +253,38 @@ export const RecruiterJobsPage: React.FC = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
             {/* Specification Panel */}
             <div className="panel" style={{ borderRadius: "16px" }}>
-              <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px" }}>
                 <div>
-                  <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)", letterSpacing: "0.04em" }}>
                     REQUISITION SPECIFICATION
                   </span>
-                  <div style={{ fontSize: "17px", fontWeight: 700, marginTop: "2px" }}>
+                  <div style={{ fontSize: "19px", fontWeight: 700, marginTop: "4px", color: "var(--text-primary)" }}>
                     {selectedJob.title}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span className="badge badge-neutral mono" style={{ fontSize: "11px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span className="badge badge-neutral mono" style={{ fontSize: "11.5px", padding: "4px 10px" }}>
                     TIER: {selectedJob.role_tier.toUpperCase()}
                   </span>
                 </div>
               </div>
 
-              <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
                 <div>
-                  <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "6px" }}>
+                  <div className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)", marginBottom: "8px", fontWeight: 700 }}>
                     JOB DESCRIPTION & EMBEDDING SOURCE
                   </div>
                   <div
                     style={{
-                      fontSize: "13.5px",
+                      fontSize: "14px",
                       color: "var(--text-secondary)",
                       backgroundColor: "var(--bg-canvas)",
-                      padding: "14px 18px",
+                      padding: "18px 22px",
                       borderRadius: "12px",
                       border: "1px solid var(--border-subtle)",
                       whiteSpace: "pre-wrap",
-                      lineHeight: "1.55",
+                      lineHeight: "1.65",
                     }}
                   >
                     {selectedJob.description}
@@ -297,20 +298,20 @@ export const RecruiterJobsPage: React.FC = () => {
                     alignItems: "center",
                     justifyContent: "space-between",
                     flexWrap: "wrap",
-                    gap: "14px",
-                    paddingTop: "12px",
+                    gap: "16px",
+                    paddingTop: "16px",
                     borderTop: "1px solid var(--border-subtle)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="mono" style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
                         TOP_K:
                       </span>
                       <select
                         value={topK}
                         onChange={(e) => setTopK(Number(e.target.value))}
-                        style={{ padding: "4px 22px 4px 8px", fontSize: "12px", borderRadius: "8px" }}
+                        style={{ padding: "6px 24px 6px 10px", fontSize: "13px", borderRadius: "8px" }}
                       >
                         <option value={3}>3 matches</option>
                         <option value={5}>5 matches</option>
@@ -318,14 +319,14 @@ export const RecruiterJobsPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="mono" style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
                         MIN_SIMILARITY:
                       </span>
                       <select
                         value={minScore}
                         onChange={(e) => setMinScore(Number(e.target.value))}
-                        style={{ padding: "4px 22px 4px 8px", fontSize: "12px", borderRadius: "8px" }}
+                        style={{ padding: "6px 24px 6px 10px", fontSize: "13px", borderRadius: "8px" }}
                       >
                         <option value={0.0}>0.00 (No floor)</option>
                         <option value={0.5}>0.50 (Moderate)</option>
@@ -340,13 +341,13 @@ export const RecruiterJobsPage: React.FC = () => {
                       className="btn btn-primary"
                       disabled={matchLoading}
                       onClick={() => handleRunMatch(selectedJob.id)}
-                      style={{ borderRadius: "50px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                      style={{ borderRadius: "50px", display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 22px", fontSize: "13.5px", fontWeight: 600 }}
                     >
-                      <Sparkles size={14} />
+                      <Sparkles size={16} />
                       <span>{matchLoading ? "Running Vector Search & LLM..." : "Run Semantic Match →"}</span>
                     </button>
                   ) : (
-                    <span className="badge badge-neutral mono" style={{ fontSize: "11px", padding: "6px 12px" }}>
+                    <span className="badge badge-neutral mono" style={{ fontSize: "12px", padding: "6px 14px" }}>
                       AI MATCHING MANAGED BY RECRUITER
                     </span>
                   )}
@@ -358,12 +359,12 @@ export const RecruiterJobsPage: React.FC = () => {
             {matchError && (
               <div
                 style={{
-                  padding: "12px 16px",
+                  padding: "14px 18px",
                   borderRadius: "10px",
                   backgroundColor: "var(--status-rejected-bg)",
                   border: "1px solid var(--status-rejected-border)",
                   color: "var(--status-rejected-text)",
-                  fontSize: "13px",
+                  fontSize: "13.5px",
                 }}
               >
                 RAG Search Error: {matchError}
@@ -373,16 +374,16 @@ export const RecruiterJobsPage: React.FC = () => {
             {/* Match Results List */}
             {matchResult && (
               <div className="panel" style={{ borderRadius: "16px" }}>
-                <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px" }}>
+                  <span className="mono" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
                     SEMANTIC MATCH RESULTS ({matchResult.count} CANDIDATES EVALUATED)
                   </span>
-                  <span className="mono text-muted" style={{ fontSize: "11px" }}>
+                  <span className="mono text-muted" style={{ fontSize: "11.5px" }}>
                     CHROMADB COSINE SIMILARITY
                   </span>
                 </div>
 
-                <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "24px" }}>
                   {matchResult.matches.length === 0 ? (
                     <EmptyState
                       title="NO MATCHING CANDIDATES FOUND"
@@ -397,25 +398,25 @@ export const RecruiterJobsPage: React.FC = () => {
                         <div
                           key={cand.id}
                           style={{
-                            padding: "16px 18px",
+                            padding: "20px 22px",
                             backgroundColor: "#ffffff",
                             border: "1px solid var(--border-subtle)",
-                            borderRadius: "12px",
+                            borderRadius: "14px",
                             boxShadow: "0 2px 10px rgba(35, 15, 75, 0.04)",
                             display: "flex",
                             flexDirection: "column",
-                            gap: "12px",
+                            gap: "14px",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                               <span
                                 className="mono"
                                 style={{
-                                  fontSize: "14px",
-                                  fontWeight: 700,
+                                  fontSize: "15px",
+                                  fontWeight: 800,
                                   color: "var(--accent-purple)",
-                                  width: "24px",
+                                  width: "28px",
                                 }}
                               >
                                 #{idx + 1}
@@ -425,7 +426,7 @@ export const RecruiterJobsPage: React.FC = () => {
                                 <Link
                                   to={`/candidates/${cand.id}`}
                                   style={{
-                                    fontSize: "14.5px",
+                                    fontSize: "15.5px",
                                     fontWeight: 700,
                                     color: "var(--text-primary)",
                                     textDecoration: "none",
@@ -433,19 +434,22 @@ export const RecruiterJobsPage: React.FC = () => {
                                 >
                                   {cand.name || parsed?.current_title || cand.raw_resume_filename}
                                 </Link>
-                                <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                                <div className="mono" style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px" }}>
                                   ID: {cand.id.slice(0, 8)} • File: {cand.raw_resume_filename}
                                 </div>
                               </div>
                             </div>
 
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                               <span
                                 className="mono"
                                 style={{
-                                  fontSize: "15px",
+                                  fontSize: "16px",
                                   fontWeight: 800,
                                   color: match.similarity_percentage >= 60 ? "var(--status-approved-text)" : "var(--text-primary)",
+                                  backgroundColor: match.similarity_percentage >= 60 ? "var(--status-approved-bg)" : "#f1f5f9",
+                                  padding: "3px 10px",
+                                  borderRadius: "6px",
                                 }}
                               >
                                 {match.similarity_percentage}%
@@ -458,37 +462,37 @@ export const RecruiterJobsPage: React.FC = () => {
                           <div
                             style={{
                               backgroundColor: "var(--bg-canvas)",
-                              padding: "12px 16px",
+                              padding: "14px 18px",
                               borderRadius: "10px",
                               borderLeft: "3px solid var(--accent-purple)",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                              <span className="mono" style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-muted)" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                              <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)" }}>
                                 LLM MATCH RATIONALE
                               </span>
                               <RationaleSourceBadge source={match.rationale_source} />
                             </div>
 
-                            <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.5", margin: 0 }}>
+                            <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>
                               {match.rationale}
                             </p>
                           </div>
 
                           {/* Actions */}
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
                             {canManageJobs && cand.status === "shortlisted" && (
                               <button
                                 className="btn btn-primary btn-sm"
                                 disabled={submittingId === cand.id}
                                 onClick={() => handleSubmitForApproval(cand.id)}
-                                style={{ borderRadius: "50px", fontSize: "11.5px" }}
+                                style={{ borderRadius: "50px", fontSize: "12.5px", padding: "6px 14px" }}
                               >
                                 {submittingId === cand.id ? "Routing..." : "Submit for Approval →"}
                               </button>
                             )}
 
-                            <Link to={`/candidates/${cand.id}`} className="btn btn-sm" style={{ borderRadius: "50px", fontSize: "11.5px" }}>
+                            <Link to={`/candidates/${cand.id}`} className="btn btn-sm" style={{ borderRadius: "50px", fontSize: "12.5px", padding: "6px 14px" }}>
                               Inspect Full Candidate
                             </Link>
                           </div>
@@ -511,27 +515,27 @@ export const RecruiterJobsPage: React.FC = () => {
       {/* New Job Modal */}
       {showCreateModal && canManageJobs && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "560px" }}>
-            <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>Define New Job Opening</span>
+          <div className="modal-content" style={{ maxWidth: "600px", borderRadius: "16px", overflow: "hidden" }}>
+            <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px" }}>
+              <span style={{ fontSize: "17px", fontWeight: 700, color: "var(--text-primary)" }}>Define New Job Opening</span>
               <button
                 className="btn btn-subtle btn-sm"
                 onClick={() => setShowCreateModal(false)}
-                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+                style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "16px", color: "var(--text-muted)" }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateJob} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <form onSubmit={handleCreateJob} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
               {createError && (
-                <div style={{ padding: "10px 14px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "8px", fontSize: "12.5px" }}>
+                <div style={{ padding: "12px 16px", backgroundColor: "var(--status-rejected-bg)", color: "var(--status-rejected-text)", borderRadius: "8px", fontSize: "13.5px" }}>
                   {createError}
                 </div>
               )}
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                   Role Title *
                 </label>
                 <input
@@ -540,18 +544,18 @@ export const RecruiterJobsPage: React.FC = () => {
                   placeholder="e.g. Lead Backend Distributed Systems Architect"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", fontSize: "13px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
+                  style={{ width: "100%", padding: "11px 16px", fontSize: "14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                   Seniority / Governance Role Tier *
                 </label>
                 <select
                   value={newRoleTier}
                   onChange={(e) => setNewRoleTier(e.target.value as RoleTier)}
-                  style={{ width: "100%", padding: "10px 14px", fontSize: "13px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
+                  style={{ width: "100%", padding: "11px 16px", fontSize: "14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}
                 >
                   <option value="junior">Junior (Direct evaluation by Hiring Manager)</option>
                   <option value="mid">Mid-Level (Evaluation by Hiring Manager)</option>
@@ -561,7 +565,7 @@ export const RecruiterJobsPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                   Job Description & Core Requirements *
                 </label>
                 <textarea
@@ -570,16 +574,16 @@ export const RecruiterJobsPage: React.FC = () => {
                   placeholder="Describe technical expectations, core skills (Python, Rust, Distributed DBs), and domain responsibilities..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", fontSize: "13px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontFamily: "inherit", lineHeight: "1.5" }}
+                  style={{ width: "100%", padding: "12px 16px", fontSize: "14px", borderRadius: "8px", border: "1px solid var(--border-subtle)", fontFamily: "inherit", lineHeight: "1.6" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "10px" }}>
                 <button
                   type="button"
                   className="btn"
                   onClick={() => setShowCreateModal(false)}
-                  style={{ borderRadius: "50px", padding: "8px 18px", fontSize: "13px" }}
+                  style={{ borderRadius: "50px", padding: "10px 22px", fontSize: "13.5px" }}
                 >
                   Cancel
                 </button>
@@ -587,7 +591,7 @@ export const RecruiterJobsPage: React.FC = () => {
                   type="submit"
                   disabled={createLoading}
                   className="btn btn-primary"
-                  style={{ borderRadius: "50px", padding: "8px 20px", fontSize: "13px" }}
+                  style={{ borderRadius: "50px", padding: "10px 24px", fontSize: "13.5px", fontWeight: 600 }}
                 >
                   {createLoading ? "Creating & Embedding..." : "Create Opening"}
                 </button>

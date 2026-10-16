@@ -99,54 +99,54 @@ export const CandidateJobsPage: React.FC = () => {
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "16px",
-          paddingBottom: "16px",
+          gap: "20px",
+          paddingBottom: "20px",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "4px",
-                fontSize: "11px",
+                gap: "5px",
+                fontSize: "12px",
                 fontWeight: 700,
                 color: "var(--accent-purple)",
                 backgroundColor: "var(--accent-purple-subtle)",
-                padding: "2px 8px",
+                padding: "3px 10px",
                 borderRadius: "50px",
                 textTransform: "uppercase",
               }}
             >
-              <Briefcase size={12} />
+              <Briefcase size={13} />
               Career Openings
             </span>
           </div>
-          <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+          <h1 style={{ fontSize: "24px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
             Explore Open Opportunities
           </h1>
-          <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
             Discover active engineering requisitions matching your expertise and skills.
           </p>
         </div>
 
         {/* Search & Filter Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              padding: "6px 14px",
+              gap: "10px",
+              padding: "8px 16px",
               backgroundColor: "#ffffff",
               border: "1px solid var(--border-subtle)",
               borderRadius: "50px",
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
             }}
           >
-            <Search size={14} style={{ color: "var(--text-muted)" }} />
+            <Search size={16} style={{ color: "var(--text-muted)" }} />
             <input
               type="text"
               placeholder="Search by title or keywords..."
@@ -155,9 +155,9 @@ export const CandidateJobsPage: React.FC = () => {
               style={{
                 border: "none",
                 outline: "none",
-                fontSize: "13px",
+                fontSize: "13.5px",
                 backgroundColor: "transparent",
-                width: "180px",
+                width: "200px",
               }}
             />
           </div>
@@ -166,8 +166,8 @@ export const CandidateJobsPage: React.FC = () => {
             value={selectedTier}
             onChange={(e) => setSelectedTier(e.target.value)}
             style={{
-              padding: "6px 14px",
-              fontSize: "12.5px",
+              padding: "8px 16px",
+              fontSize: "13.5px",
               fontWeight: 600,
               borderRadius: "50px",
               border: "1px solid var(--border-subtle)",
@@ -188,12 +188,12 @@ export const CandidateJobsPage: React.FC = () => {
       {error && (
         <div
           style={{
-            padding: "12px 16px",
+            padding: "14px 18px",
             backgroundColor: "var(--status-rejected-bg)",
             border: "1px solid var(--status-rejected-border)",
             borderRadius: "10px",
             color: "var(--status-rejected-text)",
-            fontSize: "13px",
+            fontSize: "13.5px",
           }}
         >
           {error}
@@ -201,7 +201,7 @@ export const CandidateJobsPage: React.FC = () => {
       )}
 
       {/* Split Grid: Jobs List (Left) and Requisition Details (Right) */}
-      <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "24px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(330px, 390px) 1fr", gap: "24px", alignItems: "start" }}>
         {/* Left: Requisitions List */}
         <div
           style={{
@@ -216,7 +216,7 @@ export const CandidateJobsPage: React.FC = () => {
         >
           <div
             style={{
-              padding: "14px 18px",
+              padding: "16px 20px",
               borderBottom: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
@@ -224,7 +224,7 @@ export const CandidateJobsPage: React.FC = () => {
               backgroundColor: "var(--bg-canvas)",
             }}
           >
-            <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>
+            <span className="mono" style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)" }}>
               AVAILABLE OPENINGS ({filteredJobs.length})
             </span>
           </div>
@@ -251,7 +251,7 @@ export const CandidateJobsPage: React.FC = () => {
                       setApplyFeedback(null);
                     }}
                     style={{
-                      padding: "16px 18px",
+                      padding: "18px 20px",
                       borderBottom: "1px solid var(--border-subtle)",
                       cursor: "pointer",
                       backgroundColor: isSelected ? "var(--accent-purple-subtle)" : "#ffffff",
@@ -259,14 +259,15 @@ export const CandidateJobsPage: React.FC = () => {
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                       <span
                         className="badge mono"
                         style={{
-                          fontSize: "10.5px",
+                          fontSize: "11.5px",
                           textTransform: "uppercase",
                           backgroundColor: "#f1f5f9",
                           color: "#475569",
+                          padding: "3px 8px",
                         }}
                       >
                         {job.role_tier} tier
@@ -274,24 +275,24 @@ export const CandidateJobsPage: React.FC = () => {
                       {existingApp && (
                         <span
                           style={{
-                            fontSize: "11px",
+                            fontSize: "12px",
                             fontWeight: 600,
                             color: "var(--status-approved-text)",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "3px",
+                            gap: "4px",
                           }}
                         >
-                          <CheckCircle2 size={12} /> Applied
+                          <CheckCircle2 size={13} /> Applied
                         </span>
                       )}
                     </div>
 
                     <h3
                       style={{
-                        fontSize: "14.5px",
+                        fontSize: "15.5px",
                         fontWeight: 700,
-                        margin: "0 0 6px 0",
+                        margin: "0 0 8px 0",
                         color: isSelected ? "var(--accent-purple)" : "var(--text-primary)",
                       }}
                     >
@@ -300,10 +301,10 @@ export const CandidateJobsPage: React.FC = () => {
 
                     <p
                       style={{
-                        fontSize: "12.5px",
+                        fontSize: "13px",
                         color: "var(--text-secondary)",
                         margin: 0,
-                        lineHeight: 1.4,
+                        lineHeight: 1.5,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         display: "-webkit-box",
@@ -328,28 +329,28 @@ export const CandidateJobsPage: React.FC = () => {
               borderRadius: "16px",
               border: "1px solid var(--border-subtle)",
               boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
-              padding: "28px",
+              padding: "32px",
               display: "flex",
               flexDirection: "column",
-              gap: "20px",
+              gap: "24px",
             }}
           >
             {/* Top Bar */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
                   <span
                     className="badge badge-neutral mono"
-                    style={{ fontSize: "11px", textTransform: "uppercase" }}
+                    style={{ fontSize: "11.5px", textTransform: "uppercase", padding: "4px 10px" }}
                   >
                     Seniority: {selectedJob.role_tier}
                   </span>
-                  <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
-                    <Calendar size={12} style={{ display: "inline", marginRight: "4px" }} />
+                  <span className="mono" style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
+                    <Calendar size={13} style={{ display: "inline", marginRight: "4px" }} />
                     Posted {new Date(selectedJob.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <h2 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
                   {selectedJob.title}
                 </h2>
               </div>
@@ -357,18 +358,18 @@ export const CandidateJobsPage: React.FC = () => {
               {/* Direct Apply Action */}
               <div>
                 {getApplicationForJob(selectedJob.id) ? (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
                     <div
                       style={{
-                        padding: "8px 18px",
+                        padding: "10px 20px",
                         borderRadius: "50px",
                         backgroundColor: "var(--status-approved-bg)",
                         color: "var(--status-approved-text)",
                         fontWeight: 700,
-                        fontSize: "13px",
+                        fontSize: "13.5px",
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "6px",
+                        gap: "8px",
                         border: "1px solid var(--status-approved-border)",
                       }}
                     >
@@ -380,7 +381,7 @@ export const CandidateJobsPage: React.FC = () => {
                     </div>
                     <Link
                       to="/portal"
-                      style={{ fontSize: "11.5px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}
+                      style={{ fontSize: "12.5px", color: "var(--accent-purple)", fontWeight: 600, textDecoration: "none" }}
                     >
                       Track in Portal →
                     </Link>
@@ -392,15 +393,16 @@ export const CandidateJobsPage: React.FC = () => {
                     onClick={() => handleApplyClick(selectedJob.id)}
                     className="btn btn-primary"
                     style={{
-                      padding: "10px 22px",
-                      fontSize: "13px",
+                      padding: "12px 24px",
+                      fontSize: "14px",
                       borderRadius: "50px",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "8px",
+                      fontWeight: 600,
                     }}
                   >
-                    <Sparkles size={15} />
+                    <Sparkles size={16} />
                     <span>
                       {applyingId === selectedJob.id ? "Submitting Application..." : "Apply with My Profile"}
                     </span>
@@ -413,12 +415,12 @@ export const CandidateJobsPage: React.FC = () => {
             {applyFeedback && (
               <div
                 style={{
-                  padding: "12px 16px",
+                  padding: "14px 18px",
                   borderRadius: "12px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: "12px",
+                  gap: "14px",
                   backgroundColor:
                     applyFeedback.type === "success"
                       ? "var(--status-approved-bg)"
@@ -432,7 +434,7 @@ export const CandidateJobsPage: React.FC = () => {
                     applyFeedback.type === "success"
                       ? "var(--status-approved-text)"
                       : "var(--status-rejected-text)",
-                  fontSize: "13px",
+                  fontSize: "13.5px",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -453,9 +455,10 @@ export const CandidateJobsPage: React.FC = () => {
                       alignItems: "center",
                       gap: "6px",
                       flexShrink: 0,
+                      fontSize: "13px",
                     }}
                   >
-                    <FileUp size={13} />
+                    <FileUp size={14} />
                     <span>Upload Resume Now</span>
                   </Link>
                 )}
@@ -463,17 +466,17 @@ export const CandidateJobsPage: React.FC = () => {
             )}
 
             {/* Requisition Description */}
-            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "18px" }}>
-              <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
+            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "20px" }}>
+              <span className="mono" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "10px" }}>
                 ROLE SPECIFICATION & RESPONSIBILITIES
               </span>
               <div
                 style={{
-                  fontSize: "14px",
-                  lineHeight: "1.65",
+                  fontSize: "14.5px",
+                  lineHeight: "1.7",
                   color: "var(--text-primary)",
                   backgroundColor: "var(--bg-canvas)",
-                  padding: "18px 20px",
+                  padding: "20px 24px",
                   borderRadius: "12px",
                   border: "1px solid var(--border-subtle)",
                   whiteSpace: "pre-wrap",
@@ -486,7 +489,7 @@ export const CandidateJobsPage: React.FC = () => {
             {/* Profile Synergy & Next Steps Callout */}
             <div
               style={{
-                padding: "18px 22px",
+                padding: "20px 24px",
                 borderRadius: "14px",
                 backgroundColor: "var(--accent-purple-subtle)",
                 border: "1px solid var(--accent-purple-border)",
@@ -494,14 +497,14 @@ export const CandidateJobsPage: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "space-between",
                 flexWrap: "wrap",
-                gap: "14px",
+                gap: "16px",
               }}
             >
               <div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 700, color: "var(--accent-purple)" }}>
+                <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: 700, color: "var(--accent-purple)" }}>
                   Need to update your resume or skills?
                 </h4>
-                <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
                   Ensure your candidate dossier reflects your latest projects, skills, and accomplishments.
                 </p>
               </div>
@@ -514,11 +517,12 @@ export const CandidateJobsPage: React.FC = () => {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  fontSize: "12.5px",
+                  fontSize: "13.5px",
+                  padding: "9px 18px",
                 }}
               >
                 <span>Go to Candidate Portal</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={14} />
               </Link>
             </div>
           </div>

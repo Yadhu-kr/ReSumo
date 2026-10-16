@@ -76,26 +76,26 @@ export const EscalationTracker: React.FC<EscalationTrackerProps> = ({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "5px",
-                padding: "4px 10px",
+                gap: "7px",
+                padding: "5px 12px",
                 borderRadius: "var(--radius-pill)",
                 backgroundColor: pillColor,
                 border: `1px solid ${borderColor}`,
-                fontSize: "11px",
+                fontSize: "12.5px",
               }}
             >
-              <span className="mono" style={{ color: "var(--text-muted)", fontSize: "10px" }}>
+              <span className="mono" style={{ color: "var(--text-muted)", fontSize: "11px", fontWeight: 700 }}>
                 T{step.step_order}
               </span>
               <span style={{ fontWeight: 600, color: textColor }}>{step.role}</span>
               <span
                 className="mono"
                 style={{
-                  fontSize: "9.5px",
-                  fontWeight: 600,
-                  padding: "1px 6px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  padding: "2px 7px",
                   borderRadius: "var(--radius-pill)",
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
                   color: textColor,
                 }}
               >

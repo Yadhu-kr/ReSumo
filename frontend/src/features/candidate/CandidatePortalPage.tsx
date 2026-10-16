@@ -260,57 +260,60 @@ export const CandidatePortalPage: React.FC = () => {
       {/* Hero Welcome Banner */}
       <div
         style={{
-          background: "linear-gradient(135deg, #6452ce 0%, #4a38af 100%)",
-          borderRadius: "16px",
-          padding: "32px 36px",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          borderRadius: "var(--radius-lg)",
+          padding: "36px 40px",
           color: "#ffffff",
-          boxShadow: "0 10px 30px rgba(100, 82, 206, 0.25)",
+          boxShadow: "var(--shadow-md)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: "20px",
+          gap: "24px",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
-        <div style={{ maxWidth: "680px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+        <div style={{ maxWidth: "720px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "5px",
-                padding: "3px 10px",
-                borderRadius: "50px",
-                background: "rgba(255, 255, 255, 0.2)",
-                fontSize: "11.5px",
+                gap: "6px",
+                padding: "4px 12px",
+                borderRadius: "var(--radius-pill)",
+                background: "rgba(99, 102, 241, 0.2)",
+                color: "#c7d2fe",
+                fontSize: "12px",
                 fontWeight: 700,
-                letterSpacing: "0.05em",
+                letterSpacing: "0.04em",
                 textTransform: "uppercase",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
               }}
             >
               <Sparkles size={13} />
               Candidate Career Portal
             </span>
-            <span style={{ opacity: 0.75, fontSize: "12.5px" }}>{user?.email}</span>
+            <span style={{ opacity: 0.7, fontSize: "13px", color: "#cbd5e1" }}>{user?.email}</span>
           </div>
           <h1
             style={{
-              fontSize: "28px",
+              fontSize: "30px",
               fontWeight: 800,
               margin: "0 0 10px 0",
-              letterSpacing: "-0.5px",
-              lineHeight: 1.2,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.25,
+              color: "#ffffff",
             }}
           >
             {user ? `Welcome back, ${getUserDisplayName(user)}` : "Welcome to Your Career Hub"}
           </h1>
           <p
             style={{
-              fontSize: "14px",
+              fontSize: "14.5px",
               lineHeight: "1.6",
               margin: 0,
-              opacity: 0.9,
-              color: "#e2ddff",
+              color: "#94a3b8",
             }}
           >
             Upload your resume to automatically generate your semantic skill dossier, discover matching
@@ -325,15 +328,15 @@ export const CandidatePortalPage: React.FC = () => {
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              padding: "12px 22px",
+              padding: "12px 24px",
               backgroundColor: "#ffffff",
-              color: "#6452ce",
+              color: "#0f172a",
               fontWeight: 700,
-              fontSize: "13.5px",
-              borderRadius: "50px",
+              fontSize: "14px",
+              borderRadius: "var(--radius-pill)",
               textDecoration: "none",
-              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.15)",
-              transition: "transform 0.2s ease",
+              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.2)",
+              transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
             onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
@@ -944,38 +947,38 @@ export const CandidatePortalPage: React.FC = () => {
                   padding: "12px 14px",
                   borderRadius: "10px",
                   backgroundColor: notif.is_read ? "var(--bg-canvas)" : "#f5f3ff",
-                  border: `1px solid ${notif.is_read ? "var(--border-subtle)" : "rgba(100, 82, 206, 0.25)"}`,
+                  border: `1px solid ${notif.is_read ? "var(--border-subtle)" : "rgba(79, 70, 229, 0.25)"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: "12px",
+                  gap: "14px",
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                    <span style={{ fontSize: "13px", fontWeight: notif.is_read ? 600 : 700, color: "var(--text-primary)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "13.5px", fontWeight: notif.is_read ? 600 : 700, color: "var(--text-primary)" }}>
                       {notif.subject}
                     </span>
-                    <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                      {new Date(notif.created_at).toLocaleString()}
+                    <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
+                      {new Date(notif.created_at).toLocaleDateString()} {new Date(notif.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                     <span
-                      className="mono"
                       style={{
-                        fontSize: "9.5px",
-                        padding: "1px 6px",
-                        borderRadius: "8px",
-                        backgroundColor: notif.delivery_status === "sent" ? "var(--status-approved-bg)" : "#f1f5f9",
-                        color: notif.delivery_status === "sent" ? "var(--status-approved-text)" : "#64748b",
+                        fontSize: "11px",
+                        padding: "2px 8px",
+                        borderRadius: "var(--radius-pill)",
+                        backgroundColor: notif.delivery_status === "sent" ? "#ecfdf5" : "#f1f5f9",
+                        color: notif.delivery_status === "sent" ? "#047857" : "#475569",
                         fontWeight: 700,
+                        border: notif.delivery_status === "sent" ? "1px solid #a7f3d0" : "1px solid #e2e8f0",
                       }}
                     >
                       {notif.delivery_status.toUpperCase()}
                     </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-                    {notif.body_text.slice(0, 160)}
-                    {notif.body_text.length > 160 ? "..." : ""}
+                  <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    {notif.body_text.slice(0, 180)}
+                    {notif.body_text.length > 180 ? "..." : ""}
                   </p>
                 </div>
 
@@ -984,7 +987,7 @@ export const CandidatePortalPage: React.FC = () => {
                     type="button"
                     onClick={() => handleMarkNotificationRead(notif.id)}
                     className="btn btn-sm btn-subtle"
-                    style={{ fontSize: "11px", padding: "4px 8px", color: "var(--accent-purple)", whiteSpace: "nowrap" }}
+                    style={{ fontSize: "12px", padding: "5px 10px", color: "var(--accent-purple)", whiteSpace: "nowrap" }}
                   >
                     Mark read
                   </button>
@@ -999,82 +1002,81 @@ export const CandidatePortalPage: React.FC = () => {
       {pendingOffer && (
         <div
           style={{
-            borderRadius: "16px",
-            background: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
-            border: "2px solid #c4b5fd",
-            padding: "24px 28px",
-            boxShadow: "0 10px 25px -5px rgba(109, 40, 217, 0.15)",
+            borderRadius: "var(--radius-lg)",
+            background: "#ffffff",
+            border: "2px solid #818cf8",
+            padding: "28px 32px",
+            boxShadow: "var(--shadow-md)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "20px",
+            gap: "24px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "18px" }}>
             <div
               style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "12px",
-                backgroundColor: "#7c3aed",
-                color: "#ffffff",
+                width: "52px",
+                height: "52px",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "#eff6ff",
+                color: "#4f46e5",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.35)",
+                border: "1px solid #c7d2fe",
               }}
             >
-              <Gift size={24} />
+              <Gift size={26} />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
                 <span
                   style={{
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontWeight: 800,
                     textTransform: "uppercase",
-                    backgroundColor: "#7c3aed",
+                    backgroundColor: "#4f46e5",
                     color: "#ffffff",
-                    padding: "2px 8px",
-                    borderRadius: "50px",
-                    letterSpacing: "0.05em",
+                    padding: "3px 10px",
+                    borderRadius: "var(--radius-pill)",
+                    letterSpacing: "0.04em",
                   }}
                 >
                   Official Offer Extended
                 </span>
-                <span style={{ fontSize: "12px", color: "#6d28d9", fontWeight: 600 }}>
+                <span style={{ fontSize: "12.5px", color: "#4f46e5", fontWeight: 700 }}>
                   Action Required
                 </span>
               </div>
-              <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 4px 0", color: "#4c1d95" }}>
+              <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 6px 0", color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
                 Job Offer: {pendingOffer.role_title}
               </h3>
-              <p style={{ margin: 0, fontSize: "13.5px", color: "#5b21b6", lineHeight: 1.4 }}>
-                Compensation: <strong>{pendingOffer.currency} {Number(pendingOffer.salary).toLocaleString()} / year</strong>
+              <p style={{ margin: 0, fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                Compensation: <strong style={{ color: "var(--text-primary)" }}>{pendingOffer.currency} {Number(pendingOffer.salary).toLocaleString()} / year</strong>
                 {pendingOffer.equity ? ` • Equity: ${pendingOffer.equity}` : ""}
                 {pendingOffer.start_date ? ` • Target Start Date: ${pendingOffer.start_date}` : ""}
               </p>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <a
               href={api.getOfferDownloadUrl(pendingOffer.id)}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-subtle btn-sm"
+              className="btn btn-secondary"
               style={{
-                backgroundColor: "#ffffff",
-                border: "1px solid #ddd6fe",
-                color: "#6d28d9",
+                fontSize: "13.5px",
+                padding: "10px 18px",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "8px",
               }}
             >
-              <Download size={14} />
+              <Download size={15} />
               <span>Download (.md)</span>
             </a>
             <button
@@ -1084,16 +1086,16 @@ export const CandidatePortalPage: React.FC = () => {
                 setResponseNotes("");
                 setResponseError(null);
               }}
-              className="btn btn-purple"
+              className="btn btn-primary"
               style={{
-                padding: "9px 20px",
-                fontSize: "13px",
+                padding: "10px 22px",
+                fontSize: "13.5px",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
               }}
             >
-              <FileText size={15} />
+              <FileText size={16} />
               <span>Review & Sign Offer Letter</span>
             </button>
           </div>
@@ -1245,7 +1247,7 @@ export const CandidatePortalPage: React.FC = () => {
           </div>
 
           {/* Task Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
             {onboardingSummary.tasks.map((task: OnboardingTaskOut) => {
               const isVerified = task.status === "verified";
               const isCompleted = task.status === "completed";
@@ -1259,21 +1261,21 @@ export const CandidatePortalPage: React.FC = () => {
                       isVerified ? "#86efac" : isCompleted ? "#cbd5e1" : "var(--border-subtle)"
                     }`,
                     borderRadius: "14px",
-                    padding: "18px",
+                    padding: "22px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    gap: "14px",
+                    gap: "16px",
                     transition: "all 0.2s ease",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                   }}
                 >
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                       <div
                         style={{
-                          width: "38px",
-                          height: "38px",
+                          width: "42px",
+                          height: "42px",
                           borderRadius: "10px",
                           backgroundColor: "#f1f5f9",
                           display: "flex",
@@ -1285,9 +1287,9 @@ export const CandidatePortalPage: React.FC = () => {
                       </div>
                       <span
                         style={{
-                          fontSize: "10.5px",
+                          fontSize: "11.5px",
                           fontWeight: 700,
-                          padding: "3px 8px",
+                          padding: "4px 10px",
                           borderRadius: "6px",
                           backgroundColor: isVerified
                             ? "var(--status-approved-bg)"
@@ -1306,31 +1308,31 @@ export const CandidatePortalPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    <h4 style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
                       {task.title}
                     </h4>
-                    <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: 1.55 }}>
                       {task.description}
                     </p>
 
                     {task.form_data && Object.keys(task.form_data).length > 0 && (
                       <div
                         style={{
-                          marginTop: "12px",
-                          padding: "8px 12px",
+                          marginTop: "14px",
+                          padding: "10px 14px",
                           backgroundColor: "rgba(0,0,0,0.02)",
                           borderRadius: "8px",
-                          fontSize: "11.5px",
+                          fontSize: "12.5px",
                           color: "var(--text-muted)",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "3px",
+                          gap: "5px",
                         }}
                       >
                         {Object.entries(task.form_data).slice(0, 2).map(([k, v]) => (
                           <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ textTransform: "capitalize", fontWeight: 600 }}>{k.replace(/_/g, " ")}:</span>
-                            <span className="mono" style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <span className="mono" style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {String(v)}
                             </span>
                           </div>
@@ -1344,19 +1346,19 @@ export const CandidatePortalPage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      paddingTop: "12px",
+                      paddingTop: "14px",
                       borderTop: "1px solid rgba(0,0,0,0.06)",
                     }}
                   >
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Clock size={12} />
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Clock size={14} />
                       Due within {task.due_days} days
                     </span>
                     <button
                       type="button"
                       onClick={() => openTaskModal(task)}
                       className={`btn btn-sm ${isVerified ? "btn-subtle" : isCompleted ? "btn-secondary" : "btn-purple"}`}
-                      style={{ fontSize: "12px", padding: "6px 14px", fontWeight: 600 }}
+                      style={{ fontSize: "13px", padding: "7px 16px", fontWeight: 600 }}
                     >
                       {isVerified ? "Review Details" : isCompleted ? "Edit Submission" : "Complete Task"}
                     </button>
@@ -1378,19 +1380,19 @@ export const CandidatePortalPage: React.FC = () => {
           boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
           <div>
-            <h2 style={{ fontSize: "17px", fontWeight: 700, margin: "0 0 4px 0", color: "var(--text-primary)" }}>
+            <h2 style={{ fontSize: "19px", fontWeight: 700, margin: "0 0 4px 0", color: "var(--text-primary)" }}>
               My Applications & Evaluation Status
             </h2>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
+            <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", margin: 0 }}>
               Track where your submissions are in the hiring lifecycle.
             </p>
           </div>
           <Link
             to="/jobs"
             style={{
-              fontSize: "12.5px",
+              fontSize: "13.5px",
               fontWeight: 600,
               color: "var(--accent-purple)",
               textDecoration: "none",
@@ -1406,7 +1408,7 @@ export const CandidatePortalPage: React.FC = () => {
             description="Once you upload a resume or apply for an opening, your review stages will appear here."
           />
         ) : applications.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {applications.map((app) => {
               const appOffer = offers.find((o) => o.application_id === app.id);
 
@@ -1417,20 +1419,20 @@ export const CandidatePortalPage: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "16px 20px",
+                    padding: "20px 24px",
                     backgroundColor: "var(--bg-canvas)",
-                    borderRadius: "12px",
+                    borderRadius: "14px",
                     border: "1px solid var(--border-subtle)",
                     flexWrap: "wrap",
-                    gap: "12px",
+                    gap: "16px",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                     <div
                       style={{
-                        width: "42px",
-                        height: "42px",
-                        borderRadius: "10px",
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "12px",
                         backgroundColor: "var(--accent-purple-subtle)",
                         color: "var(--accent-purple)",
                         display: "flex",
@@ -1439,17 +1441,17 @@ export const CandidatePortalPage: React.FC = () => {
                         flexShrink: 0,
                       }}
                     >
-                      <Briefcase size={20} />
+                      <Briefcase size={22} />
                     </div>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <h3 style={{ fontSize: "14.5px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
                           {app.job?.title || "Requisition Application"}
                         </h3>
                         {app.job?.role_tier && (
                           <span
                             className="badge mono"
-                            style={{ fontSize: "10.5px", textTransform: "uppercase", backgroundColor: "#f1f5f9", color: "#475569" }}
+                            style={{ fontSize: "11.5px", textTransform: "uppercase", backgroundColor: "#f1f5f9", color: "#475569", padding: "3px 8px" }}
                           >
                             {app.job.role_tier}
                           </span>
@@ -1458,25 +1460,25 @@ export const CandidatePortalPage: React.FC = () => {
                           <span
                             className="mono"
                             style={{
-                              fontSize: "11px",
+                              fontSize: "12px",
                               fontWeight: 700,
                               color: "var(--status-approved-text)",
                               backgroundColor: "var(--status-approved-bg)",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
+                              padding: "3px 8px",
+                              borderRadius: "5px",
                             }}
                           >
                             {(app.similarity_score * 100).toFixed(0)}% MATCH
                           </span>
                         )}
                       </div>
-                      <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
+                      <div className="mono" style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>
                         App ID: {app.id.slice(0, 8)} · Submitted {new Date(app.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                     {appOffer && (
                       <button
                         type="button"
@@ -1492,10 +1494,12 @@ export const CandidatePortalPage: React.FC = () => {
                           borderColor: "#ddd6fe",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "4px",
+                          gap: "6px",
+                          fontSize: "13px",
+                          padding: "6px 14px",
                         }}
                       >
-                        <Gift size={12} />
+                        <Gift size={14} />
                         <span>View Offer</span>
                       </button>
                     )}
@@ -1507,7 +1511,7 @@ export const CandidatePortalPage: React.FC = () => {
           </div>
         ) : (
           /* Fallback candidate upload records */
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {candidates.map((cand) => (
               <div
                 key={cand.id}
@@ -1515,20 +1519,20 @@ export const CandidatePortalPage: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "16px",
+                  padding: "18px 24px",
                   backgroundColor: "var(--bg-canvas)",
-                  borderRadius: "12px",
+                  borderRadius: "14px",
                   border: "1px solid var(--border-subtle)",
                   flexWrap: "wrap",
-                  gap: "12px",
+                  gap: "14px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                   <div
                     style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "10px",
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
                       backgroundColor: "var(--accent-purple-subtle)",
                       color: "var(--accent-purple)",
                       display: "flex",
@@ -1536,13 +1540,13 @@ export const CandidatePortalPage: React.FC = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <Briefcase size={20} />
+                    <Briefcase size={22} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 2px 0", color: "var(--text-primary)" }}>
+                    <h3 style={{ fontSize: "15.5px", fontWeight: 700, margin: "0 0 3px 0", color: "var(--text-primary)" }}>
                       {cand.parsed_data?.current_title || "General Application"}
                     </h3>
-                    <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    <div className="mono" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                       Record ID: {cand.id.slice(0, 8)} · Uploaded {new Date(cand.created_at).toLocaleDateString()}
                     </div>
                   </div>

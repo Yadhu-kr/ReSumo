@@ -80,24 +80,24 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: "960px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "26px" }}>
       {/* Breadcrumb / Navigation helper */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Link
           to={user.role === "candidate" ? "/portal" : user.role === "approver" ? "/approvals" : "/"}
           style={{
-            fontSize: "13px",
+            fontSize: "13.5px",
             color: "var(--text-secondary)",
             textDecoration: "none",
             display: "inline-flex",
             alignItems: "center",
-            gap: "6px",
-            fontWeight: 500,
+            gap: "8px",
+            fontWeight: 600,
           }}
         >
           <span>← Back to {user.role === "candidate" ? "Candidate Portal" : "Dashboard"}</span>
         </Link>
-        <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+        <span className="mono" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
           USER ID: {user.id.slice(0, 8)}...
         </span>
       </div>
@@ -108,7 +108,7 @@ export const ProfilePage: React.FC = () => {
           backgroundColor: "#ffffff",
           borderRadius: "20px",
           border: "1px solid var(--border-subtle)",
-          padding: "28px 32px",
+          padding: "32px 36px",
           boxShadow: "0 4px 24px rgba(35, 15, 75, 0.04)",
           position: "relative",
           overflow: "hidden",
@@ -128,20 +128,20 @@ export const ProfilePage: React.FC = () => {
           }}
         />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "22px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
             {/* Large Avatar */}
             <div
               style={{
-                width: "80px",
-                height: "80px",
+                width: "84px",
+                height: "84px",
                 borderRadius: "50%",
                 background: avatarBg,
                 color: "#ffffff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "26px",
+                fontSize: "28px",
                 fontWeight: 800,
                 letterSpacing: "0.5px",
                 boxShadow: "0 8px 24px rgba(100, 82, 206, 0.25)",
@@ -154,17 +154,17 @@ export const ProfilePage: React.FC = () => {
 
             {/* Identity Details */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <h1 style={{ fontSize: "24px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <h1 style={{ fontSize: "26px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em", margin: 0 }}>
                   {displayName}
                 </h1>
                 <span
                   style={{
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.04em",
-                    padding: "3px 10px",
+                    padding: "4px 12px",
                     borderRadius: "50px",
                     backgroundColor: "var(--accent-purple-subtle)",
                     color: "var(--accent-purple)",
@@ -175,21 +175,21 @@ export const ProfilePage: React.FC = () => {
                 </span>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "8px", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-secondary)", fontSize: "13px" }}>
-                  <Mail size={14} style={{ color: "var(--text-muted)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "10px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)", fontSize: "13.5px" }}>
+                  <Mail size={15} style={{ color: "var(--text-muted)" }} />
                   <span>{user.email}</span>
                 </div>
 
                 {user.role !== "candidate" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-secondary)", fontSize: "13px" }}>
-                    <Building2 size={14} style={{ color: "var(--text-muted)" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)", fontSize: "13.5px" }}>
+                    <Building2 size={15} style={{ color: "var(--text-muted)" }} />
                     <span>ReSumo Technologies</span>
                   </div>
                 )}
 
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)", fontSize: "12px" }}>
-                  <Calendar size={13} />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)", fontSize: "12.5px" }}>
+                  <Calendar size={14} />
                   <span>Joined {new Date(user.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</span>
                 </div>
               </div>
@@ -203,12 +203,12 @@ export const ProfilePage: React.FC = () => {
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              padding: "9px 18px",
+              padding: "10px 20px",
               borderRadius: "50px",
               backgroundColor: "#ffffff",
               border: "1px solid var(--border-subtle)",
               color: "var(--text-secondary)",
-              fontSize: "13px",
+              fontSize: "13.5px",
               fontWeight: 600,
               cursor: "pointer",
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
@@ -225,7 +225,7 @@ export const ProfilePage: React.FC = () => {
               e.currentTarget.style.backgroundColor = "#ffffff";
             }}
           >
-            <LogOut size={15} />
+            <LogOut size={16} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -267,35 +267,36 @@ export const ProfilePage: React.FC = () => {
       )}
 
       {/* Main Two-Column Settings & Info Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "24px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "26px", alignItems: "start" }}>
         {/* Left Column: Personal Information Form */}
         <div
           style={{
             backgroundColor: "#ffffff",
             borderRadius: "16px",
             border: "1px solid var(--border-subtle)",
-            padding: "24px 26px",
+            padding: "28px 32px",
             boxShadow: "0 2px 12px rgba(35, 15, 75, 0.02)",
           }}
         >
-          <div style={{ marginBottom: "20px" }}>
-            <h2 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+          <div style={{ marginBottom: "24px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0" }}>
               Personal Details
             </h2>
-            <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "3px" }}>
+            <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
               Update your display name across the platform. This name is visible to colleagues and recruiters.
             </p>
           </div>
 
-          <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div>
               <label
                 style={{
                   display: "block",
                   fontSize: "12px",
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: "var(--text-secondary)",
-                  marginBottom: "6px",
+                  marginBottom: "8px",
+                  letterSpacing: "0.04em",
                 }}
               >
                 FULL NAME
@@ -308,10 +309,10 @@ export const ProfilePage: React.FC = () => {
                   placeholder="e.g. Sarah Jenkins"
                   style={{
                     width: "100%",
-                    padding: "10px 14px 10px 38px",
+                    padding: "11px 16px 11px 40px",
                     borderRadius: "10px",
                     border: "1px solid var(--border-subtle)",
-                    fontSize: "13.5px",
+                    fontSize: "14px",
                     backgroundColor: "#fbfcfd",
                     color: "var(--text-primary)",
                     outline: "none",
@@ -320,10 +321,10 @@ export const ProfilePage: React.FC = () => {
                   onBlur={(e) => (e.target.style.borderColor = "var(--border-subtle)")}
                 />
                 <UserIcon
-                  size={16}
+                  size={18}
                   style={{
                     position: "absolute",
-                    left: "12px",
+                    left: "14px",
                     top: "50%",
                     transform: "translateY(-50%)",
                     color: "var(--text-muted)",
@@ -337,9 +338,10 @@ export const ProfilePage: React.FC = () => {
                 style={{
                   display: "block",
                   fontSize: "12px",
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: "var(--text-secondary)",
-                  marginBottom: "6px",
+                  marginBottom: "8px",
+                  letterSpacing: "0.04em",
                 }}
               >
                 EMAIL ADDRESS (PRIMARY IDENTITY)
@@ -351,39 +353,40 @@ export const ProfilePage: React.FC = () => {
                   disabled
                   style={{
                     width: "100%",
-                    padding: "10px 14px 10px 38px",
+                    padding: "11px 16px 11px 40px",
                     borderRadius: "10px",
                     border: "1px solid var(--border-subtle)",
-                    fontSize: "13.5px",
+                    fontSize: "14px",
                     backgroundColor: "#f8fafc",
                     color: "var(--text-muted)",
                     cursor: "not-allowed",
                   }}
                 />
                 <Mail
-                  size={16}
+                  size={18}
                   style={{
                     position: "absolute",
-                    left: "12px",
+                    left: "14px",
                     top: "50%",
                     transform: "translateY(-50%)",
                     color: "var(--text-muted)",
                   }}
                 />
               </div>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px", display: "block" }}>
                 Email authentication credentials are encrypted and verified.
               </span>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "6px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
               <button
                 type="submit"
                 disabled={saving}
                 className="btn btn-primary"
                 style={{
-                  padding: "10px 22px",
-                  fontSize: "13px",
+                  padding: "11px 24px",
+                  fontSize: "13.5px",
+                  fontWeight: 600,
                   borderRadius: "50px",
                 }}
               >
@@ -394,40 +397,40 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         {/* Right Column: Role Privileges & Quick Jump */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
           {/* Role Status Card */}
           <div
             style={{
               backgroundColor: "#ffffff",
               borderRadius: "16px",
               border: "1px solid var(--border-subtle)",
-              padding: "24px",
+              padding: "26px",
               boxShadow: "0 2px 12px rgba(35, 15, 75, 0.02)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <Shield size={18} style={{ color: "var(--accent-purple)" }} />
-              <h2 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <Shield size={20} style={{ color: "var(--accent-purple)" }} />
+              <h2 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
                 Role & Access Level
               </h2>
             </div>
 
             <div
               style={{
-                padding: "14px",
+                padding: "16px",
                 borderRadius: "12px",
                 backgroundColor: "#f8fafc",
                 border: "1px solid var(--border-subtle)",
-                marginBottom: "16px",
+                marginBottom: "18px",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                <span className="mono" style={{ fontSize: "11.5px", color: "var(--text-muted)", fontWeight: 700 }}>
                   CURRENT ASSIGNMENT
                 </span>
                 <span
                   style={{
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontWeight: 700,
                     color: "var(--accent-purple)",
                     textTransform: "uppercase",
@@ -436,7 +439,7 @@ export const ProfilePage: React.FC = () => {
                   {roleLabel}
                 </span>
               </div>
-              <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "6px", lineHeight: "1.4" }}>
+              <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "8px", lineHeight: "1.55", margin: "8px 0 0 0" }}>
                 {user.role === "candidate"
                   ? "Self-service candidate account. Authorized to submit resumes, view personal application status, and apply to open requisitions."
                   : user.role === "hr"
@@ -448,7 +451,7 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {/* Quick Actions based on Role */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {user.role === "candidate" ? (
                 <>
                   <Link
@@ -457,12 +460,12 @@ export const ProfilePage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 14px",
+                      padding: "12px 16px",
                       borderRadius: "10px",
                       backgroundColor: "#ffffff",
                       border: "1px solid var(--border-subtle)",
                       color: "var(--text-primary)",
-                      fontSize: "12.5px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       textDecoration: "none",
                       transition: "all 0.15s ease",
@@ -470,11 +473,11 @@ export const ProfilePage: React.FC = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent-purple)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-subtle)")}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Sparkles size={15} style={{ color: "var(--accent-purple)" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Sparkles size={16} style={{ color: "var(--accent-purple)" }} />
                       <span>My Resume & Skill Dossier</span>
                     </div>
-                    <ArrowRight size={14} style={{ color: "var(--text-muted)" }} />
+                    <ArrowRight size={15} style={{ color: "var(--text-muted)" }} />
                   </Link>
 
                   <Link
@@ -483,12 +486,12 @@ export const ProfilePage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 14px",
+                      padding: "12px 16px",
                       borderRadius: "10px",
                       backgroundColor: "#ffffff",
                       border: "1px solid var(--border-subtle)",
                       color: "var(--text-primary)",
-                      fontSize: "12.5px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       textDecoration: "none",
                       transition: "all 0.15s ease",
@@ -496,11 +499,11 @@ export const ProfilePage: React.FC = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent-purple)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-subtle)")}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Briefcase size={15} style={{ color: "var(--accent-purple)" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Briefcase size={16} style={{ color: "var(--accent-purple)" }} />
                       <span>Browse Open Jobs</span>
                     </div>
-                    <ArrowRight size={14} style={{ color: "var(--text-muted)" }} />
+                    <ArrowRight size={15} style={{ color: "var(--text-muted)" }} />
                   </Link>
                 </>
               ) : (
@@ -511,12 +514,12 @@ export const ProfilePage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 14px",
+                      padding: "12px 16px",
                       borderRadius: "10px",
                       backgroundColor: "#ffffff",
                       border: "1px solid var(--border-subtle)",
                       color: "var(--text-primary)",
-                      fontSize: "12.5px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       textDecoration: "none",
                       transition: "all 0.15s ease",
@@ -524,11 +527,11 @@ export const ProfilePage: React.FC = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent-purple)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-subtle)")}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Layers size={15} style={{ color: "var(--accent-purple)" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Layers size={16} style={{ color: "var(--accent-purple)" }} />
                       <span>Pipeline Kanban Board</span>
                     </div>
-                    <ArrowRight size={14} style={{ color: "var(--text-muted)" }} />
+                    <ArrowRight size={15} style={{ color: "var(--text-muted)" }} />
                   </Link>
 
                   <Link
@@ -537,12 +540,12 @@ export const ProfilePage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 14px",
+                      padding: "12px 16px",
                       borderRadius: "10px",
                       backgroundColor: "#ffffff",
                       border: "1px solid var(--border-subtle)",
                       color: "var(--text-primary)",
-                      fontSize: "12.5px",
+                      fontSize: "13.5px",
                       fontWeight: 600,
                       textDecoration: "none",
                       transition: "all 0.15s ease",
@@ -550,11 +553,11 @@ export const ProfilePage: React.FC = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent-purple)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-subtle)")}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Briefcase size={15} style={{ color: "var(--accent-purple)" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Briefcase size={16} style={{ color: "var(--accent-purple)" }} />
                       <span>Requisitions & RAG Matcher</span>
                     </div>
-                    <ArrowRight size={14} style={{ color: "var(--text-muted)" }} />
+                    <ArrowRight size={15} style={{ color: "var(--text-muted)" }} />
                   </Link>
                 </>
               )}
@@ -567,17 +570,17 @@ export const ProfilePage: React.FC = () => {
               backgroundColor: "#ffffff",
               borderRadius: "16px",
               border: "1px solid var(--border-subtle)",
-              padding: "20px 24px",
+              padding: "22px 26px",
               boxShadow: "0 2px 12px rgba(35, 15, 75, 0.02)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <Key size={16} style={{ color: "var(--accent-purple)" }} />
-              <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+              <Key size={18} style={{ color: "var(--accent-purple)" }} />
+              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
                 Security & Session
               </h3>
             </div>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5", margin: 0 }}>
               Your session is authenticated via JWT Bearer tokens with automated role-based guard authorization.
             </p>
           </div>
