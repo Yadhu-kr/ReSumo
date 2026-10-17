@@ -313,8 +313,8 @@ export const AdminGovernanceModal: React.FC<AdminGovernanceModalProps> = ({ isOp
           <button
             type="button"
             onClick={onClose}
-            className="as-btn-primary"
-            style={{ padding: "8px 20px", fontSize: "13px" }}
+            className="btn btn-primary"
+            style={{ height: "36px", padding: "0 18px", fontSize: "13px" }}
           >
             Done
           </button>

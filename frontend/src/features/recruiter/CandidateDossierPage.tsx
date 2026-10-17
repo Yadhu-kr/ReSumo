@@ -425,7 +425,7 @@ export const CandidateDossierPage: React.FC = () => {
       setQuestionError(null);
       const res = await api.generateInterviewQuestions({
         candidate_id: id,
-        job_id: job?.id || candidate?.job_id || undefined,
+        job_id: job?.id || candidate?.job_id || applications[0]?.job_id || undefined,
         round_type: roundToUse,
         custom_focus: customFocus.trim() || undefined,
       });
@@ -1575,10 +1575,10 @@ export const CandidateDossierPage: React.FC = () => {
                         type="submit"
                         disabled={generatingOffer}
                         className="btn btn-purple"
-                        style={{ padding: "9px 22px", fontSize: "13px" }}
+                        style={{ height: "36px", padding: "0 16px", fontSize: "12.5px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                       >
                         <Sparkles size={14} />
-                        <span>{generatingOffer ? "Generating Offer Draft..." : "Generate Offer Letter Draft"}</span>
+                        <span>{generatingOffer ? "Generating Offer..." : "Generate Offer Letter"}</span>
                       </button>
                     </div>
                   </form>
@@ -1685,11 +1685,11 @@ export const CandidateDossierPage: React.FC = () => {
                           type="button"
                           onClick={() => handleGenerateQuestions()}
                           disabled={generatingQuestions}
-                          className="btn btn-secondary"
-                          style={{ padding: "6px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                          className="btn btn-secondary btn-sm"
+                          style={{ height: "30px", padding: "0 10px", fontSize: "11.5px", display: "inline-flex", alignItems: "center", gap: "5px" }}
                         >
-                          <Sparkles size={13} />
-                          <span>Regenerate</span>
+                          <Sparkles size={12} />
+                          <span>{generatingQuestions ? "Generating..." : "Regenerate"}</span>
                         </button>
                       </div>
                     )}
@@ -1726,13 +1726,13 @@ export const CandidateDossierPage: React.FC = () => {
                               type="button"
                               onClick={() => setQuestionRoundType(r.id as InterviewRoundType)}
                               style={{
-                                padding: "7px 13px",
+                                padding: "6px 12px",
                                 borderRadius: "8px",
                                 border: isSelected ? "1.5px solid #6366f1" : "1px solid var(--border-subtle)",
                                 backgroundColor: isSelected ? "#eef2ff" : "#ffffff",
                                 color: isSelected ? "#4338ca" : "var(--text-secondary)",
                                 fontWeight: isSelected ? 700 : 500,
-                                fontSize: "12.5px",
+                                fontSize: "12px",
                                 cursor: "pointer",
                                 transition: "all 0.15s ease",
                                 display: "inline-flex",
@@ -1759,11 +1759,13 @@ export const CandidateDossierPage: React.FC = () => {
                           placeholder="e.g. Distributed consensus, Kafka partitioning, Kubernetes zero-downtime, Team conflict..."
                           style={{
                             width: "100%",
-                            padding: "8px 12px",
+                            height: "36px",
+                            padding: "0 12px",
                             fontSize: "13px",
                             borderRadius: "8px",
                             border: "1px solid var(--border-subtle)",
                             backgroundColor: "#ffffff",
+                            color: "var(--text-primary)",
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
@@ -1778,20 +1780,19 @@ export const CandidateDossierPage: React.FC = () => {
                         type="button"
                         onClick={() => handleGenerateQuestions()}
                         disabled={generatingQuestions}
-                        className="btn btn-primary"
+                        className="btn btn-purple"
                         style={{
-                          padding: "9px 20px",
-                          fontSize: "13px",
+                          height: "36px",
+                          padding: "0 14px",
+                          fontSize: "12.5px",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "8px",
+                          gap: "6px",
                           whiteSpace: "nowrap",
-                          backgroundColor: "#4f46e5",
-                          borderColor: "#4338ca",
                         }}
                       >
-                        <Sparkles size={15} />
-                        <span>{generatingQuestions ? "Generating Questions..." : "Generate AI Questions"}</span>
+                        <Sparkles size={14} />
+                        <span>{generatingQuestions ? "Generating..." : "Generate AI Questions"}</span>
                       </button>
                     </div>
                   </div>
@@ -1992,31 +1993,53 @@ export const CandidateDossierPage: React.FC = () => {
                       <p style={{ margin: "0 0 14px", fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "520px", marginLeft: "auto", marginRight: "auto" }}>
                         ReSumo analyzes candidate experience, GitHub/resume claims, and target position specs to draft high-signal interview questions with evaluation criteria.
                       </p>
-                      <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "8px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
                         <button
                           type="button"
-                          onClick={() => handleGenerateQuestions("technical")}
-                          className="btn btn-secondary"
-                          style={{ padding: "6px 14px", fontSize: "12px" }}
+                          onClick={() => handleGenerateQuestions()}
+                          disabled={generatingQuestions}
+                          className="btn btn-purple"
+                          style={{
+                            height: "36px",
+                            padding: "0 16px",
+                            fontSize: "12.5px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
                         >
-                          ⚡ Technical Coding
+                          <Sparkles size={14} />
+                          <span>{generatingQuestions ? "Generating..." : "Generate AI Questions"}</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateQuestions("system_design")}
-                          className="btn btn-secondary"
-                          style={{ padding: "6px 14px", fontSize: "12px" }}
-                        >
-                          🏗️ System Design
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateQuestions("behavioral")}
-                          className="btn btn-secondary"
-                          style={{ padding: "6px 14px", fontSize: "12px" }}
-                        >
-                          🤝 Behavioral & Leadership
-                        </button>
+                        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateQuestions("technical")}
+                            disabled={generatingQuestions}
+                            className="btn btn-secondary btn-sm"
+                            style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                          >
+                            ⚡ Technical Coding
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateQuestions("system_design")}
+                            disabled={generatingQuestions}
+                            className="btn btn-secondary btn-sm"
+                            style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                          >
+                            🏗️ System Design
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateQuestions("behavioral")}
+                            disabled={generatingQuestions}
+                            className="btn btn-secondary btn-sm"
+                            style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                          >
+                            🤝 Behavioral & Leadership
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -407,3 +407,85 @@ def test_mock_llm_provider_untouched():
     assert "7.0" in rationale
     assert "Senior Backend Engineer" in rationale
     assert "Python, FastAPI" in rationale
+
+
+def test_groq_extraction_provider_mocked_http(monkeypatch):
+    """Test GroqExtractionProvider with mocked HTTP response."""
+    from app.services.extraction import GroqExtractionProvider
+
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {
+        "choices": [
+            {
+                "message": {
+                    "content": json.dumps(VALID_MODEL_JSON),
+                }
+            }
+        ]
+    }
+    mock_resp.raise_for_status = MagicMock()
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            return mock_resp
+
+    import httpx
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+
+    provider = GroqExtractionProvider(api_key="gsk-test-key")
+    result = provider.extract("Sample resume text", resume_id="test-123")
+
+    assert result is not None
+    assert result.current_title == "Staff Software Engineer"
+    assert result.seniority == "lead"
+    assert result.years_experience == 8.5
+    assert result.leadership_experience is True
+
+
+def test_groq_extraction_provider_handles_api_failure(monkeypatch):
+    """Test GroqExtractionProvider gracefully catches network or API failures and returns None."""
+    from app.services.extraction import GroqExtractionProvider
+
+    class FailingHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            raise RuntimeError("API timeout or rate limit")
+
+    import httpx
+    monkeypatch.setattr(httpx, "Client", FailingHttpClient)
+
+    provider = GroqExtractionProvider(api_key="gsk-test-key")
+    result = provider.extract("Sample resume text", resume_id="test-456")
+
+    assert result is None
+
+
+def test_groq_and_remote_provider_selection_env(monkeypatch):
+    """Test provider factory selection for groq and remote."""
+    from app.services.extraction import GroqExtractionProvider, RemoteExtractionProvider
+
+    # Test EXTRACTION_PROVIDER=groq
+    monkeypatch.setenv("EXTRACTION_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-dummy")
+    p_groq = get_extraction_provider()
+    assert isinstance(p_groq, GroqExtractionProvider)
+    assert p_groq.provider_name == "groq"
+
+    # Test EXTRACTION_PROVIDER=remote
+    reset_extraction_provider_cache()
+    monkeypatch.setenv("EXTRACTION_PROVIDER", "remote")
+    p_remote = get_extraction_provider()
+    assert isinstance(p_remote, RemoteExtractionProvider)
+    assert p_remote.provider_name == "remote"
+

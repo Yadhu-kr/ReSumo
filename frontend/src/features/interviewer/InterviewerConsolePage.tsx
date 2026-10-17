@@ -150,14 +150,18 @@ export const InterviewerConsolePage: React.FC = () => {
     }
   };
 
-  const handleGenerateQuestions = async () => {
+  const handleGenerateQuestions = async (overrideRound?: InterviewRoundType) => {
     if (!selectedCandidateId) return;
+    const roundToUse = overrideRound || roundType;
+    if (overrideRound) {
+      setRoundType(overrideRound);
+    }
     try {
       setLoadingQuestions(true);
       setQuestionError(null);
       const res = await api.generateInterviewQuestions({
         candidate_id: selectedCandidateId,
-        round_type: roundType,
+        round_type: roundToUse,
         custom_focus: customFocus.trim() || undefined,
       });
       setQuestions(res.questions);
@@ -732,16 +736,24 @@ export const InterviewerConsolePage: React.FC = () => {
                   Synthesizes candidate experience with targeted architectural challenges. Specify your custom technical domain focus below.
                 </p>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "12px", alignItems: "end" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "10px", alignItems: "end" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
-                      Round Type
+                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }} className="mono">
+                      ROUND TYPE
                     </label>
                     <select
                       value={roundType}
                       onChange={(e) => setRoundType(e.target.value as InterviewRoundType)}
-                      className="as-input"
-                      style={{ height: "40px", fontSize: "13.5px" }}
+                      style={{
+                        height: "36px",
+                        fontSize: "13px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-subtle)",
+                        backgroundColor: "#ffffff",
+                        width: "100%",
+                        color: "var(--text-primary)",
+                      }}
                     >
                       <option value="technical">Technical Depth & Coding</option>
                       <option value="system_design">System Architecture & Scaling</option>
@@ -752,34 +764,49 @@ export const InterviewerConsolePage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
-                      Custom Technical Focus
+                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }} className="mono">
+                      CUSTOM TECHNICAL FOCUS
                     </label>
                     <input
                       type="text"
-                      className="as-input"
-                      style={{ height: "40px", fontSize: "13.5px" }}
+                      style={{
+                        height: "36px",
+                        fontSize: "13px",
+                        padding: "0 12px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-subtle)",
+                        backgroundColor: "#ffffff",
+                        width: "100%",
+                        color: "var(--text-primary)",
+                      }}
                       value={customFocus}
                       onChange={(e) => setCustomFocus(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleGenerateQuestions();
+                        }
+                      }}
                       placeholder="e.g. Distributed caching, Raft consensus, Go concurrency..."
                     />
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleGenerateQuestions}
+                    onClick={() => handleGenerateQuestions()}
                     disabled={loadingQuestions || !selectedCandidateId}
-                    className="as-btn-primary"
+                    className="btn btn-purple"
                     style={{
-                      height: "40px",
+                      height: "36px",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "7px",
-                      padding: "0 18px",
+                      gap: "6px",
+                      padding: "0 14px",
+                      fontSize: "12.5px",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <Sparkles size={15} />
+                    <Sparkles size={14} />
                     <span>{loadingQuestions ? "Generating..." : "Generate Questions"}</span>
                   </button>
                 </div>
@@ -868,15 +895,56 @@ export const InterviewerConsolePage: React.FC = () => {
                   <div style={{ fontSize: "13px", maxWidth: "440px", margin: "0 auto 16px" }}>
                     Click &quot;Generate Questions&quot; above to produce AI-tailored questions and evaluation rubrics based on this candidate&apos;s background.
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleGenerateQuestions}
-                    className="as-btn-primary"
-                    style={{ padding: "8px 20px", display: "inline-flex", alignItems: "center", gap: "6px", margin: "0 auto" }}
-                  >
-                    <Sparkles size={14} />
-                    <span>Generate AI Questions</span>
-                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateQuestions()}
+                      disabled={loadingQuestions || !selectedCandidateId}
+                      className="btn btn-purple"
+                      style={{
+                        height: "36px",
+                        padding: "0 16px",
+                        fontSize: "12.5px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        margin: "0 auto",
+                      }}
+                    >
+                      <Sparkles size={14} />
+                      <span>{loadingQuestions ? "Generating..." : "Generate AI Questions"}</span>
+                    </button>
+
+                    <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("technical")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        ⚡ Technical Depth
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("system_design")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        🏗️ System Design
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("behavioral")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        🤝 Behavioral & Culture
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1142,8 +1210,8 @@ export const InterviewerConsolePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={submittingScorecard}
-                    className="as-btn-primary"
-                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", fontSize: "14px" }}
+                    className="btn btn-primary"
+                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "38px", padding: "0 18px", fontSize: "13px" }}
                   >
                     <FileCheck size={16} />
                     <span>{submittingScorecard ? "Submitting Evaluation..." : "Submit Technical Scorecard"}</span>
@@ -1198,8 +1266,8 @@ export const InterviewerConsolePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(true)}
-                  className="as-btn-primary"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 16px" }}
+                  className="btn btn-primary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", fontSize: "12.5px" }}
                 >
                   <Plus size={14} />
                   <span>Schedule Slot</span>
@@ -1244,25 +1312,25 @@ export const InterviewerConsolePage: React.FC = () => {
                           )}
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           {s.meeting_link && (
                             <a
                               href={s.meeting_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="as-btn-outline"
-                              style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", fontSize: "12.5px" }}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
                             >
-                              <Video size={14} />
+                              <Video size={13} />
                               <span>Join Call</span>
                             </a>
                           )}
                           <a
                             href={api.getIcsDownloadUrl(s.id)}
-                            className="as-btn-outline"
-                            style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", fontSize: "12.5px" }}
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
                           >
-                            <Calendar size={14} />
+                            <Calendar size={13} />
                             <span>Download .ics</span>
                           </a>
                         </div>
@@ -1404,16 +1472,16 @@ export const InterviewerConsolePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="as-btn-outline"
-                  style={{ padding: "8px 16px" }}
+                  className="btn btn-secondary"
+                  style={{ height: "36px", padding: "0 14px", fontSize: "13px" }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={schedulingLoading}
-                  className="as-btn-primary"
-                  style={{ padding: "8px 20px" }}
+                  className="btn btn-primary"
+                  style={{ height: "36px", padding: "0 16px", fontSize: "13px" }}
                 >
                   {schedulingLoading ? "Scheduling..." : "Confirm & Send Invites"}
                 </button>
