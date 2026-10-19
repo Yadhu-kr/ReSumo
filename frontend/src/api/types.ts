@@ -143,18 +143,18 @@ export type ApprovalAction = "approve" | "reject";
 
 export interface ParsedResumeData {
   current_title: string;
-  previous_titles: string[];
-  current_company: string;
-  previous_companies: string[];
-  years_experience: number;
+  previous_titles?: string[] | null;
+  current_company?: string | null;
+  previous_companies?: string[] | null;
+  years_experience?: number | null;
   seniority: SeniorityLevel;
   primary_domain: string;
-  industries: string[];
+  industries?: string[] | null;
   core_skills: string[];
-  secondary_skills: string[];
+  secondary_skills?: string[] | null;
   tools?: string[] | null;
   leadership_experience: boolean;
-  key_achievements: string[];
+  key_achievements?: string[] | null;
   location?: string | null;
   summary: string;
 }

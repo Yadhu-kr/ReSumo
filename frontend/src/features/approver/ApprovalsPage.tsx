@@ -448,9 +448,10 @@ export const ApprovalsPage: React.FC = () => {
                           EXPERIENCE & SENIORITY
                         </span>
                         <div style={{ color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                          <strong style={{ color: "var(--text-primary)" }}>{parsed.current_title}</strong> at{" "}
-                          {parsed.current_company || "Company N/A"} •{" "}
-                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{parsed.seniority}</span> ({parsed.years_experience}y exp)
+                          <strong style={{ color: "var(--text-primary)" }}>{parsed.current_title || "Role not specified"}</strong>
+                          {parsed.current_company ? ` at ${parsed.current_company}` : ""} •{" "}
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{parsed.seniority || "seniority not specified"}</span>
+                          {parsed.years_experience != null ? ` (${parsed.years_experience}y exp)` : ""}
                         </div>
                         {parsed.summary && (
                           <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "6px", lineHeight: "1.5" }}>
@@ -464,7 +465,7 @@ export const ApprovalsPage: React.FC = () => {
                           VERIFIED CORE COMPETENCIES
                         </span>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
-                          {parsed.core_skills.map((skill, i) => (
+                          {parsed.core_skills?.map((skill, i) => (
                             <span
                               key={i}
                               style={{

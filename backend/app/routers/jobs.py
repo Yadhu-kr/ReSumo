@@ -199,8 +199,8 @@ def match_candidates_for_job(
 
         cand_data = candidate.parsed_data or {
             "current_title": "Applicant (Unstructured Match)",
-            "seniority": "mid",
-            "years_experience": 3.0,
+            "seniority": None,
+            "years_experience": None,
             "core_skills": ["Unstructured Resume Vector Match"],
             "summary": (candidate.raw_text[:200] if candidate.raw_text else "Candidate evaluated via unstructured resume embedding."),
         }
@@ -323,8 +323,8 @@ def apply_for_job(
     llm = get_llm_provider()
     cand_dict = candidate.parsed_data or {
         "current_title": "Applicant",
-        "seniority": "mid",
-        "years_experience": 3.0,
+        "seniority": None,
+        "years_experience": None,
         "core_skills": ["Software Engineering"],
         "summary": "Candidate applied directly through the Career Portal.",
     }

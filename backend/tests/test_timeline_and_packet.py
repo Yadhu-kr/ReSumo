@@ -5,7 +5,7 @@ Automated tests for Package A:
 3. Executive Hiring Packet Export & Download (GET /candidates/{id}/hiring-packet, GET /candidates/{id}/hiring-packet/download)
 """
 import pytest
-from app.models import Notification
+from app.models import Notification, Candidate
 
 
 def test_notifications_unread_count(client, hr_auth, db_session):
@@ -149,3 +149,46 @@ def test_executive_hiring_packet_export_and_download(client, hr_auth, candidate_
     assert "attachment; filename=" in dl_res.headers.get("content-disposition", "")
     assert b"# Executive Hiring Dossier:" in dl_res.content
     assert b"Strong culture fit" in dl_res.content
+
+
+def test_hiring_packet_unknown_company_and_location_no_phone_fallback(client, hr_auth, db_session):
+    """Verifies unknown company shows 'Not specified' (not 'Independent') and location shows 'Not specified' without phone fallback."""
+    hr_headers, hr_user = hr_auth
+
+    candidate = Candidate(
+        name="Morgan Kelly",
+        email="morgan.kelly@example.com",
+        phone="1-800-555-9999",
+        raw_resume_filename="morgan_cv.pdf",
+        parsed_data={
+            "current_title": "Site Reliability Engineer",
+            "current_company": None,
+            "location": None,
+            "seniority": None,
+            "years_experience": None,
+            "core_skills": None,
+            "secondary_skills": None,
+            "tools": None,
+            "key_achievements": None,
+        },
+        parsed_status="parsed",
+    )
+    db_session.add(candidate)
+    db_session.commit()
+    db_session.refresh(candidate)
+
+    packet_res = client.get(f"/candidates/{candidate.id}/hiring-packet", headers=hr_headers)
+    assert packet_res.status_code == 200
+    markdown = packet_res.json()["markdown"]
+
+    assert "Current Organization:** Not specified" in markdown
+    assert "Independent" not in markdown
+    assert "Location:** Not specified" in markdown
+    assert "1-800-555-9999" not in markdown
+    assert "Total Experience:** Not specified" in markdown
+    assert "Role Designation:** Site Reliability Engineer (Not specified)" in markdown
+    assert "MID" not in markdown
+    assert "Engineering Toolchain & Frameworks:** Not specified" in markdown
+    assert "Standard toolchain" not in markdown
+
+

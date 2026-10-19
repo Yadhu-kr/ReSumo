@@ -316,9 +316,9 @@ def generate_interview_questions(
             job = db.query(models.Job).filter(models.Job.id == latest_app.job_id).first()
 
     parsed_info = candidate.parsed_data if isinstance(candidate.parsed_data, dict) else {}
-    cand_seniority = parsed_info.get("seniority") or "Senior"
-    cand_title = parsed_info.get("current_title") or "Engineer"
-    cand_exp = parsed_info.get("years_experience") or 5.0
+    cand_seniority = parsed_info.get("seniority")
+    cand_title = parsed_info.get("current_title")
+    cand_exp = parsed_info.get("years_experience")
     cand_core_skills = parsed_info.get("core_skills") or []
     cand_sec_skills = parsed_info.get("secondary_skills") or []
     cand_domain = parsed_info.get("primary_domain") or "Backend & Cloud Architecture"

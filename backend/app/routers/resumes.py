@@ -23,6 +23,7 @@ ALLOWED_EXTENSIONS = {
 }
 
 
+from starlette.concurrency import run_in_threadpool
 from app.services.extraction import get_extraction_provider, MockExtractionProvider
 
 
@@ -166,7 +167,7 @@ async def upload_resume(
         if provider is not None:
             extracted = None
             try:
-                extracted = provider.extract_resume_fields(stored_path, raw_text=raw_text, resume_id=candidate.id)
+                extracted = await run_in_threadpool(provider.extract_resume_fields, stored_path, raw_text=raw_text, resume_id=candidate.id)
             except Exception as exc:
                 import logging
                 logging.getLogger(__name__).warning(

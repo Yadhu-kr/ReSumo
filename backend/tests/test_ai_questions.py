@@ -219,3 +219,96 @@ def test_generate_interview_questions_forbidden_role(client, candidate_auth, db_
         headers=cand_headers,
     )
     assert resp.status_code == 403
+
+
+def test_generate_interview_questions_null_years_experience_and_seniority(client, hr_auth, db_session):
+    """Verifies generating interview questions when years_experience and seniority are null."""
+    hr_headers, hr_user = hr_auth
+
+    candidate = models.Candidate(
+        name="Jordan Lee",
+        email="jordan.lee@example.com",
+        raw_resume_filename="jordan_cv.pdf",
+        parsed_data={
+            "current_title": "Full Stack Engineer",
+            "seniority": None,
+            "years_experience": None,
+            "core_skills": ["TypeScript", "React"],
+            "summary": "Full stack engineer with frontend and API focus.",
+        },
+        parsed_status="parsed",
+    )
+    db_session.add(candidate)
+    db_session.commit()
+    db_session.refresh(candidate)
+
+    job = models.Job(
+        title="Web Platform Developer",
+        description="Building user interfaces and Node APIs.",
+        role_tier="mid",
+        company_id=hr_user["company_id"],
+    )
+    db_session.add(job)
+    db_session.commit()
+    db_session.refresh(job)
+
+    resp = client.post(
+        "/interviews/generate-questions",
+        json={"candidate_id": candidate.id, "job_id": job.id, "round_type": "technical"},
+        headers=hr_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["total_questions"] >= 2
+    for q in data["questions"]:
+        for field in ("question", "what_to_look_for", "rationale", "difficulty"):
+            val = q.get(field, "")
+            assert "None" not in val, f"Found 'None' in {field}: {val}"
+            assert "5.0" not in val, f"Found '5.0' in {field}: {val}"
+            assert "null" not in val.lower(), f"Found 'null' in {field}: {val}"
+
+
+def test_job_match_fallback_when_parsed_data_missing(client, hr_auth, db_session, monkeypatch):
+    """Verifies that candidate matching fallback when parsed_data is None does not render 'None' or '5.0'."""
+    hr_headers, hr_user = hr_auth
+
+    candidate = models.Candidate(
+        name="Sam Taylor",
+        email="sam.taylor@example.com",
+        raw_resume_filename="sam_cv.txt",
+        raw_text="Experienced developer in cloud systems and microservices.",
+        parsed_data=None,
+        parsed_status="uploaded",
+    )
+    db_session.add(candidate)
+    db_session.commit()
+    db_session.refresh(candidate)
+
+    job = models.Job(
+        title="Cloud Infrastructure Lead",
+        description="Kubernetes, terraform, and distributed cloud systems.",
+        role_tier="senior",
+        company_id=hr_user["company_id"],
+    )
+    db_session.add(job)
+    db_session.commit()
+    db_session.refresh(job)
+
+    from app.services import embeddings
+    monkeypatch.setattr(embeddings, "query_top_candidates", lambda text, top_k=10: [{"candidate_id": candidate.id, "similarity_score": 0.82, "distance": 0.18}])
+
+    resp = client.post(
+        f"/jobs/{job.id}/matches",
+        json={"top_k": 5, "min_score": 0.0},
+        headers=hr_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    matches = resp.json()["matches"]
+    assert len(matches) > 0
+    rationale = matches[0]["rationale"]
+    assert "None" not in rationale
+    assert "5.0" not in rationale
+    assert "3.0" not in rationale
+    assert "null" not in rationale.lower()
+
+

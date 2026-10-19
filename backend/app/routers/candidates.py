@@ -700,19 +700,25 @@ def generate_hiring_packet_markdown(candidate: models.Candidate, db: Session) ->
     parsed = candidate.parsed_data or {}
     cand_name = candidate.name or parsed.get("current_title") or "Candidate"
     title = parsed.get("current_title") or "Professional"
-    seniority = (parsed.get("seniority") or "mid").upper()
-    years_exp = parsed.get("years_experience", 0)
-    company = parsed.get("current_company") or "Independent"
-    location = parsed.get("location") or candidate.phone or "Not specified"
+    raw_seniority = parsed.get("seniority")
+    seniority = raw_seniority.upper() if raw_seniority else "Not specified"
+    years_exp = parsed.get("years_experience")
+    exp_str = f"{years_exp} Years" if years_exp is not None else "Not specified"
+    company = parsed.get("current_company") or "Not specified"
+    location = parsed.get("location") or "Not specified"
     summary = parsed.get("summary") or "Profile ingested into ReSumo talent intelligence system."
-    core_skills = ", ".join(parsed.get("core_skills", [])) or "None specified"
-    secondary_skills = ", ".join(parsed.get("secondary_skills", [])) or "None specified"
-    tools = ", ".join(parsed.get("tools", [])) or "Standard toolchain"
-    achievements = parsed.get("key_achievements", [])
+    raw_core = parsed.get("core_skills")
+    core_skills = ", ".join(str(s) for s in raw_core) if raw_core and isinstance(raw_core, (list, tuple)) else "None specified"
+    raw_sec = parsed.get("secondary_skills")
+    secondary_skills = ", ".join(str(s) for s in raw_sec) if raw_sec and isinstance(raw_sec, (list, tuple)) else "None specified"
+    raw_tools = parsed.get("tools")
+    tools = ", ".join(str(t) for t in raw_tools) if raw_tools and isinstance(raw_tools, (list, tuple)) else "Not specified"
+    raw_achievements = parsed.get("key_achievements")
+    achievements = raw_achievements if isinstance(raw_achievements, (list, tuple)) else []
 
     lines = [
         f"# Executive Hiring Dossier: {cand_name}",
-        f"**Role Designation:** {title} ({seniority}) | **Total Experience:** {years_exp} Years | **Current Organization:** {company}",
+        f"**Role Designation:** {title} ({seniority}) | **Total Experience:** {exp_str} | **Current Organization:** {company}",
         f"**Candidate Email:** {candidate.email or 'N/A'} | **Location:** {location}",
         f"**Report Generated:** {datetime.now(timezone.utc).strftime('%B %d, %Y at %H:%M UTC')}",
         "",

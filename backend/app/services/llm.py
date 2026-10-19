@@ -83,9 +83,9 @@ Role Tier: {job_role_tier}
 Job Description: {job_description}
 
 Candidate Profile (from extraction model):
-- Seniority: {candidate_data.get('seniority', 'N/A')}
-- Current Title: {candidate_data.get('current_title', 'N/A')}
-- Years Experience: {candidate_data.get('years_experience', 'N/A')}
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Current Title: {candidate_data.get('current_title') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
 - Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
 - Secondary Skills: {_format_skill_list(candidate_data.get('secondary_skills'))}
 - Primary Domain: {candidate_data.get('primary_domain', 'N/A')}
@@ -144,8 +144,8 @@ Interview Round: {round_type}
 Custom Focus: {custom_focus or 'General Core Competency'}
 
 Candidate Profile:
-- Seniority: {candidate_data.get('seniority', 'Senior')}
-- Years Experience: {candidate_data.get('years_experience', '5+')}
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
 - Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
 - Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
 - Summary: {candidate_data.get('summary', '')}
@@ -224,9 +224,9 @@ Role Tier: {job_role_tier}
 Job Description: {job_description}
 
 Candidate Profile (from extraction model):
-- Seniority: {candidate_data.get('seniority', 'N/A')}
-- Current Title: {candidate_data.get('current_title', 'N/A')}
-- Years Experience: {candidate_data.get('years_experience', 'N/A')}
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Current Title: {candidate_data.get('current_title') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
 - Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
 - Secondary Skills: {_format_skill_list(candidate_data.get('secondary_skills'))}
 - Primary Domain: {candidate_data.get('primary_domain', 'N/A')}
@@ -267,8 +267,8 @@ Interview Round: {round_type}
 Custom Focus: {custom_focus or 'General Core Competency'}
 
 Candidate Profile:
-- Seniority: {candidate_data.get('seniority', 'Senior')}
-- Years Experience: {candidate_data.get('years_experience', '5+')}
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
 - Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
 - Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
 - Summary: {candidate_data.get('summary', '')}
@@ -320,18 +320,26 @@ class MockLLMProvider:
         candidate_data: dict[str, Any],
         similarity_score: float,
     ) -> str:
-        seniority = candidate_data.get("seniority", "mid")
-        years_exp = candidate_data.get("years_experience", 0.0)
-        current_title = candidate_data.get("current_title", "Engineer")
+        seniority = candidate_data.get("seniority")
+        seniority_phrase = f"Holds {seniority} seniority " if seniority else "Demonstrates verified competence "
+        years_exp = candidate_data.get("years_experience")
+        exp_phrase = (
+            f"with {years_exp} years of verified experience "
+            if years_exp is not None
+            else "with demonstrated domain experience "
+        )
+        current_title = candidate_data.get("current_title")
+        title_phrase = f"(currently '{current_title}'), " if current_title else ""
         raw_skills = candidate_data.get("core_skills")
         core_skills = [str(s) for s in raw_skills] if isinstance(raw_skills, (list, tuple)) else []
         skills_str = ", ".join(core_skills[:3]) if core_skills else "relevant core competencies"
         pct = round(similarity_score * 100, 1)
+        tier_phrase = f"{job_role_tier}-tier " if job_role_tier else ""
 
         return (
             f"Candidate profile demonstrates strong alignment with {pct}% semantic similarity. "
-            f"Holds {seniority} seniority with {years_exp} years of verified experience (currently '{current_title}'), "
-            f"directly matching the {job_role_tier}-tier profile required for '{job_title}'. "
+            f"{seniority_phrase}{exp_phrase}{title_phrase}"
+            f"directly matching the {tier_phrase}profile required for '{job_title}'. "
             f"Key technical overlap includes proficiency in {skills_str}."
         )
 
@@ -344,7 +352,11 @@ class MockLLMProvider:
         round_type: str = "technical",
         custom_focus: Optional[str] = None,
     ) -> list[dict[str, Any]]:
-        seniority = str(candidate_data.get("seniority") or job_role_tier or "Senior").capitalize()
+        seniority_raw = candidate_data.get("seniority") or job_role_tier or "Senior"
+        seniority = str(seniority_raw).capitalize()
+        if seniority.lower() == "none":
+            seniority = "Senior"
+        tier_label = f"{job_role_tier}-tier" if job_role_tier else "target"
         raw_skills = candidate_data.get("core_skills") or []
         core_skills = [str(s) for s in raw_skills] if isinstance(raw_skills, (list, tuple)) else []
         skill_1 = core_skills[0] if len(core_skills) > 0 else "Python"
@@ -365,7 +377,7 @@ class MockLLMProvider:
                     "what_to_look_for": "Candidate should articulate message deduplication keys, dead-letter queues (DLQs), consumer partition rebalancing, and backpressure mechanisms.",
                     "suggested_dimension": "system_design",
                     "difficulty": seniority,
-                    "rationale": f"Validates system design depth for {job_role_tier}-tier expectations using candidate's stated skill '{skill_1}'."
+                    "rationale": f"Validates system design depth for {tier_label} expectations using candidate's stated skill '{skill_1}'."
                 },
                 {
                     "id": "q2_data_cache",

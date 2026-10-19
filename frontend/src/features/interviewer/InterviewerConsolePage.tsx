@@ -432,7 +432,7 @@ export const InterviewerConsolePage: React.FC = () => {
                         <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {p?.current_title || "Software Engineer"}
                         </div>
-                        {p?.years_experience && (
+                        {p?.years_experience != null && (
                           <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "3px" }}>
                             {p.years_experience}y exp • {p.seniority || "Senior"}
                           </div>
@@ -601,7 +601,7 @@ export const InterviewerConsolePage: React.FC = () => {
                     )}
                   </div>
                   <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                    {parsed?.current_title || "Engineer"} {parsed?.current_company ? `at ${parsed.current_company}` : ""} • {parsed?.years_experience || 5} years experience
+                    {parsed?.current_title || "Engineer"}{parsed?.current_company ? ` at ${parsed.current_company}` : ""}{parsed?.years_experience != null ? ` • ${parsed.years_experience} years experience` : ""}
                   </div>
                 </div>
 

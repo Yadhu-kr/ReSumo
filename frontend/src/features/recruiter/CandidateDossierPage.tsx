@@ -1034,7 +1034,7 @@ export const CandidateDossierPage: React.FC = () => {
                         CURRENT COMPANY
                       </span>
                       <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-                        {parsed.current_company || "N/A"}
+                        {parsed.current_company || "Not specified"}
                       </div>
                     </div>
 
@@ -1043,7 +1043,7 @@ export const CandidateDossierPage: React.FC = () => {
                         SENIORITY & EXP
                       </span>
                       <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--accent-purple)", marginTop: "4px" }}>
-                        {parsed.seniority.toUpperCase()} • {parsed.years_experience}y
+                        {parsed.seniority ? parsed.seniority.toUpperCase() : "N/A"}{parsed.years_experience != null ? ` • ${parsed.years_experience}y` : " • Not specified"}
                       </div>
                     </div>
                   </div>
@@ -1064,7 +1064,7 @@ export const CandidateDossierPage: React.FC = () => {
                         INDUSTRIES
                       </span>
                       <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px", fontWeight: 500 }}>
-                        {parsed.industries.join(", ") || "N/A"}
+                        {parsed.industries && parsed.industries.length > 0 ? parsed.industries.join(", ") : "Not specified"}
                       </div>
                     </div>
                   </div>
@@ -1075,7 +1075,7 @@ export const CandidateDossierPage: React.FC = () => {
                       CORE TECHNICAL SKILLS
                     </span>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
-                      {parsed.core_skills.map((skill, i) => (
+                      {parsed.core_skills?.map((skill, i) => (
                         <span
                           key={i}
                           style={{
@@ -1148,7 +1148,7 @@ export const CandidateDossierPage: React.FC = () => {
                         PREVIOUS TITLES
                       </span>
                       <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                        {parsed.previous_titles.length > 0 ? parsed.previous_titles.join(" → ") : "None listed"}
+                        {parsed.previous_titles && parsed.previous_titles.length > 0 ? parsed.previous_titles.join(" → ") : "None listed"}
                       </div>
                     </div>
 
@@ -1157,7 +1157,7 @@ export const CandidateDossierPage: React.FC = () => {
                         PREVIOUS ORGANIZATIONS
                       </span>
                       <div style={{ fontSize: "13.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                        {parsed.previous_companies.length > 0 ? parsed.previous_companies.join(", ") : "None listed"}
+                        {parsed.previous_companies && parsed.previous_companies.length > 0 ? parsed.previous_companies.join(", ") : "None listed"}
                       </div>
                     </div>
                   </div>

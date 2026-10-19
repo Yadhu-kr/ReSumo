@@ -174,3 +174,56 @@ def test_upload_resume_approver_forbidden(client, approver_auth):
         headers=headers,
     )
     assert response.status_code == 403
+
+
+def test_upload_resume_runs_off_event_loop(client, candidate_auth, monkeypatch):
+    """Verifies that provider.extract_resume_fields is executed in a worker thread off the event loop thread."""
+    import threading
+    from app.schemas import ParsedResumeData
+
+    loop_thread_ident = None
+    called_thread_ident = None
+
+    class ThreadTrackingProvider:
+        provider_name = "thread-tracker"
+        def extract_resume_fields(self, file_path, raw_text=None, resume_id=None):
+            nonlocal called_thread_ident
+            called_thread_ident = threading.get_ident()
+            return ParsedResumeData(
+                current_title="Software Engineer",
+                seniority="mid",
+                years_experience=3.0,
+                primary_domain="Engineering",
+                core_skills=["Python"],
+                secondary_skills=[],
+                tools=None,
+                leadership_experience=False,
+                key_achievements=[],
+                location=None,
+                summary="Thread test candidate",
+            )
+
+    import app.routers.resumes as resumes_mod
+
+    def mock_get_extraction_provider():
+        nonlocal loop_thread_ident
+        loop_thread_ident = threading.get_ident()
+        return ThreadTrackingProvider()
+
+    monkeypatch.setattr(resumes_mod, "get_extraction_provider", mock_get_extraction_provider)
+
+    headers, _ = candidate_auth
+    resume_text = "Sample candidate resume for thread concurrency check"
+    response = client.post(
+        "/upload-resume",
+        files={"file": ("thread_check.txt", resume_text.encode("utf-8"), "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    assert loop_thread_ident is not None
+    assert called_thread_ident is not None
+    assert called_thread_ident != loop_thread_ident, (
+        f"Expected extraction to run on worker thread off event loop, but both ran on thread {called_thread_ident}"
+    )
+
+

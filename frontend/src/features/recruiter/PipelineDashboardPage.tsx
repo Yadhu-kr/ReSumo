@@ -983,7 +983,7 @@ export const PipelineDashboardPage: React.FC = () => {
                         {cand.parsed_data?.current_title || "General Candidate"}
                       </td>
                       <td style={{ padding: "14px 18px", color: "var(--text-secondary)" }}>
-                        {cand.parsed_data?.years_experience ? `${cand.parsed_data.years_experience} yrs` : "N/A"}
+                        {cand.parsed_data?.years_experience != null ? `${cand.parsed_data.years_experience} yrs` : "Not specified"}
                       </td>
                       <td style={{ padding: "14px 18px" }}>
                         <StatusBadge status={candStatus} />

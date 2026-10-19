@@ -634,7 +634,7 @@ export const CandidatePortalPage: React.FC = () => {
                     Experience
                   </span>
                   <span className="mono" style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>
-                    {parsed.years_experience ? `${parsed.years_experience} yrs` : "N/A"}
+                    {parsed.years_experience != null ? `${parsed.years_experience} yrs` : "Not specified"}
                   </span>
                 </div>
                 <div>
