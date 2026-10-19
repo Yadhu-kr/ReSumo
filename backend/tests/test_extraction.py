@@ -3,6 +3,7 @@ import logging
 from unittest.mock import MagicMock
 import pytest
 import torch
+import httpx
 
 from app.schemas import ParsedResumeData
 from app.services.extraction import (
@@ -488,4 +489,458 @@ def test_groq_and_remote_provider_selection_env(monkeypatch):
     p_remote = get_extraction_provider()
     assert isinstance(p_remote, RemoteExtractionProvider)
     assert p_remote.provider_name == "remote"
+
+
+# ---- QwenExtractionProvider Tests ----
+
+VALID_15_KEY_WITH_NULLS = {
+    "current_title": "Senior Python Engineer",
+    "previous_titles": ["Python Developer"],
+    "current_company": None,
+    "previous_companies": None,
+    "years_experience": 3.5,
+    "seniority": "senior",
+    "primary_domain": "Backend Engineering",
+    "industries": ["Fintech"],
+    "core_skills": ["Python", "FastAPI"],
+    "secondary_skills": ["PostgreSQL"],
+    "tools": None,
+    "leadership_experience": False,
+    "key_achievements": ["Built microservices"],
+    "location": None,
+    "summary": "Experienced engineer with backend focus.",
+}
+
+
+class MockQwenResponse:
+    def __init__(self, content_str: str, status_code: int = 200):
+        self.content_str = content_str
+        self.status_code = status_code
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            request = httpx.Request("POST", "http://test")
+            response = httpx.Response(self.status_code, request=request)
+            raise httpx.HTTPStatusError(f"HTTP error {self.status_code}", request=request, response=response)
+
+    def json(self):
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": self.content_str
+                    }
+                }
+            ]
+        }
+
+
+import json as json_lib
+
+
+def test_qwen_provider_selection_env(monkeypatch):
+    """Test provider factory selection for qwen."""
+    from app.services.extraction import QwenExtractionProvider
+
+    monkeypatch.setenv("EXTRACTION_PROVIDER", "qwen")
+    p_qwen = get_extraction_provider()
+    assert isinstance(p_qwen, QwenExtractionProvider)
+    assert p_qwen.provider_name == "qwen"
+
+
+def test_qwen_provider_request_payload(monkeypatch):
+    """5a: System message equals SYSTEM_PROMPT exactly, user message starts with 'Resume:\n', temp=0.0, max_tokens=640."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+    from app.services.qwen_prompt import SYSTEM_PROMPT
+
+    captured = {}
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["json"] = json
+            return MockQwenResponse(json_lib.dumps(VALID_15_KEY_WITH_NULLS))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+
+    provider = QwenExtractionProvider(base_url="http://localhost:8001/v1", api_key="test-key")
+    result = provider.extract("Senior engineer with 3.5 years experience.")
+
+    assert result is not None
+    payload = captured["json"]
+    assert payload["model"] == "resume-parser"
+    assert payload["temperature"] == 0.0
+    assert payload["max_tokens"] == 640
+    assert "response_format" not in payload
+    assert payload["messages"][0]["role"] == "system"
+    assert payload["messages"][0]["content"] == SYSTEM_PROMPT
+    assert payload["messages"][1]["role"] == "user"
+    assert payload["messages"][1]["content"].startswith("Resume:\n")
+
+
+def test_qwen_provider_valid_15_key_with_nulls(monkeypatch):
+    """5b: Valid 15-key reply with nulls in current_company, previous_companies, tools, location returns parsed result."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(VALID_15_KEY_WITH_NULLS))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+
+    assert isinstance(result, ParsedResumeData)
+    assert result.current_title == "Senior Python Engineer"
+    assert result.current_company is None
+    assert result.previous_companies is None
+    assert result.tools is None
+    assert result.location is None
+    assert result.years_experience == 3.5
+
+
+def test_qwen_provider_years_experience_null(monkeypatch):
+    """6a: years_experience null -> parsed result has years_experience None (not 0)."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    payload_dict = dict(VALID_15_KEY_WITH_NULLS)
+    payload_dict["years_experience"] = None
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(payload_dict))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is not None
+    assert result.years_experience is None
+
+
+def test_qwen_provider_years_experience_float_and_invalid(monkeypatch):
+    """6b: years_experience 1.5 -> 1.5; years_experience 'ten' -> None result (invalid)."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    # Case 1: 1.5 -> 1.5
+    dict_1_5 = dict(VALID_15_KEY_WITH_NULLS)
+    dict_1_5["years_experience"] = 1.5
+
+    class MockHttpClient1:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(dict_1_5))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient1)
+    provider = QwenExtractionProvider()
+    res1 = provider.extract("Resume text")
+    assert res1 is not None
+    assert res1.years_experience == 1.5
+
+    # Case 2: 'ten' -> None
+    dict_ten = dict(VALID_15_KEY_WITH_NULLS)
+    dict_ten["years_experience"] = "ten"
+
+    class MockHttpClient2:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(dict_ten))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient2)
+    res2 = provider.extract("Resume text")
+    assert res2 is None
+
+
+def test_qwen_provider_null_lists_converted_to_empty(monkeypatch):
+    """6c: previous_titles / industries / secondary_skills / key_achievements null -> []."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    payload_dict = dict(VALID_15_KEY_WITH_NULLS)
+    payload_dict["previous_titles"] = None
+    payload_dict["industries"] = None
+    payload_dict["secondary_skills"] = None
+    payload_dict["key_achievements"] = None
+    payload_dict["core_skills"] = None
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(payload_dict))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is not None
+    assert result.previous_titles == []
+    assert result.industries == []
+    assert result.secondary_skills == []
+    assert result.key_achievements == []
+    assert result.core_skills == []
+
+
+def test_qwen_provider_seniority_strict(monkeypatch):
+    """6d: seniority 'Staff' -> None result; 'senior' -> OK."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    # Case 1: 'Staff' -> None result
+    dict_staff = dict(VALID_15_KEY_WITH_NULLS)
+    dict_staff["seniority"] = "Staff"
+
+    class MockHttpClientStaff:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(dict_staff))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClientStaff)
+    provider = QwenExtractionProvider()
+    assert provider.extract("Resume text") is None
+
+    # Case 2: 'senior' -> OK
+    dict_senior = dict(VALID_15_KEY_WITH_NULLS)
+    dict_senior["seniority"] = "senior"
+
+    class MockHttpClientSenior:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(dict_senior))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClientSenior)
+    res_ok = provider.extract("Resume text")
+    assert res_ok is not None
+    assert res_ok.seniority == "senior"
+
+
+def test_qwen_provider_no_retry_on_invalid_json(monkeypatch):
+    """6e: invalid JSON reply -> exactly ONE HTTP call is made (no retry)."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            return MockQwenResponse("MALFORMED JSON {{{")
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is None
+    assert call_count == 1
+
+
+def test_qwen_provider_retry_on_http_500(monkeypatch):
+    """6f: HTTP 500 first, valid second -> result returned after 2 calls."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return MockQwenResponse("Internal Server Error", status_code=500)
+            return MockQwenResponse(json_lib.dumps(VALID_15_KEY_WITH_NULLS))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is not None
+    assert result.current_title == "Senior Python Engineer"
+    assert call_count == 2
+
+
+def test_qwen_provider_tuned_style_all_nulls(monkeypatch):
+    """6g: A tuned-style reply where current_company, previous_companies, tools, location are null and years_experience is null still parses."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    tuned_dict = dict(VALID_15_KEY_WITH_NULLS)
+    tuned_dict["current_company"] = None
+    tuned_dict["previous_companies"] = None
+    tuned_dict["tools"] = None
+    tuned_dict["location"] = None
+    tuned_dict["years_experience"] = None
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(tuned_dict))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is not None
+    assert result.current_company is None
+    assert result.previous_companies is None
+    assert result.tools is None
+    assert result.location is None
+    assert result.years_experience is None
+
+
+def test_qwen_provider_rejects_duplicate_key(monkeypatch):
+    """5e: Reply with a duplicate key returns None."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    dup_json = (
+        '{"current_title": "Title 1", "current_title": "Title 2", '
+        '"previous_titles": [], "current_company": null, "previous_companies": null, '
+        '"years_experience": 2.0, "seniority": "mid", "primary_domain": "Backend", '
+        '"industries": [], "core_skills": ["Python"], "secondary_skills": [], '
+        '"tools": null, "leadership_experience": false, "key_achievements": [], '
+        '"location": null, "summary": "Dev"}'
+    )
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(dup_json)
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+
+    assert result is None
+
+
+def test_qwen_provider_rejects_missing_or_extra_keys(monkeypatch):
+    """5f: Reply with 14 keys or a 16th extra key returns None."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    # 14 keys (missing 'summary')
+    fourteen_keys = dict(VALID_15_KEY_WITH_NULLS)
+    del fourteen_keys["summary"]
+
+    class MockHttpClient14:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(fourteen_keys))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient14)
+    provider = QwenExtractionProvider()
+    assert provider.extract("Resume text") is None
+
+    # 16 keys (extra 'extra_field')
+    sixteen_keys = dict(VALID_15_KEY_WITH_NULLS)
+    sixteen_keys["extra_field"] = "not_allowed"
+
+    class MockHttpClient16:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(sixteen_keys))
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient16)
+    provider = QwenExtractionProvider()
+    assert provider.extract("Resume text") is None
+
+
+def test_qwen_provider_no_retry_on_value_error_with_timeout_message(monkeypatch):
+    """ValueError whose message contains 'timeout' is NOT a transport error and must NOT be retried."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("Something failed with timeout message inside string")
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is None
+    assert call_count == 1
+
+
+def test_qwen_provider_no_retry_on_read_timeout(monkeypatch):
+    """httpx.ReadTimeout must NOT be retried: call_count == 1 and result is None."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockHttpClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            raise httpx.ReadTimeout("Server took too long to send response headers")
+
+    monkeypatch.setattr(httpx, "Client", MockHttpClient)
+    provider = QwenExtractionProvider()
+    result = provider.extract("Resume text")
+    assert result is None
+    assert call_count == 1
+
+
+
+
 

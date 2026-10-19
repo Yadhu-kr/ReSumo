@@ -133,9 +133,9 @@ class ParsedResumeData(BaseModel):
 
     current_title: str
     previous_titles: list[str] = Field(default_factory=list)
-    current_company: str
-    previous_companies: list[str] = Field(default_factory=list)
-    years_experience: float
+    current_company: Optional[str] = None
+    previous_companies: Optional[list[str]] = None
+    years_experience: Optional[float] = None
     seniority: SeniorityLevel
     primary_domain: str
     industries: list[str] = Field(default_factory=list)

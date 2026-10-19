@@ -12,6 +12,7 @@ import os
 import json
 import logging
 from typing import Protocol, Any, runtime_checkable
+import httpx
 
 from app.schemas import ParsedResumeData
 
@@ -500,20 +501,206 @@ class RemoteExtractionProvider:
             return None
 
 
+QWEN_REQUIRED_KEYS = {
+    "current_title",
+    "previous_titles",
+    "current_company",
+    "previous_companies",
+    "years_experience",
+    "seniority",
+    "primary_domain",
+    "industries",
+    "core_skills",
+    "secondary_skills",
+    "tools",
+    "leadership_experience",
+    "key_achievements",
+    "location",
+    "summary",
+}
+
+
+def _strict_json_object_pairs_hook(pairs):
+    d = {}
+    for k, v in pairs:
+        if k in d:
+            raise ValueError(f"Duplicate key detected in JSON: {k}")
+        d[k] = v
+    return d
+
+
+class QwenExtractionProvider:
+    """
+    Production extraction provider calling fine-tuned Qwen2.5-7B resume parser endpoint
+    via OpenAI-compatible API.
+    """
+    provider_name: str = "qwen"
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout: float | None = None,
+    ):
+        self.base_url = (base_url or os.getenv("EXTRACTION_API_BASE_URL", "http://localhost:1234/v1")).rstrip("/")
+        self.api_key = api_key or os.getenv("EXTRACTION_API_KEY", "dummy-key")
+        self.model = model or os.getenv("EXTRACTION_QWEN_MODEL", "resume-parser")
+        if timeout is not None:
+            self.timeout = float(timeout)
+        else:
+            try:
+                self.timeout = float(os.getenv("EXTRACTION_TIMEOUT_SECONDS", "300"))
+            except (ValueError, TypeError):
+                self.timeout = 300.0
+
+    def _parse_reply(self, raw_content: str) -> ParsedResumeData:
+        clean_output = raw_content.strip()
+        if clean_output.startswith("```json"):
+            clean_output = clean_output[7:]
+        elif clean_output.startswith("```"):
+            clean_output = clean_output[3:]
+        if clean_output.endswith("```"):
+            clean_output = clean_output[:-3]
+        clean_output = clean_output.strip()
+
+        parsed = json.loads(clean_output, object_pairs_hook=_strict_json_object_pairs_hook)
+        if not isinstance(parsed, dict):
+            raise ValueError("Parsed JSON response is not an object")
+
+        parsed_keys = set(parsed.keys())
+        if parsed_keys != QWEN_REQUIRED_KEYS:
+            missing = QWEN_REQUIRED_KEYS - parsed_keys
+            extra = parsed_keys - QWEN_REQUIRED_KEYS
+            raise ValueError(f"Schema key mismatch: missing={missing}, extra={extra}")
+
+        # Requirement 3: Seniority. Exact lowercase junior, mid, senior, lead, principal.
+        allowed_seniority = {"junior", "mid", "senior", "lead", "principal"}
+        sen = parsed.get("seniority")
+        if sen not in allowed_seniority:
+            raise ValueError(f"Invalid seniority '{sen}'. Allowed values: {allowed_seniority}")
+
+        # Requirement 1: years_experience. None stays None, number converted with float(), anything else raises ValueError.
+        years_exp = parsed.get("years_experience")
+        if years_exp is None:
+            parsed["years_experience"] = None
+        elif isinstance(years_exp, bool):
+            raise ValueError(f"years_experience cannot be a boolean: {years_exp}")
+        elif isinstance(years_exp, (int, float)):
+            parsed["years_experience"] = float(years_exp)
+        else:
+            raise ValueError(f"years_experience must be a number or null, got {type(years_exp).__name__}")
+
+        # Requirement 2: Null lists.
+        # If previous_titles, industries, secondary_skills, key_achievements, or core_skills is None, convert to [].
+        # Leave tools as None if None.
+        for list_key in ("previous_titles", "industries", "secondary_skills", "key_achievements", "core_skills"):
+            if parsed.get(list_key) is None:
+                parsed[list_key] = []
+
+        return ParsedResumeData(**parsed)
+
+    def extract(
+        self,
+        raw_text: str,
+        resume_id: str | None = None,
+    ) -> ParsedResumeData | None:
+        import httpx
+        from app.services.qwen_prompt import build_messages
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": build_messages(raw_text),
+            "temperature": 0.0,
+            "max_tokens": 640,
+        }
+
+        max_attempts = 2
+        for attempt in range(max_attempts):
+            resp = None
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                    )
+                    resp.raise_for_status()
+            except Exception as req_err:
+                # Retry ONCE only for: httpx connection/network errors, HTTP 429, or HTTP >= 500. Timeouts are NOT retried.
+                status_code = getattr(getattr(req_err, "response", None), "status_code", None)
+                if status_code is None and hasattr(req_err, "status_code"):
+                    status_code = req_err.status_code
+
+                is_retryable = False
+                if isinstance(req_err, httpx.TimeoutException):
+                    is_retryable = False
+                elif isinstance(req_err, (httpx.ConnectError, httpx.NetworkError)):
+                    is_retryable = True
+                elif status_code is not None:
+                    is_retryable = (status_code == 429 or status_code >= 500)
+
+                logger.warning(
+                    "Qwen extraction transport error (attempt %d/%d) for resume %s (%s): %s",
+                    attempt + 1,
+                    max_attempts,
+                    resume_id or "unknown",
+                    type(req_err).__name__,
+                    req_err,
+                )
+                if is_retryable and attempt == 0:
+                    continue
+                return None
+
+            # Response arrived successfully. If reply is invalid, do NOT retry: log warning and return None.
+            try:
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                return self._parse_reply(content)
+            except Exception as parse_err:
+                logger.warning(
+                    "Qwen extraction response parsing failed for resume %s (%s): %s",
+                    resume_id or "unknown",
+                    type(parse_err).__name__,
+                    parse_err,
+                )
+                return None
+
+        return None
+
+    def extract_resume_fields(
+        self,
+        file_path: str = "",
+        raw_text: str | None = None,
+        resume_id: str | None = None,
+    ) -> ParsedResumeData | None:
+        try:
+            return self.extract(raw_text or "", resume_id=resume_id)
+        except Exception as exc:
+            logger.warning("Unexpected error in Qwen extract_resume_fields: %s", exc)
+            return None
+
+
 # Module-level singletons for providers
 _cached_finetuned_provider: FineTunedExtractionProvider | None = None
 _cached_mock_provider: MockExtractionProvider | None = None
 _cached_groq_provider: GroqExtractionProvider | None = None
 _cached_remote_provider: RemoteExtractionProvider | None = None
+_cached_qwen_provider: QwenExtractionProvider | None = None
 
 
 def reset_extraction_provider_cache():
     """Resets cached singletons (used in test suite for clean isolation)."""
-    global _cached_finetuned_provider, _cached_mock_provider, _cached_groq_provider, _cached_remote_provider
+    global _cached_finetuned_provider, _cached_mock_provider, _cached_groq_provider, _cached_remote_provider, _cached_qwen_provider
     _cached_finetuned_provider = None
     _cached_mock_provider = None
     _cached_groq_provider = None
     _cached_remote_provider = None
+    _cached_qwen_provider = None
     FineTunedExtractionProvider._shared_model = None
     FineTunedExtractionProvider._shared_tokenizer = None
 
@@ -522,23 +709,28 @@ def get_extraction_provider() -> ExtractionProvider | None:
     """
     Factory returning the configured extraction provider singleton:
     1. If EXTRACTION_PROVIDER in ("fine-tuned", "finetuned") -> cached FineTunedExtractionProvider.
-    2. If EXTRACTION_PROVIDER == "groq" -> cached GroqExtractionProvider.
-    3. If EXTRACTION_PROVIDER in ("remote", "openai") -> cached RemoteExtractionProvider.
-    4. If EXTRACTION_PROVIDER in ("mock",) -> cached MockExtractionProvider.
-    5. If EXTRACTION_PROVIDER in ("none", "disabled") -> None.
-    6. Else fallback to MOCK_EXTRACTION flag:
+    2. If EXTRACTION_PROVIDER == "qwen" -> cached QwenExtractionProvider.
+    3. If EXTRACTION_PROVIDER == "groq" -> cached GroqExtractionProvider.
+    4. If EXTRACTION_PROVIDER in ("remote", "openai") -> cached RemoteExtractionProvider.
+    5. If EXTRACTION_PROVIDER in ("mock",) -> cached MockExtractionProvider.
+    6. If EXTRACTION_PROVIDER in ("none", "disabled") -> None.
+    7. Else fallback to MOCK_EXTRACTION flag:
        - If MOCK_EXTRACTION is true (default):
            - If GROQ_API_KEY is present and EXTRACTION_PROVIDER != "mock" -> returns GroqExtractionProvider
            - Else -> MockExtractionProvider
        - If MOCK_EXTRACTION is false -> None (unwired mode for test suite).
     """
-    global _cached_finetuned_provider, _cached_mock_provider, _cached_groq_provider, _cached_remote_provider
+    global _cached_finetuned_provider, _cached_mock_provider, _cached_groq_provider, _cached_remote_provider, _cached_qwen_provider
 
     provider_env = os.getenv("EXTRACTION_PROVIDER", "").strip().lower()
     if provider_env in ("fine-tuned", "finetuned"):
         if _cached_finetuned_provider is None:
             _cached_finetuned_provider = FineTunedExtractionProvider()
         return _cached_finetuned_provider
+    elif provider_env == "qwen":
+        if _cached_qwen_provider is None:
+            _cached_qwen_provider = QwenExtractionProvider()
+        return _cached_qwen_provider
     elif provider_env == "groq":
         if _cached_groq_provider is None:
             _cached_groq_provider = GroqExtractionProvider()
