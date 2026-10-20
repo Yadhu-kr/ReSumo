@@ -554,6 +554,14 @@ class QwenExtractionProvider:
             except (ValueError, TypeError):
                 self.timeout = 300.0
 
+        timeout_val = int(self.timeout) if self.timeout.is_integer() else self.timeout
+        logger.info(
+            "Qwen extraction provider: base_url=%s model=%s timeout=%ss",
+            self.base_url,
+            self.model,
+            timeout_val,
+        )
+
     def _parse_reply(self, raw_content: str) -> ParsedResumeData:
         clean_output = raw_content.strip()
         if clean_output.startswith("```json"):
@@ -645,9 +653,11 @@ class QwenExtractionProvider:
                     is_retryable = (status_code == 429 or status_code >= 500)
 
                 logger.warning(
-                    "Qwen extraction transport error (attempt %d/%d) for resume %s (%s): %s",
+                    "Qwen extraction transport error (attempt %d/%d, base_url=%s, model=%s) for resume %s (%s): %s",
                     attempt + 1,
                     max_attempts,
+                    self.base_url,
+                    self.model,
                     resume_id or "unknown",
                     type(req_err).__name__,
                     req_err,
@@ -663,7 +673,9 @@ class QwenExtractionProvider:
                 return self._parse_reply(content)
             except Exception as parse_err:
                 logger.warning(
-                    "Qwen extraction response parsing failed for resume %s (%s): %s",
+                    "Qwen extraction response parsing failed (base_url=%s, model=%s) for resume %s (%s): %s",
+                    self.base_url,
+                    self.model,
                     resume_id or "unknown",
                     type(parse_err).__name__,
                     parse_err,

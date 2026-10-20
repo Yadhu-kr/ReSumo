@@ -941,6 +941,147 @@ def test_qwen_provider_no_retry_on_read_timeout(monkeypatch):
     assert call_count == 1
 
 
+def test_qwen_provider_init_logging(caplog):
+    """2a: On creation, provider logs 'Qwen extraction provider: base_url=<url> model=<model> timeout=<n>s'."""
+    from app.services.extraction import QwenExtractionProvider
+
+    with caplog.at_level(logging.INFO):
+        provider = QwenExtractionProvider(
+            base_url="http://127.0.0.1:1234/v1",
+            model="resume-parser",
+            timeout=300,
+        )
+
+    info_records = [r for r in caplog.records if r.levelno == logging.INFO and "Qwen extraction provider:" in r.message]
+    assert len(info_records) == 1
+    assert info_records[0].message == "Qwen extraction provider: base_url=http://127.0.0.1:1234/v1 model=resume-parser timeout=300s"
+
+
+def test_qwen_logging_connection_error(monkeypatch, caplog):
+    """Connection error -> two warning lines (attempt 1/2 and 2/2), each containing the base_url."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockConnectErrorClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            request = httpx.Request("POST", url)
+            raise httpx.ConnectError("Failed to establish a new connection: [WinError 10061] Connection refused", request=request)
+
+    monkeypatch.setattr(httpx, "Client", MockConnectErrorClient)
+    provider = QwenExtractionProvider(base_url="http://127.0.0.1:1234/v1", model="resume-parser")
+
+    with caplog.at_level(logging.WARNING):
+        result = provider.extract("Resume text", resume_id="cand-conn-err")
+
+    assert result is None
+    assert call_count == 2
+
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warning_records) == 2
+    assert "attempt 1/2" in warning_records[0].message
+    assert "http://127.0.0.1:1234/v1" in warning_records[0].message
+    assert "attempt 2/2" in warning_records[1].message
+    assert "http://127.0.0.1:1234/v1" in warning_records[1].message
+
+
+def test_qwen_logging_read_timeout(monkeypatch, caplog):
+    """Read timeout -> exactly one warning line, no retry."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    call_count = 0
+
+    class MockReadTimeoutClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            nonlocal call_count
+            call_count += 1
+            raise httpx.ReadTimeout("Server took too long to send response headers")
+
+    monkeypatch.setattr(httpx, "Client", MockReadTimeoutClient)
+    provider = QwenExtractionProvider(base_url="http://127.0.0.1:8001/v1", model="resume-parser")
+
+    with caplog.at_level(logging.WARNING):
+        result = provider.extract("Resume text", resume_id="cand-read-timeout")
+
+    assert result is None
+    assert call_count == 1
+
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warning_records) == 1
+    assert "attempt 1/2" in warning_records[0].message
+    assert "http://127.0.0.1:8001/v1" in warning_records[0].message
+    assert "ReadTimeout" in warning_records[0].message
+
+
+def test_qwen_logging_reply_with_wrong_keys(monkeypatch, caplog):
+    """Reply with wrong keys -> one warning containing 'Schema key mismatch'."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    wrong_keys_dict = dict(VALID_15_KEY_WITH_NULLS)
+    del wrong_keys_dict["summary"]
+
+    class MockWrongKeysClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(wrong_keys_dict))
+
+    monkeypatch.setattr(httpx, "Client", MockWrongKeysClient)
+    provider = QwenExtractionProvider(base_url="http://127.0.0.1:1234/v1", model="resume-parser")
+
+    with caplog.at_level(logging.WARNING):
+        result = provider.extract("Resume text", resume_id="cand-wrong-keys")
+
+    assert result is None
+
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warning_records) == 1
+    assert "Schema key mismatch" in warning_records[0].message
+    assert "http://127.0.0.1:1234/v1" in warning_records[0].message
+
+
+def test_qwen_logging_reply_with_invalid_seniority(monkeypatch, caplog):
+    """Reply with seniority 'Staff' -> one warning containing 'Invalid seniority'."""
+    import httpx
+    from app.services.extraction import QwenExtractionProvider
+
+    invalid_seniority_dict = dict(VALID_15_KEY_WITH_NULLS)
+    invalid_seniority_dict["seniority"] = "Staff"
+
+    class MockInvalidSeniorityClient:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def post(self, url, headers=None, json=None):
+            return MockQwenResponse(json_lib.dumps(invalid_seniority_dict))
+
+    monkeypatch.setattr(httpx, "Client", MockInvalidSeniorityClient)
+    provider = QwenExtractionProvider(base_url="http://127.0.0.1:1234/v1", model="resume-parser")
+
+    with caplog.at_level(logging.WARNING):
+        result = provider.extract("Resume text", resume_id="cand-invalid-seniority")
+
+    assert result is None
+
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warning_records) == 1
+    assert "Invalid seniority" in warning_records[0].message
+    assert "http://127.0.0.1:1234/v1" in warning_records[0].message
+
+
+
 
 
 
