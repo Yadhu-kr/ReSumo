@@ -35,10 +35,20 @@ docker-compose up --build
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000 --env-file .env
+```
+The backend does not read `.env` by itself, so the `--env-file` flag is required.
+
+#### Using the fine-tuned Qwen resume parser locally
+Start the model server first, then the backend. In `backend/.env`, configure:
+```env
+# EXTRACTION_PROVIDER=qwen
+# EXTRACTION_API_BASE_URL=http://127.0.0.1:1234/v1   # LM Studio; llama-server uses 8001
+# EXTRACTION_QWEN_MODEL=resume-parser
+# EXTRACTION_TIMEOUT_SECONDS=300                     # 600 on slow machines
 ```
 
 #### Frontend Setup
