@@ -542,17 +542,189 @@ class MockLLMProvider:
 
 
 
+class BionicLLMProvider:
+    """
+    Live provider calling local Bionic / OpenAI-compatible endpoint (http://127.0.0.1:1234/v1)
+    with the local fine-tuned model (e.g. resume-parser-qwen7b).
+    """
+    provider_name: str = "bionic"
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        model: str | None = None,
+        timeout: float = 60.0,
+    ):
+        self.base_url = (
+            base_url
+            or os.getenv("LLM_API_BASE_URL")
+            or os.getenv("EXTRACTION_API_BASE_URL", "http://127.0.0.1:1234/v1")
+        ).rstrip("/")
+        self.model = (
+            model
+            or os.getenv("LLM_MODEL")
+            or os.getenv("EXTRACTION_QWEN_MODEL", "resume-parser-qwen7b")
+        )
+        self.timeout = timeout
+
+    def generate_match_rationale(
+        self,
+        job_title: str,
+        job_description: str,
+        job_role_tier: str,
+        candidate_data: dict[str, Any],
+        similarity_score: float,
+    ) -> str:
+        prompt = f"""You are an expert recruitment assistant evaluating a candidate against a job specification for an academic capstone demonstration.
+
+Job Title: {job_title}
+Role Tier: {job_role_tier}
+Job Description: {job_description}
+
+Candidate Profile (from extraction model):
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Current Title: {candidate_data.get('current_title') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Secondary Skills: {_format_skill_list(candidate_data.get('secondary_skills'))}
+- Primary Domain: {candidate_data.get('primary_domain', 'N/A')}
+- Summary: {candidate_data.get('summary', 'N/A')}
+- Semantic Similarity Score: {similarity_score:.2f}
+
+Generate a concise, defensible 2-3 sentence rationale explaining why this candidate matches (or does not match) this role.
+CRITICAL DEFENSE REQUIREMENT: You MUST explicitly reference the candidate's seniority level, core skills overlap, and total years of experience in your rationale. Do not invent any facts."""
+
+        import httpx
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+        api_key = os.getenv("EXTRACTION_API_KEY", "dummy-key")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional HR and recruitment analyst providing objective evaluations.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": 250,
+            "temperature": 0.2,
+        }
+
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                return data["choices"][0]["message"]["content"].strip()
+        except Exception as exc:
+            logger.warning("Bionic API call failed (%s). Falling back to MockLLMProvider.", exc)
+            return MockLLMProvider().generate_match_rationale(
+                job_title, job_description, job_role_tier, candidate_data, similarity_score
+            )
+
+    def generate_interview_questions(
+        self,
+        job_title: str,
+        job_description: str,
+        job_role_tier: str,
+        candidate_data: dict[str, Any],
+        round_type: str = "technical",
+        custom_focus: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
+        prompt = f"""You are a principal technical interviewer preparing structured, rigorous interview questions for a hiring debrief.
+
+Job Title: {job_title}
+Role Tier: {job_role_tier}
+Job Description: {job_description}
+Interview Round: {round_type}
+Custom Focus: {custom_focus or 'General Core Competency'}
+
+Candidate Profile:
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
+- Summary: {candidate_data.get('summary', '')}
+- Key Accomplishments: {candidate_data.get('key_accomplishments', [])}
+
+Generate 4 to 5 rigorous, tailored interview questions. Each question must evaluate the candidate's actual background and target role.
+Return ONLY valid JSON matching this exact structure:
+[
+  {{
+    "id": "q1",
+    "category": "System Architecture / Technical Depth / Behavioral / Leadership",
+    "question": "The question to ask candidate",
+    "what_to_look_for": "Specific rubric indicators of what a strong answer contains vs red flags",
+    "suggested_dimension": "technical_depth / system_design / communication / cultural_alignment / role_fit",
+    "difficulty": "Junior / Mid / Senior / Staff",
+    "rationale": "Why this question tests their background against the job requirements"
+  }}
+]"""
+        import httpx
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+        api_key = os.getenv("EXTRACTION_API_KEY", "dummy-key")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a technical interview evaluator. Output strict JSON only without markdown formatting.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": 1200,
+            "temperature": 0.3,
+        }
+
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                raw = data["choices"][0]["message"]["content"].strip()
+                if raw.startswith("```json"):
+                    raw = raw[7:]
+                elif raw.startswith("```"):
+                    raw = raw[3:]
+                if raw.endswith("```"):
+                    raw = raw[:-3]
+                raw = raw.strip()
+                return json.loads(raw)
+        except Exception as exc:
+            logger.warning("Bionic question generation failed (%s). Falling back to MockLLMProvider.", exc)
+            return MockLLMProvider().generate_interview_questions(
+                job_title, job_description, job_role_tier, candidate_data, round_type, custom_focus
+            )
+
+
 def get_llm_provider() -> LLMProvider:
     """
     Factory function returning the configured LLMProvider based on priority:
     1. If MOCK_LLM=true -> MockLLMProvider (default for testing suite).
-    2. Else if GROQ_API_KEY is set -> GroqLLMProvider (fast, free-tier friendly).
-    3. Else if ANTHROPIC_API_KEY is set -> ClaudeLLMProvider.
-    4. Else -> MockLLMProvider with a warning that no real provider is configured.
+    2. Else if LLM_PROVIDER in ("bionic", "local", "qwen") -> BionicLLMProvider.
+    3. Else if GROQ_API_KEY is set -> GroqLLMProvider (fast, free-tier friendly).
+    4. Else if ANTHROPIC_API_KEY is set -> ClaudeLLMProvider.
+    5. Else -> MockLLMProvider with a warning that no real provider is configured.
     """
     mock_llm = os.getenv("MOCK_LLM", "true").lower() in ("1", "true", "yes")
     if mock_llm:
         return MockLLMProvider()
+
+    llm_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if llm_provider in ("bionic", "local", "qwen"):
+        return BionicLLMProvider()
 
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
     if groq_api_key:
@@ -567,3 +739,4 @@ def get_llm_provider() -> LLMProvider:
         "Falling back to MockLLMProvider."
     )
     return MockLLMProvider()
+

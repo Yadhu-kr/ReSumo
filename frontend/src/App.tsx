@@ -12,18 +12,23 @@ import { CandidatePortalPage } from "./pages/CandidatePortalPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AuthPage } from "./pages/AuthPage";
 import { InterviewerConsolePage } from "./pages/InterviewerConsolePage";
+import { AdminConsolePage } from "./pages/AdminConsolePage";
 
 /**
  * Smart index router that delivers the correct role landing view:
  * - Candidate -> CandidatePortalPage
+ * - Admin -> Redirects to /admin (Dedicated Admin Console)
  * - Approver -> Redirects to /approvals
  * - Interviewer -> Redirects to /interviewer
- * - HR / Admin -> DashboardPage (Pipeline Kanban)
+ * - HR -> DashboardPage (Pipeline Kanban)
  */
 const HomeIndexRoute: React.FC = () => {
   const { user } = useAuth();
   if (user?.role === "candidate") {
     return <CandidatePortalPage />;
+  }
+  if (user?.role === "admin") {
+    return <Navigate to="/admin" replace />;
   }
   if (user?.role === "approver") {
     return <Navigate to="/approvals" replace />;
@@ -54,6 +59,16 @@ export const App: React.FC = () => {
           >
             {/* Dynamic Role Home */}
             <Route index element={<HomeIndexRoute />} />
+
+            {/* Dedicated Administrator Console */}
+            <Route
+              path="admin"
+              element={
+                <RoleRoute allowedRoles={["admin"]}>
+                  <AdminConsolePage />
+                </RoleRoute>
+              }
+            />
 
             {/* Candidate Portal */}
             <Route

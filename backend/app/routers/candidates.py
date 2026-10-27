@@ -135,6 +135,29 @@ def update_candidate(
     if current_user.role not in ("candidate", "hr", "admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    # HR can only update candidates who belong to or have applications with their company
+    if current_user.role == "hr" and current_user.company_id:
+        has_company_app = (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(
+                models.Application.candidate_id == candidate.id,
+                models.Job.company_id == current_user.company_id,
+            )
+            .first()
+        )
+        has_other_company_app = (
+            db.query(models.Application)
+            .join(models.Job, models.Job.id == models.Application.job_id)
+            .filter(
+                models.Application.candidate_id == candidate.id,
+                models.Job.company_id != current_user.company_id,
+            )
+            .first()
+        )
+        if has_other_company_app and not has_company_app:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: candidate belongs to another organization")
+
     update_data = candidate_update.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -243,6 +266,41 @@ def update_application_status(
         return application
 
     application.status = payload.status
+
+    # If transitioned to "offered", ensure an Offer record exists in the database
+    if payload.status == "offered":
+        existing_offer = db.query(models.Offer).filter(models.Offer.application_id == application.id).first()
+        if not existing_offer:
+            from app.services.offers import generate_offer_letter_text
+            cand = db.query(models.Candidate).filter(models.Candidate.id == application.candidate_id).first()
+            comp = db.query(models.Company).filter(models.Company.id == job.company_id).first() if job else None
+            company_name = comp.name if comp else "ReSumo Partner Organization"
+            candidate_name = cand.name if (cand and cand.name) else "Prospective Team Member"
+            candidate_email = cand.email if (cand and cand.email) else "candidate@resumo.ai"
+            role_title = job.title if job else "Software Engineer"
+            salary = 145000.0
+            letter_text = generate_offer_letter_text(
+                company_name=company_name,
+                candidate_name=candidate_name,
+                candidate_email=candidate_email,
+                role_title=role_title,
+                salary=salary,
+                currency="USD",
+                notes="Formal offer generated upon extending offer in candidate pipeline.",
+            )
+            offer = models.Offer(
+                candidate_id=application.candidate_id,
+                application_id=application.id,
+                role_title=role_title,
+                salary=salary,
+                currency="USD",
+                offer_letter_text=letter_text,
+                status="sent",
+            )
+            db.add(offer)
+        elif existing_offer.status == "draft":
+            existing_offer.status = "sent"
+
     db.commit()
     db.refresh(application)
     return application
@@ -293,8 +351,8 @@ def assign_candidate_to_job(
 
         cand_text = candidate.raw_text or ""
         if candidate.parsed_data:
-            from app.services.embeddings import serialize_candidate_for_embedding
-            cand_text = serialize_candidate_for_embedding(candidate.parsed_data)
+            from app.services.embeddings import build_candidate_embedding_text
+            cand_text = build_candidate_embedding_text(candidate.parsed_data) or cand_text
         if cand_text:
             j_vec = np.array(compute_embedding(build_job_embedding_text(job.title, job.description, job.role_tier)))
             c_vec = np.array(compute_embedding(cand_text))
@@ -368,6 +426,13 @@ def submit_for_approval(
     # HR can only submit for their company's jobs
     if current_user.role == "hr" and job.company_id != current_user.company_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # Validate application lifecycle state: do not allow re-submitting terminal/active approval states
+    if application.status in ("approved", "offered", "hired", "rejected"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot submit application for approval in '{application.status}' state",
+        )
 
     # Check if an approval is already pending
     existing_pending = (
@@ -566,7 +631,19 @@ def get_candidate_timeline(
             metadata={"status": offer.status, "salary": offer.salary},
         ))
 
-        if offer.status in ("sent", "accepted", "declined") and offer.responded_at:
+        if offer.status in ("sent", "accepted", "declined"):
+            events.append(schemas.TimelineEventOut(
+                id=f"evt-offer-sent-{offer.id}",
+                event_type="offer_sent",
+                title="Offer Letter Sent to Candidate",
+                description=f"Formal offer extended for {offer.role_title or 'position'} at {salary_str}.",
+                actor_name="Talent Acquisition",
+                actor_role="hr",
+                timestamp=offer_created,
+                metadata={"status": "sent", "salary": offer.salary},
+            ))
+
+        if offer.status in ("accepted", "declined") and offer.responded_at:
             if offer.status == "accepted":
                 events.append(schemas.TimelineEventOut(
                     id=f"evt-offer-acc-{offer.id}",

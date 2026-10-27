@@ -88,6 +88,12 @@ def temp_chroma_and_mock_embeddings(monkeypatch, tmp_path):
     chroma_dir = str(tmp_path / "chroma")
     monkeypatch.setenv("CHROMA_DATA_DIR", chroma_dir)
     monkeypatch.setenv("MOCK_LLM", "true")
+    monkeypatch.setenv("MOCK_EXTRACTION", "true")
+    monkeypatch.delenv("EXTRACTION_PROVIDER", raising=False)
+    monkeypatch.setenv("EXTRACTION_QWEN_MODEL", "resume-parser")
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    from app.services.extraction import reset_extraction_provider_cache
+    reset_extraction_provider_cache()
     monkeypatch.setattr(emb_service, "_chroma_client", None)
 
     def fake_compute_embedding(text: str) -> list[float]:

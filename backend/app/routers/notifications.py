@@ -66,6 +66,9 @@ def mark_notification_read(
     if not notif:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
 
+    if current_user.role != "admin" and notif.user_id != current_user.id and notif.recipient_email != current_user.email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     notif.is_read = True
     db.commit()
     db.refresh(notif)

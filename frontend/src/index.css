@@ -436,6 +436,12 @@ select {
   border-color: var(--border-subtle);
 }
 
+.badge-source-bionic {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
 /* Modal Overlay & Drawer */
 .modal-overlay {
   position: fixed;

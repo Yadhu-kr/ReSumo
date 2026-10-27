@@ -585,6 +585,9 @@ class QwenExtractionProvider:
         # Requirement 3: Seniority. Exact lowercase junior, mid, senior, lead, principal.
         allowed_seniority = {"junior", "mid", "senior", "lead", "principal"}
         sen = parsed.get("seniority")
+        if isinstance(sen, str) and sen.strip().lower() in allowed_seniority:
+            sen = sen.strip().lower()
+            parsed["seniority"] = sen
         if sen not in allowed_seniority:
             raise ValueError(f"Invalid seniority '{sen}'. Allowed values: {allowed_seniority}")
 
@@ -689,11 +692,20 @@ class QwenExtractionProvider:
         file_path: str = "",
         raw_text: str | None = None,
         resume_id: str | None = None,
-    ) -> ParsedResumeData | None:
+    ) -> ParsedResumeData | dict[str, Any] | None:
         try:
-            return self.extract(raw_text or "", resume_id=resume_id)
+            result = self.extract(raw_text or "", resume_id=resume_id)
+            if result is None and os.getenv("MOCK_EXTRACTION", "true").lower() in ("1", "true", "yes"):
+                logger.warning(
+                    "Qwen extraction service on %s returned None; falling back to MockExtractionProvider because MOCK_EXTRACTION=true.",
+                    self.base_url,
+                )
+                return MockExtractionProvider().extract(raw_text or "", resume_id=resume_id)
+            return result
         except Exception as exc:
             logger.warning("Unexpected error in Qwen extract_resume_fields: %s", exc)
+            if os.getenv("MOCK_EXTRACTION", "true").lower() in ("1", "true", "yes"):
+                return MockExtractionProvider().extract(raw_text or "", resume_id=resume_id)
             return None
 
 

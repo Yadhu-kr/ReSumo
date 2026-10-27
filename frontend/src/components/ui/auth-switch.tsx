@@ -11,9 +11,7 @@ import {
   AlertCircle,
   LogOut,
   ArrowRight,
-  UserCheck,
-  Briefcase,
-  Building2,
+  Shield,
 } from "lucide-react";
 import "./auth-switch.css";
 
@@ -35,12 +33,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
   //       isSignUp false = Sign In (right form active)
   const [isSignUp, setIsSignUp] = useState<boolean>(initialMode === "register");
 
-  // Role Selection for Sign Up: "candidate" | "hr"
-  const [role, setRole] = useState<"candidate" | "hr">("candidate");
-
-  // Form Fields
+  // Form Fields (Candidate registration)
   const [name, setName] = useState<string>("");
-  const [companyName, setCompanyName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
 
@@ -65,6 +59,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
         const me = await api.getMe();
         if (me.role === "candidate") {
           navigate("/portal", { replace: true });
+        } else if (me.role === "admin") {
+          navigate("/admin", { replace: true });
         } else if (me.role === "approver") {
           navigate("/approvals", { replace: true });
         } else if (me.role === "interviewer") {
@@ -99,6 +95,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
         const me = await api.getMe();
         if (me.role === "candidate") {
           navigate("/portal", { replace: true });
+        } else if (me.role === "admin") {
+          navigate("/admin", { replace: true });
         } else if (me.role === "approver") {
           navigate("/approvals", { replace: true });
         } else if (me.role === "interviewer") {
@@ -132,30 +130,19 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
       return;
     }
 
-    const autoCompanyName = companyName.trim()
-      ? companyName.trim()
-      : name.trim()
-      ? `${name.trim()}'s Organization`
-      : `${email.trim().split("@")[0].replace(/[^a-zA-Z0-9]/g, " ")}'s Organization`;
-
     setLoading(true);
     try {
       await register({
         email: email.trim(),
         password,
         name: name.trim() || undefined,
-        role,
-        company_name: role === "hr" ? autoCompanyName : undefined,
+        role: "candidate",
       });
 
       if (onSuccess) {
         onSuccess();
       } else {
-        if (role === "candidate") {
-          navigate("/portal", { replace: true });
-        } else {
-          navigate("/", { replace: true });
-        }
+        navigate("/portal", { replace: true });
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -190,6 +177,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
               onClick={() => {
                 if (user.role === "candidate") {
                   navigate("/portal");
+                } else if (user.role === "admin") {
+                  navigate("/admin");
                 } else if (user.role === "approver") {
                   navigate("/approvals");
                 } else if (user.role === "interviewer") {
@@ -203,6 +192,8 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                 Go to{" "}
                 {user.role === "candidate"
                   ? "Candidate Portal"
+                  : user.role === "admin"
+                  ? "Admin Console"
                   : user.role === "interviewer"
                   ? "Interview Console"
                   : user.role === "approver"
@@ -230,35 +221,14 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
 
       <div className={cn("as-card", isSignUp ? "mode-signup" : "mode-signin")}>
         {/* ==================================================================
-            1. SIGN UP FORM CONTAINER (Left Half)
+            1. CANDIDATE SIGN UP FORM CONTAINER (Left Half)
            ================================================================== */}
         <div className="as-form-signup-container">
           <div className="as-form-content">
-            <h1 className="as-title">Sign up</h1>
-
-            {/* Role Selection: Candidate vs HR */}
-            <div className="as-role-selector" role="radiogroup" aria-label="Select Account Type">
-              <button
-                type="button"
-                className={cn("as-role-btn", role === "candidate" && "active")}
-                onClick={() => setRole("candidate")}
-                role="radio"
-                aria-checked={role === "candidate"}
-              >
-                <UserCheck size={14} />
-                <span>Candidate</span>
-              </button>
-              <button
-                type="button"
-                className={cn("as-role-btn", role === "hr" && "active")}
-                onClick={() => setRole("hr")}
-                role="radio"
-                aria-checked={role === "hr"}
-              >
-                <Briefcase size={14} />
-                <span>Recruiter</span>
-              </button>
-            </div>
+            <h1 className="as-title">Candidate Sign up</h1>
+            <p className="as-subtitle">
+              Create your profile to apply, track application status, and schedule interviews.
+            </p>
 
             {/* Error Notification */}
             {error && isSignUp && (
@@ -268,7 +238,7 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSignUp} style={{ width: "100%", marginTop: 4 }}>
+            <form onSubmit={handleSignUp} style={{ width: "100%", marginTop: 8 }}>
               {/* Full Name / Username Input */}
               <div className="as-input-group">
                 <span className="as-input-icon">
@@ -279,25 +249,9 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
                   className="as-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={role === "candidate" ? "Full Name" : "Your Name"}
+                  placeholder="Full Name"
                 />
               </div>
-
-              {/* Company Name (only shown if HR is selected) */}
-              {role === "hr" && (
-                <div className="as-input-group">
-                  <span className="as-input-icon">
-                    <Building2 />
-                  </span>
-                  <input
-                    type="text"
-                    className="as-input"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Organization / Company Name"
-                  />
-                </div>
-              )}
 
               {/* Email Input */}
               <div className="as-input-group">
@@ -337,6 +291,13 @@ export const AuthSwitch: React.FC<AuthSwitchProps> = ({
               >
                 {loading ? "CREATING..." : "SIGN UP"}
               </button>
+
+              <div className="as-company-notice">
+                <Shield size={12} className="as-notice-icon" />
+                <span>
+                  Company member or recruiter? Accounts are provisioned by your System Administrator. Use <strong>Sign In</strong> to access your portal.
+                </span>
+              </div>
             </form>
           </div>
         </div>

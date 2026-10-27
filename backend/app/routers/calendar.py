@@ -205,17 +205,18 @@ def get_my_schedules(
     If HR/Admin/Approver: returns schedules where they are interviewer or in their company.
     """
     if current_user.role == "candidate":
-        cand = db.query(models.Candidate).filter(
+        cands = db.query(models.Candidate).filter(
             or_(
                 models.Candidate.user_id == current_user.id,
                 models.Candidate.email == current_user.email,
             )
-        ).first()
-        if not cand:
+        ).all()
+        if not cands:
             return []
+        cand_ids = [c.id for c in cands]
         return (
             db.query(models.InterviewSchedule)
-            .filter(models.InterviewSchedule.candidate_id == cand.id)
+            .filter(models.InterviewSchedule.candidate_id.in_(cand_ids))
             .order_by(models.InterviewSchedule.start_time.asc())
             .all()
         )
@@ -244,6 +245,26 @@ def update_schedule(
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
 
+    # Authorization checks: candidates cannot tamper with schedules; interviewers can only edit their own
+    if current_user.role == "candidate":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Candidates are not permitted to modify interview schedules",
+        )
+    if current_user.role == "interviewer":
+        if schedule.interviewer_id and schedule.interviewer_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Interviewers can only update their own scheduled interviews",
+            )
+    if current_user.role == "hr" and current_user.company_id and schedule.application:
+        job = db.query(models.Job).filter(models.Job.id == schedule.application.job_id).first()
+        if job and job.company_id != current_user.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: interview belongs to another organization",
+            )
+
     if payload.status is not None:
         schedule.status = payload.status
     if payload.meeting_link is not None:
@@ -269,6 +290,31 @@ def download_ics(
     schedule = db.query(models.InterviewSchedule).filter(models.InterviewSchedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+
+    # Authorization checks: candidates can only download their own schedules; HR/interviewers checked by company
+    if current_user.role == "candidate":
+        cand = schedule.candidate
+        if not cand or (cand.user_id != current_user.id and cand.email != current_user.email):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: cannot download calendar invites for another candidate",
+            )
+    elif current_user.role == "interviewer":
+        if schedule.interviewer_id and schedule.interviewer_id != current_user.id and current_user.company_id:
+            if schedule.application:
+                job = db.query(models.Job).filter(models.Job.id == schedule.application.job_id).first()
+                if job and job.company_id != current_user.company_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Access denied: interview belongs to another organization",
+                    )
+    elif current_user.role == "hr" and current_user.company_id and schedule.application:
+        job = db.query(models.Job).filter(models.Job.id == schedule.application.job_id).first()
+        if job and job.company_id != current_user.company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: interview belongs to another organization",
+            )
 
     candidate_name = schedule.candidate.name if schedule.candidate and schedule.candidate.name else "Candidate"
     interviewer_name = schedule.interviewer_name or "Hiring Team"

@@ -45,6 +45,12 @@ def generate_offer(
             detail=f"Application '{payload.application_id}' not found",
         )
 
+    if application.status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot generate offer: application status must be 'approved' (current status: '{application.status}')",
+        )
+
     job = db.query(models.Job).filter(models.Job.id == application.job_id).first()
     if not job:
         raise HTTPException(
@@ -220,11 +226,23 @@ def send_offer(
     if not offer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offer not found")
 
+    if offer.status in ("accepted", "declined"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot send offer that has already been {offer.status}",
+        )
+
     application = (
         db.query(models.Application).filter(models.Application.id == offer.application_id).first()
         if offer.application_id
         else None
     )
+
+    if application and application.status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot send an offer for a rejected application",
+        )
 
     if current_user.role == "hr" and application:
         job = db.query(models.Job).filter(models.Job.id == application.job_id).first()

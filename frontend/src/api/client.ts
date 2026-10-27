@@ -41,6 +41,9 @@ import type {
   GenerateInterviewQuestionsResponse,
   UserGovernance,
   UserRoleGovernanceUpdate,
+  AdminCreateUserPayload,
+  AdminResetPasswordPayload,
+  AccountLog,
 } from "./types";
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -396,11 +399,7 @@ export const api = {
     return `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics${query}`;
   },
 
-  getIcsDownloadUrl: (scheduleId: string) => {
-    const token = getStoredToken();
-    const query = token ? `?token=${encodeURIComponent(token)}` : "";
-    return `${BASE_URL}/calendar/schedules/${encodeURIComponent(scheduleId)}/ics${query}`;
-  },
+  getIcsDownloadUrl: (scheduleId: string) => api.getScheduleIcsUrl(scheduleId),
 
   // Phase 6 Notifications
   getMyNotifications: () =>
@@ -453,6 +452,21 @@ export const api = {
   // Admin Governance & Multi-Role Expansion
   listGovernanceUsers: () =>
     request<UserGovernance[]>("/auth/governance/users"),
+
+  adminCreateUser: (payload: AdminCreateUserPayload) =>
+    request<UserGovernance>("/auth/governance/users", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getAccountLogs: () =>
+    request<AccountLog[]>("/auth/governance/logs"),
+
+  adminResetPassword: (userId: string, payload: AdminResetPasswordPayload) =>
+    request<{ message: string; user_id: string }>(`/auth/governance/users/${encodeURIComponent(userId)}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   updateUserRolesGovernance: (userId: string, payload: UserRoleGovernanceUpdate) =>
     request<UserGovernance>(`/auth/governance/users/${encodeURIComponent(userId)}/roles`, {

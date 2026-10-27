@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { getUserDisplayName, getUserInitials, getRoleBadgeLabel, getAvatarGradient } from "../lib/user";
-import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox, Briefcase, FileText, Compass, Terminal, Key } from "lucide-react";
+import { ChevronDown, User as UserIcon, LogOut, Sparkles, Layers, Bell, CheckCheck, Calendar, Gift, ShieldCheck, Inbox, Briefcase, FileText, Compass, Terminal, Shield } from "lucide-react";
 import type { AppNotification } from "../api/types";
 import { AdminGovernanceModal } from "./AdminGovernanceModal";
 
@@ -357,8 +357,53 @@ export const Layout: React.FC = () => {
                   <span>Job Requisitions</span>
                 </NavLink>
               </>
+            ) : user?.role === "admin" ? (
+              // Admin Governance Navigation
+              <>
+                <NavLink
+                  to="/admin"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <Shield size={15} />
+                  <span>Admin Console</span>
+                </NavLink>
+
+                <NavLink
+                  to="/jobs"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <Briefcase size={15} />
+                  <span>Job Requisitions</span>
+                </NavLink>
+              </>
             ) : (
-              // HR & Admin Navigation
+              // HR & Recruiter Operational Navigation
               <>
                 <NavLink
                   to="/"
@@ -423,41 +468,39 @@ export const Layout: React.FC = () => {
                   <span>Interview Console</span>
                 </NavLink>
 
-                {(user?.role === "admin" || user?.role === "hr") && (
-                  <NavLink
-                    to="/approvals"
-                    style={({ isActive }) => ({
-                      padding: "8px 16px",
-                      borderRadius: "var(--radius-sm)",
-                      fontSize: "13.5px",
-                      fontWeight: isActive ? 600 : 500,
-                      color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                      backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                      border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                      textDecoration: "none",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "7px",
-                      transition: "all 0.15s ease",
-                    })}
-                  >
-                    <ShieldCheck size={15} />
-                    <span>{user?.role === "hr" ? "Approvals Tracking" : "Governance Queue"}</span>
-                    {pendingCount > 0 && (
-                      <span
-                        className="badge badge-pending"
-                        style={{
-                          fontSize: "11px",
-                          padding: "2px 8px",
-                          borderRadius: "9999px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {pendingCount}
-                      </span>
-                    )}
-                  </NavLink>
-                )}
+                <NavLink
+                  to="/approvals"
+                  style={({ isActive }) => ({
+                    padding: "8px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "13.5px",
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
+                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
+                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transition: "all 0.15s ease",
+                  })}
+                >
+                  <ShieldCheck size={15} />
+                  <span>Approvals Tracking</span>
+                  {pendingCount > 0 && (
+                    <span
+                      className="badge badge-pending"
+                      style={{
+                        fontSize: "11px",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
+                </NavLink>
               </>
             )}
           </nav>
@@ -465,11 +508,10 @@ export const Layout: React.FC = () => {
 
         {/* Status & User Bar */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          {/* Admin Multi-Role Governance Shortcut */}
+          {/* Admin Dedicated Console Shortcut */}
           {user?.role === "admin" && (
-            <button
-              type="button"
-              onClick={() => setAdminGovernanceOpen(true)}
+            <Link
+              to="/admin"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -481,13 +523,14 @@ export const Layout: React.FC = () => {
                 color: "var(--accent-purple)",
                 fontSize: "12px",
                 fontWeight: 600,
+                textDecoration: "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
             >
-              <Key size={13} />
-              <span>Multi-Role Governance</span>
-            </button>
+              <Shield size={13} />
+              <span>Admin Console</span>
+            </Link>
           )}
 
           {/* API Health */}
@@ -1001,6 +1044,28 @@ export const Layout: React.FC = () => {
                         <Sparkles size={16} style={{ color: "var(--accent-purple)" }} />
                         <span>Candidate Career Hub</span>
                       </Link>
+                    ) : user.role === "admin" ? (
+                      <Link
+                        to="/admin"
+                        onClick={() => setProfileMenuOpen(false)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-sm)",
+                          color: "var(--text-primary)",
+                          fontSize: "13.5px",
+                          fontWeight: 500,
+                          textDecoration: "none",
+                          transition: "background-color 0.12s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        <Shield size={16} style={{ color: "var(--accent-purple)" }} />
+                        <span>Administrator Console</span>
+                      </Link>
                     ) : (
                       <Link
                         to="/"
@@ -1025,7 +1090,7 @@ export const Layout: React.FC = () => {
                       </Link>
                     )}
 
-                    {(user.role === "interviewer" || user.role === "admin" || user.role === "hr" || user.secondary_roles?.includes("interviewer")) && (
+                    {(user.role === "interviewer" || user.role === "hr" || user.secondary_roles?.includes("interviewer")) && (
                       <Link
                         to="/interviewer"
                         onClick={() => setProfileMenuOpen(false)}
@@ -1047,37 +1112,6 @@ export const Layout: React.FC = () => {
                         <Terminal size={16} style={{ color: "var(--accent-purple)" }} />
                         <span>Technical Interview Console</span>
                       </Link>
-                    )}
-
-                    {user.role === "admin" && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileMenuOpen(false);
-                          setAdminGovernanceOpen(true);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          width: "100%",
-                          padding: "10px 14px",
-                          borderRadius: "var(--radius-sm)",
-                          border: "none",
-                          backgroundColor: "transparent",
-                          color: "var(--text-primary)",
-                          fontSize: "13.5px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          textAlign: "left",
-                          transition: "background-color 0.12s ease",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-surface-elevated)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                      >
-                        <Key size={16} style={{ color: "var(--accent-purple)" }} />
-                        <span>Multi-Role Governance</span>
-                      </button>
                     )}
 
                     <div style={{ height: "1px", backgroundColor: "var(--border-subtle)", margin: "6px 0" }} />

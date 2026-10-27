@@ -66,7 +66,14 @@ def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
                 detail="Approver role requires approver_role (hiring_manager/director/vp/ceo)",
             )
     elif payload.role == "interviewer":
-        if payload.company_id:
+        if payload.company_name:
+            company = db.query(models.Company).filter(models.Company.name == payload.company_name).first()
+            if not company:
+                company = models.Company(name=payload.company_name)
+                db.add(company)
+                db.flush()
+            company_id = company.id
+        elif payload.company_id:
             company = db.query(models.Company).filter(models.Company.id == payload.company_id).first()
             if not company:
                 raise HTTPException(
@@ -150,9 +157,150 @@ def list_governance_users(
     current_user: models.User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    """Admin-only: Retrieve all registered users for multi-role governance inspection."""
-    users = db.query(models.User).order_by(models.User.created_at.desc()).all()
+    """Admin-only: Retrieve registered users for multi-role governance inspection."""
+    query = db.query(models.User)
+    if current_user.company_id:
+        query = query.filter(
+            (models.User.company_id == current_user.company_id) | (models.User.role == "candidate")
+        )
+    users = query.order_by(models.User.created_at.desc()).all()
     return users
+
+
+@router.post("/governance/users", response_model=schemas.UserGovernanceOut, status_code=status.HTTP_201_CREATED)
+def admin_create_user(
+    payload: schemas.AdminCreateUserRequest,
+    current_user: models.User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin-only: Provision a new company employee (HR, Interviewer, Approver, Admin)
+    with initial credentials and roles, automatically scoped to the company and logged in AccountLog.
+    """
+    existing = db.query(models.User).filter(models.User.email == payload.email.strip().lower()).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User with email '{payload.email}' already exists",
+        )
+
+    target_company_id = payload.company_id or current_user.company_id
+    if not target_company_id:
+        first_co = db.query(models.Company).first()
+        target_company_id = first_co.id if first_co else None
+
+    approver_role = payload.approver_role
+    if payload.role == "approver" and not approver_role:
+        approver_role = "hiring_manager"
+
+    new_user = models.User(
+        email=payload.email.strip().lower(),
+        name=payload.name.strip() if payload.name else None,
+        password_hash=hash_password(payload.password),
+        role=payload.role,
+        secondary_roles=payload.secondary_roles or [],
+        company_id=target_company_id,
+        approver_role=approver_role if payload.role == "approver" else None,
+    )
+    db.add(new_user)
+    db.flush()
+
+    if target_company_id:
+        log = models.AccountLog(
+            company_id=target_company_id,
+            admin_id=current_user.id,
+            target_user_id=new_user.id,
+            action="account_created",
+            details={
+                "email": new_user.email,
+                "name": new_user.name,
+                "role": new_user.role,
+                "secondary_roles": new_user.secondary_roles,
+                "approver_role": new_user.approver_role,
+            },
+        )
+        db.add(log)
+
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
+@router.get("/governance/logs", response_model=list[schemas.AccountLogOut])
+def get_account_logs(
+    current_user: models.User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: Retrieve chronological account audit logs."""
+    query = db.query(models.AccountLog)
+    if current_user.company_id:
+        query = query.filter(models.AccountLog.company_id == current_user.company_id)
+
+    raw_logs = query.order_by(models.AccountLog.created_at.desc()).limit(200).all()
+
+    output = []
+    for l in raw_logs:
+        admin_name = l.admin.name if l.admin else (l.admin.email if l.admin else "System Administrator")
+        target_email = (
+            l.target_user.email
+            if l.target_user
+            else (l.details.get("email") or l.details.get("target_email") if l.details else None)
+        )
+        output.append(
+            schemas.AccountLogOut(
+                id=l.id,
+                company_id=l.company_id,
+                admin_id=l.admin_id,
+                admin_name=admin_name,
+                target_user_id=l.target_user_id,
+                target_user_email=target_email,
+                action=l.action,
+                details=l.details or {},
+                created_at=l.created_at,
+            )
+        )
+    return output
+
+
+@router.post("/governance/users/{user_id}/reset-password")
+def reset_user_password(
+    user_id: str,
+    payload: schemas.AdminResetPasswordRequest,
+    current_user: models.User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: Reset an employee password and record audit log."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{user_id}' not found",
+        )
+
+    if current_user.company_id and user.company_id and user.company_id != current_user.company_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot reset password for user in another organization",
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+
+    co_id = user.company_id or current_user.company_id
+    if co_id:
+        log = models.AccountLog(
+            company_id=co_id,
+            admin_id=current_user.id,
+            target_user_id=user.id,
+            action="password_reset",
+            details={
+                "target_email": user.email,
+                "reset_by": current_user.email,
+            },
+        )
+        db.add(log)
+
+    db.commit()
+    return {"message": "Password updated successfully", "user_id": user.id}
 
 
 @router.patch("/governance/users/{user_id}/roles", response_model=schemas.UserGovernanceOut)
@@ -180,6 +328,22 @@ def update_user_roles_governance(
     if payload.approver_role is not None:
         user.approver_role = payload.approver_role
 
+    co_id = user.company_id or current_user.company_id
+    if co_id:
+        log = models.AccountLog(
+            company_id=co_id,
+            admin_id=current_user.id,
+            target_user_id=user.id,
+            action="roles_updated",
+            details={
+                "target_email": user.email,
+                "role": user.role,
+                "secondary_roles": user.secondary_roles,
+                "approver_role": user.approver_role,
+            },
+        )
+        db.add(log)
+
     db.commit()
     db.refresh(user)
     return user
@@ -188,9 +352,13 @@ def update_user_roles_governance(
 def seed_demo_users_if_empty(db: Session):
     """Ensure standard demo accounts exist for interactive evaluation."""
     try:
-        company = db.query(models.Company).filter(models.Company.name == "ReSumo Technologies").first()
+        company = (
+            db.query(models.Company)
+            .filter(models.Company.name.in_(["ReSumo Tech", "ReSumo Technologies"]))
+            .first()
+        )
         if not company:
-            company = models.Company(name="ReSumo Technologies")
+            company = models.Company(name="ReSumo Tech")
             db.add(company)
             db.flush()
 
@@ -217,8 +385,11 @@ def seed_demo_users_if_empty(db: Session):
                     secondary_roles=[],
                 )
                 db.add(user)
-            elif not user.name:
-                user.name = name
+            else:
+                if not user.name:
+                    user.name = name
+                if cid and user.company_id != cid:
+                    user.company_id = cid
         db.commit()
     except Exception as exc:
         db.rollback()

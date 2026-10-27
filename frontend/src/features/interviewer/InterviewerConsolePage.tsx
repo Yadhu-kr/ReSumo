@@ -90,20 +90,6 @@ export const InterviewerConsolePage: React.FC = () => {
   const [scorecardError, setScorecardError] = useState<string | null>(null);
   const [scorecardSummary, setScorecardSummary] = useState<CandidateScorecardSummary | null>(null);
 
-  // Load Candidates on Mount
-  useEffect(() => {
-    loadCandidates();
-    loadMySchedules();
-  }, []);
-
-  // When candidate changes, load their scorecard and candidate-specific schedules
-  useEffect(() => {
-    if (selectedCandidateId) {
-      loadCandidateDetail(selectedCandidateId);
-      loadCandidateScorecard(selectedCandidateId);
-    }
-  }, [selectedCandidateId]);
-
   const loadCandidates = async () => {
     try {
       setLoadingCandidates(true);
@@ -149,6 +135,20 @@ export const InterviewerConsolePage: React.FC = () => {
       setLoadingSchedules(false);
     }
   };
+
+  // Load Candidates on Mount
+  useEffect(() => {
+    loadCandidates();
+    loadMySchedules();
+  }, []);
+
+  // When candidate changes, load their scorecard and candidate-specific schedules
+  useEffect(() => {
+    if (selectedCandidateId) {
+      loadCandidateDetail(selectedCandidateId);
+      loadCandidateScorecard(selectedCandidateId);
+    }
+  }, [selectedCandidateId]);
 
   const handleGenerateQuestions = async (overrideRound?: InterviewRoundType) => {
     if (!selectedCandidateId) return;
@@ -205,6 +205,9 @@ export const InterviewerConsolePage: React.FC = () => {
       setSchedMessage(null);
       await api.scheduleInterview({
         candidate_id: selectedCandidateId,
+        application_id: candidate?.applications?.[0]?.id,
+        interviewer_id: user?.id,
+        interviewer_name: getUserDisplayName(user),
         title: schedTitle,
         round_type: schedRoundType,
         start_time: new Date(schedDate).toISOString(),
@@ -241,6 +244,7 @@ export const InterviewerConsolePage: React.FC = () => {
 
       const summary = await api.submitInterviewScorecard({
         candidate_id: selectedCandidateId,
+        application_id: candidate?.applications?.[0]?.id,
         interviewer_name: getUserDisplayName(user),
         interview_type: "technical",
         recommendation: overallRecommendation,

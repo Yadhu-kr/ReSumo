@@ -36,6 +36,32 @@ export interface UserRoleGovernanceUpdate {
   approver_role?: string;
 }
 
+export interface AdminCreateUserPayload {
+  email: string;
+  password: string;
+  name?: string;
+  role: "hr" | "interviewer" | "approver" | "admin";
+  approver_role?: ApproverRole | null;
+  secondary_roles?: string[];
+  company_id?: string;
+}
+
+export interface AdminResetPasswordPayload {
+  new_password: string;
+}
+
+export interface AccountLog {
+  id: string;
+  company_id: string;
+  admin_id: string;
+  admin_name?: string | null;
+  target_user_id?: string | null;
+  target_user_email?: string | null;
+  action: string;
+  details?: Record<string, any> | null;
+  created_at: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -194,7 +220,7 @@ export interface CandidateMatchOut {
   similarity_score: number;
   similarity_percentage: number;
   rationale: string;
-  rationale_source: "groq" | "claude" | "mock";
+  rationale_source: "groq" | "claude" | "mock" | "bionic" | "local";
   status_updated?: boolean;
 }
 

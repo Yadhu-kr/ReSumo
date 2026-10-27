@@ -22,7 +22,11 @@ EMAIL_REGEX = re.compile(
 )
 
 OBFUSCATED_EMAIL_REGEX = re.compile(
-    r"\b([A-Za-z0-9._%+-]+)\s*(?:\[at\]|\(at\)|@)\s*([A-Za-z0-9.-]+)\s*(?:\[dot\]|\(dot\)|\.)\s*([A-Za-z]{2,})\b",
+    r"([A-Za-z0-9._%+-]+(?:\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*[A-Za-z0-9._%+-]+)*)"
+    r"\s*(?:\[at\]|\(at\)|@)\s*"
+    r"([A-Za-z0-9.-]+(?:\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*[A-Za-z0-9.-]+)*)"
+    r"\s*(?:\[dot\]|\(dot\)|\.|\bdot\b)\s*"
+    r"([A-Za-z]{2,})",
     re.IGNORECASE,
 )
 
@@ -80,16 +84,7 @@ def extract_contact_info(text: str) -> ExtractedContactInfo:
         # Prefer the first valid email found
         email = email_matches[0].strip().lower()
     else:
-        # Check obfuscated email patterns (e.g. bob dot builder [at] company [dot] com)
-        obf_pattern = re.compile(
-            r"([A-Za-z0-9._%+-]+(?:\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*[A-Za-z0-9._%+-]+)*)"
-            r"\s*(?:\[at\]|\(at\)|@)\s*"
-            r"([A-Za-z0-9.-]+(?:\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*[A-Za-z0-9.-]+)*)"
-            r"\s*(?:\[dot\]|\(dot\)|\.|\bdot\b)\s*"
-            r"([A-Za-z]{2,})",
-            re.IGNORECASE,
-        )
-        match = obf_pattern.search(text)
+        match = OBFUSCATED_EMAIL_REGEX.search(text)
         if match:
             user_part = re.sub(r"\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*", ".", match.group(1)).strip(".")
             domain_part = re.sub(r"\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*", ".", match.group(2)).strip(".")

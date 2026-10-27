@@ -100,11 +100,13 @@ def test_duplicate_match_prevented(client, hr_auth, candidate_auth, monkeypatch)
     res1 = client.post(f"/jobs/{job_id}/matches", json={"top_k": 5, "min_score": 0.0}, headers=hr_headers)
     assert res1.status_code == 200
     assert res1.json()["count"] == 1
+    app_id1 = res1.json()["matches"][0]["application"]["id"]
 
-    # Second match — candidate already has an Application, should be skipped
+    # Second match — candidate already has an Application, match is returned with existing application, no duplicates
     res2 = client.post(f"/jobs/{job_id}/matches", json={"top_k": 5, "min_score": 0.0}, headers=hr_headers)
     assert res2.status_code == 200
-    assert res2.json()["count"] == 0
+    assert res2.json()["count"] == 1
+    assert res2.json()["matches"][0]["application"]["id"] == app_id1
 
 
 def test_job_matches_not_found(client, hr_auth):

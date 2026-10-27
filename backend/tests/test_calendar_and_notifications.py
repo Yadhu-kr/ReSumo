@@ -177,6 +177,14 @@ def test_offer_and_onboarding_notification_triggers(client, hr_auth, candidate_a
     assert apply_res.status_code == 201
     app_id = apply_res.json()["id"]
 
+    # Advance application to approved prior to offer generation
+    app_patch = client.patch(
+        f"/candidates/applications/{app_id}/status",
+        json={"status": "approved"},
+        headers=hr_headers,
+    )
+    assert app_patch.status_code == 200
+
     # Generate and send offer
     offer_gen = client.post(
         "/offers/generate",
@@ -201,4 +209,35 @@ def test_offer_and_onboarding_notification_triggers(client, hr_auth, candidate_a
     offer_notif = next((n for n in notifs_res.json() if n["notification_type"] == "offer_extended"), None)
     assert offer_notif is not None
     assert "Official Offer Extended" in offer_notif["subject"]
+
+    # Candidate can mark their own notification as read
+    own_read_res = client.patch(f"/notifications/{offer_notif['id']}/read", headers=cand_headers)
+    assert own_read_res.status_code == 200
+    assert own_read_res.json()["is_read"] is True
+
+
+def test_mark_notification_read_forbidden_for_other_user(client, hr_auth, candidate_auth, register_user):
+    """Users cannot mark notifications belonging to other users as read."""
+    hr_headers, _ = hr_auth
+    cand_headers, _ = candidate_auth
+    other_headers, _ = register_user("unauthorized_reader@test.com", "TestPass123!", "candidate")
+
+    # Send a notification to candidate via HR
+    res = client.post(
+        "/notifications/test-email",
+        json={
+            "recipient_email": "candidate@test.com",
+            "subject": "Private Notice",
+            "message": "Confidential candidate message",
+        },
+        headers=hr_headers,
+    )
+    assert res.status_code == 200
+    notif_id = res.json()["id"]
+
+    # Unauthorized user attempts to mark as read
+    unauth_res = client.patch(f"/notifications/{notif_id}/read", headers=other_headers)
+    assert unauth_res.status_code == 403
+    assert "Access denied" in unauth_res.json()["detail"]
+
 

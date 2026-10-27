@@ -302,3 +302,19 @@ class CandidateNote(Base):
     candidate = relationship("Candidate", backref="notes")
     author = relationship("User", foreign_keys=[author_id])
 
+
+class AccountLog(Base):
+    __tablename__ = "account_logs"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    company_id = Column(UUID_TYPE, ForeignKey("companies.id"), nullable=False)
+    admin_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=False)
+    target_user_id = Column(UUID_TYPE, ForeignKey("users.id"), nullable=True)
+    action = Column(String, nullable=False)  # account_created, roles_updated, password_reset
+    details = Column(JSON, nullable=True, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+
+    company = relationship("Company", backref="account_logs")
+    admin = relationship("User", foreign_keys=[admin_id], backref="administered_logs")
+    target_user = relationship("User", foreign_keys=[target_user_id], backref="account_history_logs")
+

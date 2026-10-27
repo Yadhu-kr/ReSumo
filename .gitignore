@@ -64,3 +64,13 @@ frontend/.env
 .idea/
 *.swp
 *.swo
+
+# Brag video outputs & temporary artifacts
+brag-output/
+brag-output*/
+
+# Presentations & slides
+*.pptx
+*.ppt
+*.key
+

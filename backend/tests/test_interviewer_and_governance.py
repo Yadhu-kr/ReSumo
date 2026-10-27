@@ -155,3 +155,77 @@ def test_admin_multi_role_governance(client: TestClient, db_session, hr_auth):
     assert patch_res.status_code == 200
     updated_mgr = patch_res.json()
     assert "interviewer" in updated_mgr["secondary_roles"]
+
+
+def test_admin_user_provisioning_and_account_logs(client: TestClient, db_session, hr_auth):
+    _, hr_user = hr_auth
+    company_id = hr_user["company_id"]
+
+    # 1. Admin login
+    client.post("/auth/register", json={
+        "email": "corp.admin@resumo.ai",
+        "password": "Password123!",
+        "name": "Corp Admin",
+        "role": "admin",
+        "company_id": company_id,
+    })
+    admin_token = client.post("/auth/login", json={"email": "corp.admin@resumo.ai", "password": "Password123!"}).json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # 2. Admin provisions a new interviewer
+    prov_payload = {
+        "email": "provisioned.dev@resumo.ai",
+        "password": "InitialPass123!",
+        "name": "Provisioned Dev",
+        "role": "interviewer",
+        "secondary_roles": ["approver"],
+        "approver_role": "director",
+        "company_id": company_id,
+    }
+    create_res = client.post("/auth/governance/users", headers=admin_headers, json=prov_payload)
+    assert create_res.status_code == 201, create_res.text
+    created_user = create_res.json()
+    assert created_user["email"] == "provisioned.dev@resumo.ai"
+    assert created_user["role"] == "interviewer"
+    assert "approver" in created_user["secondary_roles"]
+
+    # 3. Duplicate creation blocked
+    dup_res = client.post("/auth/governance/users", headers=admin_headers, json=prov_payload)
+    assert dup_res.status_code == 409
+
+    # 4. Verify provisioned user can log in with initial password
+    login_res = client.post("/auth/login", json={"email": "provisioned.dev@resumo.ai", "password": "InitialPass123!"})
+    assert login_res.status_code == 200
+
+    # 5. Non-admin blocked from provisioning
+    dev_token = login_res.json()["access_token"]
+    dev_headers = {"Authorization": f"Bearer {dev_token}"}
+    blocked_res = client.post("/auth/governance/users", headers=dev_headers, json={
+        "email": "unauthorized@resumo.ai",
+        "password": "Password123!",
+        "role": "hr",
+    })
+    assert blocked_res.status_code == 403
+
+    # 6. Admin resets password
+    reset_res = client.post(
+        f"/auth/governance/users/{created_user['id']}/reset-password",
+        headers=admin_headers,
+        json={"new_password": "NewSecretPass456!"},
+    )
+    assert reset_res.status_code == 200
+
+    # 7. Old password fails, new password succeeds
+    fail_res = client.post("/auth/login", json={"email": "provisioned.dev@resumo.ai", "password": "InitialPass123!"})
+    assert fail_res.status_code == 401
+    succ_res = client.post("/auth/login", json={"email": "provisioned.dev@resumo.ai", "password": "NewSecretPass456!"})
+    assert succ_res.status_code == 200
+
+    # 8. Check Account Logs
+    logs_res = client.get("/auth/governance/logs", headers=admin_headers)
+    assert logs_res.status_code == 200
+    logs = logs_res.json()
+    actions = [l["action"] for l in logs]
+    assert "account_created" in actions
+    assert "password_reset" in actions
+    assert logs[0]["admin_id"] is not None

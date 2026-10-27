@@ -13,6 +13,7 @@ ApproverRole = Literal["hiring_manager", "director", "vp", "ceo"]
 ApplicationStatus = Literal[
     "uploaded",
     "parsed",
+    "extraction_failed",
     "shortlisted",
     "pending_approval",
     "approved",
@@ -30,10 +31,38 @@ class UserRegister(BaseModel):
     email: str = Field(..., min_length=5, description="User email address")
     password: str = Field(..., min_length=8, description="Password (min 8 chars)")
     name: Optional[str] = Field(None, description="User full display name")
-    role: UserRole = "hr"
+    role: UserRole = "candidate"
     company_name: Optional[str] = Field(None, description="Create new company (HR signup)")
     company_id: Optional[str] = Field(None, description="Join existing company (HR/approver)")
     approver_role: Optional[ApproverRole] = Field(None, description="Required for approver role")
+
+
+class AdminCreateUserRequest(BaseModel):
+    email: str = Field(..., min_length=5, description="Employee corporate email")
+    password: str = Field(..., min_length=8, description="Initial employee password (min 8 chars)")
+    name: Optional[str] = Field(None, description="Employee display name")
+    role: Literal["hr", "interviewer", "approver", "admin"] = Field("hr", description="Primary role")
+    approver_role: Optional[ApproverRole] = Field(None, description="Approver tier (required if approver)")
+    secondary_roles: Optional[list[str]] = Field(default_factory=list, description="Additional multi-roles")
+    company_id: Optional[str] = Field(None, description="Optional target company (defaults to admin company)")
+
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=8, description="New employee password (min 8 chars)")
+
+
+class AccountLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    company_id: str
+    admin_id: str
+    admin_name: Optional[str] = None
+    target_user_id: Optional[str] = None
+    target_user_email: Optional[str] = None
+    action: str
+    details: Optional[dict[str, Any]] = None
+    created_at: datetime
 
 
 class UserLogin(BaseModel):
@@ -244,7 +273,7 @@ class CandidateMatchOut(BaseModel):
     similarity_score: float
     similarity_percentage: float
     rationale: str
-    rationale_source: Literal["groq", "claude", "mock"] = "mock"
+    rationale_source: Literal["groq", "claude", "mock", "bionic", "local"] = "mock"
 
 
 class JobMatchesResponse(BaseModel):

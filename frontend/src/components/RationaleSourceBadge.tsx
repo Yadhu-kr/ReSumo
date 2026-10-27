@@ -16,6 +16,9 @@ export const RationaleSourceBadge: React.FC<RationaleSourceBadgeProps> = ({ sour
   } else if (normalized === "claude") {
     badgeClass = "badge-source-claude";
     displayLabel = "SRC: CLAUDE";
+  } else if (normalized === "bionic" || normalized === "local" || normalized === "qwen") {
+    badgeClass = "badge-source-bionic";
+    displayLabel = "SRC: BIONIC LOCAL";
   }
 
   return (

@@ -124,6 +124,21 @@ def delete_job(
     if current_user.role == "hr" and job.company_id != current_user.company_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    # Clean up dependent records before deleting job to prevent FK constraint violations
+    # 1. Interview schedules linked directly to job
+    db.query(models.InterviewSchedule).filter(models.InterviewSchedule.job_id == job_id).delete(synchronize_session=False)
+
+    # 2. Applications and their child records
+    apps = db.query(models.Application).filter(models.Application.job_id == job_id).all()
+    app_ids = [a.id for a in apps]
+    if app_ids:
+        db.query(models.Approval).filter(models.Approval.application_id.in_(app_ids)).delete(synchronize_session=False)
+        db.query(models.Offer).filter(models.Offer.application_id.in_(app_ids)).delete(synchronize_session=False)
+        db.query(models.InterviewScore).filter(models.InterviewScore.application_id.in_(app_ids)).delete(synchronize_session=False)
+        db.query(models.OnboardingTask).filter(models.OnboardingTask.application_id.in_(app_ids)).delete(synchronize_session=False)
+        db.query(models.InterviewSchedule).filter(models.InterviewSchedule.application_id.in_(app_ids)).delete(synchronize_session=False)
+        db.query(models.Application).filter(models.Application.id.in_(app_ids)).delete(synchronize_session=False)
+
     db.delete(job)
     db.commit()
 
@@ -172,12 +187,13 @@ def match_candidates_for_job(
     job_text = build_job_embedding_text(job.title, job.description, job.role_tier)
     hits = query_top_candidates(job_text, top_k=match_req.top_k)
 
-    # Get candidate IDs that already have applications for this job
-    existing_app_cids = set(
-        cid for (cid,) in db.query(models.Application.candidate_id)
+    # Get existing applications for this job mapped by candidate_id
+    existing_apps = {
+        app.candidate_id: app
+        for app in db.query(models.Application)
         .filter(models.Application.job_id == job_id)
         .all()
-    )
+    }
 
     llm = get_llm_provider()
     matches_out: list[schemas.CandidateMatchOut] = []
@@ -189,12 +205,27 @@ def match_candidates_for_job(
         if sim < min_score:
             continue
 
-        # Skip candidates who already applied to this job
-        if cid in existing_app_cids:
-            continue
-
         candidate = db.query(models.Candidate).filter(models.Candidate.id == cid).first()
         if not candidate:
+            continue
+
+        existing_application = existing_apps.get(cid)
+        if existing_application:
+            # Candidate already has an application; reuse it to avoid duplicate records
+            # while still returning the match in the response
+            if existing_application.similarity_score is None:
+                existing_application.similarity_score = sim
+            rationale_text = existing_application.rationale or "Previously matched candidate."
+            matches_out.append(
+                schemas.CandidateMatchOut(
+                    candidate=schemas.CandidateOut.model_validate(candidate),
+                    application=schemas.ApplicationOut.model_validate(existing_application),
+                    similarity_score=sim,
+                    similarity_percentage=round(sim * 100, 1),
+                    rationale=rationale_text,
+                    rationale_source=existing_application.rationale_source or getattr(llm, "provider_name", "mock"),
+                )
+            )
             continue
 
         cand_data = candidate.parsed_data or {
@@ -228,6 +259,7 @@ def match_candidates_for_job(
         )
         db.add(application)
         db.flush()  # get application.id
+        existing_apps[cid] = application
 
         matches_out.append(
             schemas.CandidateMatchOut(

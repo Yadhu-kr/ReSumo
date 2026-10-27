@@ -93,8 +93,11 @@ export const CandidatePortalPage: React.FC = () => {
 
       if (cands.length > 0) {
         try {
-          const candidateOffers = await api.getCandidateOffers(cands[0].id);
-          setOffers(candidateOffers);
+          const offerPromises = cands.map((c) => api.getCandidateOffers(c.id).catch(() => [] as Offer[]));
+          const allOfferLists = await Promise.all(offerPromises);
+          const mergedOffers = allOfferLists.flat();
+          const uniqueOffers = Array.from(new Map(mergedOffers.map((o) => [o.id, o])).values());
+          setOffers(uniqueOffers);
         } catch {
           // Candidate might not have any offers yet
           setOffers([]);

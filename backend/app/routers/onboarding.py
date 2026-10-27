@@ -178,13 +178,30 @@ def get_candidate_onboarding(
         .all()
     )
 
-    # If no tasks exist yet, auto-initialize if candidate has an application
+    # If no tasks exist yet, auto-initialize only if candidate has been offered or hired
     if not tasks:
-        tasks = initialize_candidate_onboarding(
-            db=db,
-            candidate_id=candidate_id,
-            company_id=current_user.company_id,
+        has_offer_or_hired = (
+            db.query(models.Application)
+            .filter(
+                models.Application.candidate_id == candidate_id,
+                models.Application.status.in_(["hired", "offered"]),
+            )
+            .first()
+            is not None
+            or db.query(models.Offer)
+            .filter(
+                models.Offer.candidate_id == candidate_id,
+                models.Offer.status.in_(["accepted", "sent"]),
+            )
+            .first()
+            is not None
         )
+        if has_offer_or_hired:
+            tasks = initialize_candidate_onboarding(
+                db=db,
+                candidate_id=candidate_id,
+                company_id=current_user.company_id,
+            )
 
     return build_onboarding_summary(candidate_id, tasks)
 
@@ -225,11 +242,28 @@ def get_my_onboarding(
     )
 
     if not tasks:
-        tasks = initialize_candidate_onboarding(
-            db=db,
-            candidate_id=candidate.id,
-            company_id=candidate.company_id if hasattr(candidate, "company_id") else None,
+        has_offer_or_hired = (
+            db.query(models.Application)
+            .filter(
+                models.Application.candidate_id == candidate.id,
+                models.Application.status.in_(["hired", "offered"]),
+            )
+            .first()
+            is not None
+            or db.query(models.Offer)
+            .filter(
+                models.Offer.candidate_id == candidate.id,
+                models.Offer.status.in_(["accepted", "sent"]),
+            )
+            .first()
+            is not None
         )
+        if has_offer_or_hired:
+            tasks = initialize_candidate_onboarding(
+                db=db,
+                candidate_id=candidate.id,
+                company_id=candidate.company_id if hasattr(candidate, "company_id") else None,
+            )
 
     return build_onboarding_summary(candidate.id, tasks)
 
@@ -263,6 +297,11 @@ def update_onboarding_task(
         task.form_data = merged
 
     if payload.status:
+        if payload.status == "verified" and current_user.role not in ("hr", "admin"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only HR or Administrators can verify onboarding compliance tasks",
+            )
         task.status = payload.status
         if payload.status in ("completed", "verified") and not task.completed_at:
             task.completed_at = datetime.now(timezone.utc)

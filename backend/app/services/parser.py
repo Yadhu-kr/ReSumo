@@ -44,7 +44,9 @@ def extract_text(file_path: str) -> str:
         return _extract_docx_text(file_path)
     elif ext in (".png", ".jpg", ".jpeg"):
         return _extract_image_ocr(file_path)
-    elif ext in (".txt", ".doc"):
+    elif ext == ".doc":
+        return _extract_doc_text(file_path)
+    elif ext == ".txt":
         return _extract_txt_text(file_path)
     else:
         # Fallback to text reading
@@ -159,4 +161,54 @@ def _extract_txt_text(file_path: str) -> str:
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return f.read().strip()
     except Exception:
+        return ""
+
+
+def _extract_doc_text(file_path: str) -> str:
+    """
+    Extracts text from .doc files (Word 97-2003 OLE2 CFBF binary or plaintext fallback).
+    Checks header magic bytes for OLE2 binary format (b"\xd0\xcf\x11\xe0").
+    For binary OLE2 files, extracts printable text without Unicode replacement character noise.
+    For non-binary files saved with .doc extension, decodes cleanly with UTF-8.
+    """
+    try:
+        with open(file_path, "rb") as f:
+            header = f.read(8)
+            f.seek(0)
+            raw_bytes = f.read()
+
+        # OLE2 Compound File Binary Format magic bytes: \xd0\xcf\x11\xe0
+        if header.startswith(b"\xd0\xcf\x11\xe0"):
+            import re
+            # Extract ASCII strings of 4 or more printable characters
+            ascii_strings = re.findall(rb"[\x20-\x7e\t\n\r]{4,}", raw_bytes)
+            # Extract UTF-16LE strings (common in Word binary format)
+            utf16_strings = re.findall(rb"(?:[\x20-\x7e][\x00]){4,}", raw_bytes)
+
+            ignored_keywords = {
+                "Root Entry", "WordDocument", "SummaryInformation",
+                "DocumentSummaryInformation", "CompObj", "ObjectPool"
+            }
+            extracted_parts = []
+            for s in ascii_strings:
+                try:
+                    decoded = s.decode("latin1").strip()
+                    if len(decoded) > 3 and not any(kw in decoded for kw in ignored_keywords):
+                        extracted_parts.append(decoded)
+                except Exception:
+                    pass
+
+            for s in utf16_strings:
+                try:
+                    decoded = s.decode("utf-16le").strip()
+                    if len(decoded) > 3 and not any(kw in decoded for kw in ignored_keywords):
+                        extracted_parts.append(decoded)
+                except Exception:
+                    pass
+
+            return "\n".join(extracted_parts).strip()
+        else:
+            return raw_bytes.decode("utf-8", errors="ignore").strip()
+    except Exception as exc:
+        logger.warning("Error reading .doc file %s: %s", file_path, exc)
         return ""

@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +18,7 @@ from app.database import SessionLocal
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Creates tables if missing and seeds default approval policies & demo users on startup."""
+    db = None
     try:
         from app.database import Base, engine
         from sqlalchemy import text
@@ -43,10 +49,11 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         print(f"Startup warning: {exc}")
     finally:
-        try:
-            db.close()
-        except Exception:
-            pass
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
     yield
 
 

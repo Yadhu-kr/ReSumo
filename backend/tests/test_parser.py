@@ -50,3 +50,22 @@ def test_extract_text_pdf(tmp_path):
 def test_extract_text_file_not_found():
     with pytest.raises(FileNotFoundError):
         extract_text("non_existent_file.pdf")
+
+
+def test_extract_text_doc_plain(tmp_path):
+    doc_file = tmp_path / "resume.doc"
+    doc_file.write_text("Marcus Wright\nSite Reliability Engineer\nKubernetes, Terraform", encoding="utf-8")
+    extracted = extract_text(str(doc_file))
+    assert "Marcus Wright" in extracted
+    assert "Site Reliability Engineer" in extracted
+
+
+def test_extract_text_doc_binary_ole2(tmp_path):
+    doc_file = tmp_path / "legacy.doc"
+    # Write binary OLE2 header followed by ASCII and UTF-16 strings
+    ole2_header = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+    content = ole2_header + b"\x00\x01\x02" + b"Alice Johnson - Principal Systems Architect" + b"\x00\x00"
+    doc_file.write_bytes(content)
+    extracted = extract_text(str(doc_file))
+    assert "Alice Johnson - Principal Systems Architect" in extracted
+

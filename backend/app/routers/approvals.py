@@ -59,8 +59,10 @@ def list_pending_approvals(
     query = db.query(models.Approval).filter(models.Approval.action == "pending")
 
     if current_user.role == "approver":
-        # Filter by approver's role
-        if current_user.approver_role:
+        # Filter by specified role if provided, otherwise default to approver's configured role
+        if role:
+            query = query.filter(models.Approval.approver_role == role)
+        elif current_user.approver_role:
             query = query.filter(models.Approval.approver_role == current_user.approver_role)
 
         # Scope to approver's company
