@@ -37,6 +37,8 @@ import type {
   CandidateTimelineResponse,
   HiringPacketResponse,
   UnreadCountResponse,
+  CandidateDirectNotifyRequest,
+  CandidateAssignJobRequest,
   GenerateInterviewQuestionsRequest,
   GenerateInterviewQuestionsResponse,
   UserGovernance,
@@ -44,6 +46,12 @@ import type {
   AdminCreateUserPayload,
   AdminResetPasswordPayload,
   AccountLog,
+  CandidateClipRequest,
+  BulkResumeUploadResponse,
+  OutreachRequest,
+  OutreachResponse,
+  ClaimProfileVerificationResponse,
+  ClaimProfileActivationRequest,
 } from "./types";
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -212,6 +220,26 @@ export const api = {
       `/candidates/applications/${encodeURIComponent(applicationId)}/submit-for-approval`,
       {
         method: "POST",
+      }
+    ),
+
+  assignCandidateJob: (candidateId: string, payload: CandidateAssignJobRequest | string) => {
+    const body = typeof payload === "string" ? { job_id: payload } : payload;
+    return request<Application>(
+      `/candidates/${encodeURIComponent(candidateId)}/assign-job`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    );
+  },
+
+  notifyCandidate: (candidateId: string, payload: CandidateDirectNotifyRequest) =>
+    request<AppNotification>(
+      `/candidates/${encodeURIComponent(candidateId)}/notify`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
       }
     ),
 
@@ -471,6 +499,68 @@ export const api = {
   updateUserRolesGovernance: (userId: string, payload: UserRoleGovernanceUpdate) =>
     request<UserGovernance>(`/auth/governance/users/${encodeURIComponent(userId)}/roles`, {
       method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  // Outbound Talent Sourcing & CRM Pool
+  clipCandidate: (payload: CandidateClipRequest) =>
+    request<Candidate>("/candidates/clip", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  bulkUploadResumes: (files: File[], jobId?: string) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    if (jobId) {
+      formData.append("job_id", jobId);
+    }
+    const token = getStoredToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return fetch(`${BASE_URL}/resumes/bulk-upload`, {
+      method: "POST",
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Bulk upload failed");
+      }
+      return res.json() as Promise<BulkResumeUploadResponse>;
+    });
+  },
+
+  listProspects: (sourcingStatus?: string) => {
+    const query = sourcingStatus ? `?sourcing_status=${encodeURIComponent(sourcingStatus)}` : "";
+    return request<Candidate[]>(`/candidates/prospects${query}`);
+  },
+
+  sendOutreach: (candidateId: string, payload: OutreachRequest) =>
+    request<OutreachResponse>(`/candidates/${encodeURIComponent(candidateId)}/outreach`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  updateSourcingStatus: (candidateId: string, sourcingStatus: string) =>
+    request<Candidate>(`/candidates/${encodeURIComponent(candidateId)}/sourcing-status`, {
+      method: "PATCH",
+      body: JSON.stringify({ sourcing_status: sourcingStatus }),
+    }),
+
+  convertProspect: (candidateId: string) =>
+    request<Candidate>(`/candidates/${encodeURIComponent(candidateId)}/convert`, {
+      method: "POST",
+    }),
+
+  verifyClaimToken: (token: string) =>
+    request<ClaimProfileVerificationResponse>(`/auth/claim-profile/verify?token=${encodeURIComponent(token)}`),
+
+  activateClaimedProfile: (payload: ClaimProfileActivationRequest) =>
+    request<AuthTokenResponse>("/auth/claim-profile/activate", {
+      method: "POST",
       body: JSON.stringify(payload),
     }),
 };

@@ -9,6 +9,7 @@ import { JobsPage } from "./pages/JobsPage";
 import { ApprovalsPage } from "./pages/ApprovalsPage";
 import { CandidateDetailPage } from "./pages/CandidateDetailPage";
 import { CandidatePortalPage } from "./pages/CandidatePortalPage";
+import { ClaimProfilePage } from "./features/candidate/ClaimProfilePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AuthPage } from "./pages/AuthPage";
 import { InterviewerConsolePage } from "./pages/InterviewerConsolePage";
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
           {/* Public Auth Routes */}
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
+          <Route path="/claim-profile" element={<ClaimProfilePage />} />
 
           {/* Protected Application Routes */}
           <Route

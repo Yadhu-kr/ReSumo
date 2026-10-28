@@ -145,22 +145,32 @@ async def upload_resume(
         db.refresh(candidate)
 
         app_record = None
+        target_job = None
         if job_id:
-            job = db.query(models.Job).filter(models.Job.id == job_id).first()
-            if job:
-                if current_user.role == "hr" and current_user.company_id and job.company_id != current_user.company_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Cannot upload candidate for another company's job",
-                    )
-                app_record = models.Application(
-                    candidate_id=candidate.id,
-                    job_id=job.id,
-                    status="uploaded",
+            target_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+            if target_job and current_user.role == "hr" and current_user.company_id and target_job.company_id != current_user.company_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cannot upload candidate for another company's job",
                 )
-                db.add(app_record)
-                db.commit()
-                db.refresh(app_record)
+
+        if target_job:
+            app_record = models.Application(
+                candidate_id=candidate.id,
+                job_id=target_job.id,
+                status="uploaded",
+            )
+            db.add(app_record)
+            db.commit()
+            db.refresh(app_record)
+
+            if current_user.role == "candidate":
+                try:
+                    from app.services.notifications import notify_candidate_application
+                    notify_candidate_application(db=db, application=app_record, candidate=candidate, job=target_job)
+                except Exception as exc:
+                    import logging
+                    logging.getLogger(__name__).warning("Failed to dispatch application notification: %s", exc)
 
         # Attempt extraction using configured provider
         provider = get_extraction_provider()

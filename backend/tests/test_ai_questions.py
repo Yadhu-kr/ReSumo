@@ -109,9 +109,45 @@ def test_generate_interview_questions_behavioral(client, hr_auth, db_session):
     assert data_beh["round_type"] == "behavioral"
     assert data_beh["total_questions"] >= 3
     assert any(
-        q["suggested_dimension"] in ["cultural_alignment", "communication", "role_fit"]
+        q["suggested_dimension"] in ["cultural_alignment", "communication", "role_fit", "work_ethic", "leadership_potential"]
         for q in data_beh["questions"]
     )
+
+
+def test_generate_interview_questions_cultural_fit(client, hr_auth, db_session):
+    """Verifies generating dedicated cultural fit questions using STAR methodology and HR rubrics."""
+    hr_headers, hr_user = hr_auth
+
+    candidate = models.Candidate(
+        name="Casey Rowan",
+        email="casey.rowan@people.org",
+        raw_resume_filename="casey_resume.pdf",
+        raw_text="Product leader with strong background fostering cross-functional alignment, leading blameless post-mortems, and building high-trust team cultures.",
+        parsed_status="parsed",
+    )
+    db_session.add(candidate)
+    db_session.commit()
+    db_session.refresh(candidate)
+
+    resp_cult = client.post(
+        "/interviews/generate-questions",
+        json={
+            "candidate_id": candidate.id,
+            "round_type": "cultural_fit",
+            "custom_focus": "Psychological safety and radical candor",
+        },
+        headers=hr_headers,
+    )
+    assert resp_cult.status_code == 200, resp_cult.text
+    data_cult = resp_cult.json()
+    assert data_cult["round_type"] == "cultural_fit"
+    assert data_cult["total_questions"] >= 4
+    # Ensure HR dimensions are suggested
+    dimensions = [q["suggested_dimension"] for q in data_cult["questions"]]
+    assert any(d in ["cultural_alignment", "leadership_potential", "work_ethic", "communication", "role_fit"] for d in dimensions)
+    # Ensure no technical coding dimensions are suggested for pure cultural fit
+    assert "technical_depth" not in dimensions
+    assert "system_design" not in dimensions
 
 
 def test_generate_interview_questions_with_custom_focus(client, hr_auth, db_session):

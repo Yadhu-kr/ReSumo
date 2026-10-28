@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, resumes, candidates, jobs, approvals, offers, interviews, onboarding, calendar, notifications
+from app.routers import auth, resumes, candidates, jobs, approvals, offers, interviews, onboarding, calendar, notifications, sourcing
 from app.routers.approvals import seed_default_policies_if_empty
 from app.routers.auth import seed_demo_users_if_empty
 from app.routers.jobs import seed_demo_jobs_and_applications_if_empty
@@ -41,6 +41,20 @@ async def lifespan(app: FastAPI):
                 conn.commit()
         except Exception:
             pass
+        # Sourcing columns — added in Phase 6 (safe to run multiple times via try/except)
+        for col_ddl in [
+            "ALTER TABLE candidates ADD COLUMN is_passive_lead BOOLEAN NOT NULL DEFAULT 0",
+            "ALTER TABLE candidates ADD COLUMN sourcing_channel TEXT DEFAULT 'inbound'",
+            "ALTER TABLE candidates ADD COLUMN sourcing_status TEXT DEFAULT 'sourced'",
+            "ALTER TABLE candidates ADD COLUMN sourcing_url TEXT",
+            "ALTER TABLE candidates ADD COLUMN claimed_at DATETIME",
+        ]:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(col_ddl))
+                    conn.commit()
+            except Exception:
+                pass
         db = SessionLocal()
         seed_default_policies_if_empty(db)
         seed_demo_users_if_empty(db)
@@ -73,6 +87,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(sourcing.router)
 app.include_router(resumes.router)
 app.include_router(candidates.router)
 app.include_router(jobs.router)

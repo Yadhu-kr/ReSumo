@@ -471,6 +471,21 @@ def submit_for_approval(
     db.refresh(application)
     db.refresh(approval)
 
+    try:
+        from app.services.notifications import notify_approval_requested
+        candidate = db.query(models.Candidate).filter(models.Candidate.id == application.candidate_id).first()
+        if candidate and job:
+            notify_approval_requested(
+                db=db,
+                approval=approval,
+                application=application,
+                candidate=candidate,
+                job=job,
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Failed to dispatch approval request notification: %s", exc)
+
     return schemas.SubmitForApprovalResponse(
         application_id=application.id,
         status=application.status,
@@ -488,7 +503,7 @@ def submit_candidate_for_approval(
     current_user: models.User = Depends(require_role("hr", "admin")),
     db: Session = Depends(get_db),
 ):
-    """Convenience alias: submits the candidate's latest active application for approval."""
+    """Convenience alias: submits the candidate's latest active application for approval. Auto-assigns first open job if needed."""
     application = (
         db.query(models.Application)
         .filter(models.Application.candidate_id == candidate_id)
@@ -496,11 +511,132 @@ def submit_candidate_for_approval(
         .first()
     )
     if not application:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No application found for candidate '{candidate_id}'",
+        job = None
+        if current_user.company_id:
+            job = db.query(models.Job).filter(models.Job.company_id == current_user.company_id).first()
+        if not job:
+            job = db.query(models.Job).first()
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No application found for candidate '{candidate_id}', and no open jobs available to assign.",
+            )
+
+        application = models.Application(
+            candidate_id=candidate_id,
+            job_id=job.id,
+            status="parsed",
+            similarity_score=0.85,
+            rationale=f"Auto-assigned to {job.title} during approval submission.",
+            rationale_source="system",
         )
+        db.add(application)
+        db.commit()
+        db.refresh(application)
+
     return submit_for_approval(application.id, current_user, db)
+
+
+@router.post(
+    "/{candidate_id}/assign-job",
+    response_model=schemas.ApplicationOut,
+)
+def assign_candidate_to_job(
+    candidate_id: str,
+    payload: schemas.CandidateAssignJobRequest,
+    current_user: models.User = Depends(require_role("hr", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Explicitly assigns a candidate to an open job opening."""
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    job = db.query(models.Job).filter(models.Job.id == payload.job_id).first()
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job opening not found")
+
+    if current_user.role == "hr" and current_user.company_id and job.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign candidate to another company's job")
+
+    app = (
+        db.query(models.Application)
+        .filter(
+            models.Application.candidate_id == candidate.id,
+            models.Application.job_id == job.id,
+        )
+        .first()
+    )
+    if not app:
+        sim = 0.85
+        try:
+            from app.services.embeddings import build_job_embedding_text, compute_embedding
+            import numpy as np
+            cand_text = candidate.raw_text or ""
+            if candidate.parsed_data:
+                from app.services.embeddings import serialize_candidate_for_embedding
+                cand_text = serialize_candidate_for_embedding(candidate.parsed_data)
+            if cand_text:
+                j_vec = np.array(compute_embedding(build_job_embedding_text(job.title, job.description, job.role_tier)))
+                c_vec = np.array(compute_embedding(cand_text))
+                norm_j = np.linalg.norm(j_vec)
+                norm_c = np.linalg.norm(c_vec)
+                if norm_j > 0 and norm_c > 0:
+                    sim = float(np.dot(j_vec, c_vec) / (norm_j * norm_c))
+        except Exception:
+            pass
+
+        app = models.Application(
+            candidate_id=candidate.id,
+            job_id=job.id,
+            status="parsed",
+            similarity_score=round(sim, 4),
+            rationale=f"Candidate assigned by {current_user.name or current_user.email} to {job.title}.",
+            rationale_source="recruiter_assignment",
+        )
+        db.add(app)
+        db.commit()
+        db.refresh(app)
+
+    return app
+
+
+@router.post(
+    "/{candidate_id}/notify",
+    response_model=schemas.NotificationOut,
+)
+def direct_notify_candidate(
+    candidate_id: str,
+    payload: schemas.CandidateDirectNotifyRequest,
+    current_user: models.User = Depends(require_role("hr", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Allows recruiters and administrators to directly dispatch an in-app and email notification to a candidate."""
+    from app.services.notifications import send_notification
+
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    cand_email = candidate.email or (candidate.user.email if candidate.user else None) or "candidate@resumo.ai"
+    cand_user_id = candidate.user_id
+    if not cand_user_id:
+        user_match = db.query(models.User).filter(models.User.email == cand_email).first()
+        if user_match:
+            cand_user_id = user_match.id
+            candidate.user_id = user_match.id
+            db.commit()
+
+    return send_notification(
+        db=db,
+        recipient_email=cand_email,
+        subject=payload.subject,
+        body_text=payload.message,
+        notification_type=payload.notification_type,
+        user_id=cand_user_id,
+        reference_id=candidate.id,
+    )
 
 
 # =========================================================================

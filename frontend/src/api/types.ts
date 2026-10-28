@@ -15,6 +15,7 @@ export interface User {
   role: UserRole;
   secondary_roles?: string[] | null;
   company_id?: string | null;
+  company_name?: string | null;
   approver_role?: ApproverRole | null;
   created_at: string;
 }
@@ -97,6 +98,7 @@ export interface AuthTokenResponse {
 export type CandidateStatus =
   | "uploaded"
   | "parsed"
+  | "sourced"
   | "shortlisted"
   | "pending_approval"
   | "approved"
@@ -196,6 +198,11 @@ export interface Candidate {
   parsed_data?: ParsedResumeData | null;
   parsed_status?: string | null;
   status: CandidateStatus;
+  is_passive_lead?: boolean;
+  sourcing_channel?: "inbound" | "bulk_upload" | "clipper" | "github" | string;
+  sourcing_status?: "sourced" | "contacted" | "follow_up" | "engaged" | "converted" | "archived" | string;
+  sourcing_url?: string | null;
+  claimed_at?: string | null;
   created_at: string;
   applications?: Application[];
 }
@@ -347,7 +354,8 @@ export type InterviewRoundType =
   | "system_design"
   | "behavioral"
   | "screening"
-  | "executive";
+  | "executive"
+  | "cultural_fit";
 
 export interface InterviewQuestionItem {
   id: string;
@@ -520,6 +528,88 @@ export interface HiringPacketResponse {
 
 export interface UnreadCountResponse {
   unread_count: number;
+}
+
+export interface CandidateDirectNotifyRequest {
+  subject: string;
+  message: string;
+  notification_type?: string;
+}
+
+export interface CandidateAssignJobRequest {
+  job_id: string;
+}
+
+// ---- Outbound Talent Sourcing & CRM Pool Types ----
+
+export interface CandidateClipRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+  current_title?: string;
+  title?: string;
+  current_company?: string;
+  company?: string;
+  years_experience?: number;
+  core_skills?: string[];
+  skills?: string[];
+  summary?: string;
+  sourcing_url?: string;
+  job_id?: string;
+  notes?: string;
+}
+
+export interface BulkResumeUploadResult {
+  filename: string;
+  candidate_id?: string | null;
+  status: "parsed" | "uploaded" | "failed" | string;
+  name?: string | null;
+  email?: string | null;
+  match_score?: number | null;
+}
+
+export interface BulkResumeUploadResponse {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BulkResumeUploadResult[];
+}
+
+export interface OutreachRequest {
+  message?: string;
+  job_id?: string;
+}
+
+export interface OutreachResponse {
+  status: string;
+  recipient_email: string;
+  candidate_id: string;
+  claim_token_id: string;
+  claim_token?: string;
+  expires_at: string;
+  claim_url_preview?: string;
+}
+
+export interface ClaimProfileVerificationResponse {
+  candidate_id: string;
+  name?: string | null;
+  current_title?: string | null;
+  core_skills: string[];
+  years_experience?: number | null;
+  job_title?: string | null;
+  job_id?: string | null;
+  company_name?: string | null;
+  role_tier?: string | null;
+  match_score?: number | null;
+  is_expired: boolean;
+}
+
+export interface ClaimProfileActivationRequest {
+  token: string;
+  password?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
 }
 
 

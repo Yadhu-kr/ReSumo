@@ -387,6 +387,14 @@ def apply_for_job(
     db.add(application)
     db.commit()
     db.refresh(application)
+
+    try:
+        from app.services.notifications import notify_candidate_application
+        notify_candidate_application(db=db, application=application, candidate=candidate, job=job)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Failed to dispatch application notification: %s", exc)
+
     return application
 
 

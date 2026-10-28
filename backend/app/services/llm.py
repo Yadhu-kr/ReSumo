@@ -22,6 +22,111 @@ def _format_skill_list(skills: Any) -> str:
     return ", ".join(cleaned) if cleaned else "None specified"
 
 
+def _is_hr_round(round_type: str) -> bool:
+    """Returns True if the interview round is HR / behavioral / cultural / screening."""
+    r = (round_type or "technical").strip().lower()
+    return r in ("hr", "cultural_fit", "culture_fit", "behavioral", "screening", "culture")
+
+
+def _build_interview_prompt_and_system(
+    job_title: str,
+    job_description: str,
+    job_role_tier: str,
+    candidate_data: dict[str, Any],
+    round_type: str = "technical",
+    custom_focus: Optional[str] = None,
+) -> tuple[str, str]:
+    """
+    Builds (system_prompt, user_prompt) dynamically based on whether the round
+    is an HR & Cultural Fit round or a Technical Architecture/Coding round.
+    """
+    is_hr = _is_hr_round(round_type)
+
+    if is_hr:
+        system_prompt = (
+            "You are an expert Head of People and Talent Acquisition Director. "
+            "You evaluate candidates on cultural fit, behavioral alignment, team collaboration, "
+            "interpersonal communication, work ethic, and workplace values using STAR methodology. "
+            "Output strict JSON only without markdown formatting."
+        )
+        user_prompt = f"""You are a seasoned Head of People and HR Director preparing structured, high-signal behavioral and cultural fit interview questions for a hiring debrief.
+
+Target Position: {job_title}
+Role Tier: {job_role_tier}
+Company Requisition / Context: {job_description}
+Interview Track: HR & Culture Fit ({round_type})
+Custom Focus: {custom_focus or 'Values alignment, interpersonal communication, conflict resolution, ownership, and work ethic'}
+
+Candidate Profile:
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Current Title: {candidate_data.get('current_title') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Primary Domain: {candidate_data.get('primary_domain', 'Professional')}
+- Summary: {candidate_data.get('summary', '')}
+
+CRITICAL HR INTERVIEW RULES:
+1. You are conducting an HR and cultural fit interview, NOT an engineering coding interview.
+2. DO NOT ask syntax, coding, system design, algorithm, or technical stack questions.
+3. Every question must probe behavioral competencies using the STAR methodology (Situation, Task, Action, Result):
+   - Values & Cultural Alignment (ownership, humility, velocity, adaptability, ethics)
+   - Interpersonal Communication & Feedback (clarity, active listening, managing expectations)
+   - Collaboration & Conflict Resolution (handling friction, empathy, building consensus)
+   - Work Ethic & Accountability (handling pressure, setbacks, delivering on commitments)
+   - Role Motivation & Career Expectations (why this role, team fit, long-term aspirations)
+
+Generate 4 to 5 rigorous, tailored behavioral and cultural interview questions.
+Return ONLY valid JSON matching this exact structure:
+[
+  {{
+    "id": "q1",
+    "category": "Cultural Alignment / Communication / Conflict Resolution / Work Ethic / Role Motivation",
+    "question": "The behavioral or cultural question to ask candidate",
+    "what_to_look_for": "Specific positive behavioral indicators (green flags) vs warning signs (red flags)",
+    "suggested_dimension": "cultural_alignment / communication / role_fit / leadership_potential / work_ethic",
+    "difficulty": "Junior / Mid / Senior / Executive",
+    "rationale": "Why this question tests their cultural fit and behavioral suitability against the role"
+  }}
+]"""
+    else:
+        system_prompt = (
+            "You are a principal technical interviewer and software architect. "
+            "You evaluate candidates on technical depth, architecture scalability, system resilience, and coding patterns. "
+            "Output strict JSON only without markdown formatting."
+        )
+        user_prompt = f"""You are a principal technical interviewer preparing structured, rigorous interview questions for a hiring debrief.
+
+Job Title: {job_title}
+Role Tier: {job_role_tier}
+Job Description: {job_description}
+Interview Round: {round_type}
+Custom Focus: {custom_focus or 'General Core Competency'}
+
+Candidate Profile:
+- Seniority: {candidate_data.get('seniority') or 'Not specified'}
+- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
+- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
+- Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
+- Summary: {candidate_data.get('summary', '')}
+- Key Accomplishments: {candidate_data.get('key_accomplishments', [])}
+
+Generate 4 to 5 rigorous, tailored interview questions. Each question must evaluate the candidate's actual background and target role.
+Return ONLY valid JSON matching this exact structure:
+[
+  {{
+    "id": "q1",
+    "category": "System Architecture / Technical Depth / Operational Resilience / Engineering Leadership",
+    "question": "The question to ask candidate",
+    "what_to_look_for": "Specific rubric indicators of what a strong answer contains vs red flags",
+    "suggested_dimension": "technical_depth / system_design / problem_solving / code_quality / debugging_resilience",
+    "difficulty": "Junior / Mid / Senior / Staff",
+    "rationale": "Why this question tests their background against the job requirements"
+  }}
+]"""
+
+    return system_prompt, user_prompt
+
+
 class LLMProvider(Protocol):
     provider_name: str
 
@@ -135,35 +240,9 @@ CRITICAL DEFENSE REQUIREMENT: You MUST explicitly reference the candidate's seni
         round_type: str = "technical",
         custom_focus: Optional[str] = None,
     ) -> list[dict[str, Any]]:
-        prompt = f"""You are a principal technical interviewer preparing structured, rigorous interview questions for a hiring debrief.
-
-Job Title: {job_title}
-Role Tier: {job_role_tier}
-Job Description: {job_description}
-Interview Round: {round_type}
-Custom Focus: {custom_focus or 'General Core Competency'}
-
-Candidate Profile:
-- Seniority: {candidate_data.get('seniority') or 'Not specified'}
-- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
-- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
-- Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
-- Summary: {candidate_data.get('summary', '')}
-- Key Accomplishments: {candidate_data.get('key_accomplishments', [])}
-
-Generate 4 to 5 rigorous, tailored interview questions. Each question must evaluate the candidate's actual background and target role.
-Return ONLY valid JSON matching this exact structure:
-[
-  {{
-    "id": "q1",
-    "category": "System Architecture / Technical Depth / Behavioral / Leadership",
-    "question": "The question to ask candidate",
-    "what_to_look_for": "Specific rubric indicators of what a strong answer contains vs red flags",
-    "suggested_dimension": "technical_depth / system_design / communication / cultural_alignment / role_fit",
-    "difficulty": "Junior / Mid / Senior / Staff",
-    "rationale": "Why this question tests their background against the job requirements"
-  }}
-]"""
+        system_prompt, prompt = _build_interview_prompt_and_system(
+            job_title, job_description, job_role_tier, candidate_data, round_type, custom_focus
+        )
         import httpx
 
         headers = {
@@ -175,7 +254,7 @@ Return ONLY valid JSON matching this exact structure:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a technical interview evaluator. Output strict JSON only without markdown formatting.",
+                    "content": system_prompt,
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -258,38 +337,13 @@ CRITICAL DEFENSE REQUIREMENT: You MUST explicitly reference the candidate's seni
         round_type: str = "technical",
         custom_focus: Optional[str] = None,
     ) -> list[dict[str, Any]]:
-        prompt = f"""You are a principal technical interviewer preparing structured, rigorous interview questions for a hiring debrief.
-
-Job Title: {job_title}
-Role Tier: {job_role_tier}
-Job Description: {job_description}
-Interview Round: {round_type}
-Custom Focus: {custom_focus or 'General Core Competency'}
-
-Candidate Profile:
-- Seniority: {candidate_data.get('seniority') or 'Not specified'}
-- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
-- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
-- Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
-- Summary: {candidate_data.get('summary', '')}
-- Key Accomplishments: {candidate_data.get('key_accomplishments', [])}
-
-Generate 4 to 5 rigorous, tailored interview questions. Each question must evaluate the candidate's actual background and target role.
-Return ONLY valid JSON matching this exact structure:
-[
-  {{
-    "id": "q1",
-    "category": "System Architecture / Technical Depth / Behavioral / Leadership",
-    "question": "The question to ask candidate",
-    "what_to_look_for": "Specific rubric indicators of what a strong answer contains vs red flags",
-    "suggested_dimension": "technical_depth / system_design / communication / cultural_alignment / role_fit",
-    "difficulty": "Junior / Mid / Senior / Staff",
-    "rationale": "Why this question tests their background against the job requirements"
-  }}
-]"""
+        system_prompt, prompt = _build_interview_prompt_and_system(
+            job_title, job_description, job_role_tier, candidate_data, round_type, custom_focus
+        )
         try:
             response = self.client.messages.create(
                 model=self.model,
+                system=system_prompt,
                 max_tokens=1200,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -368,7 +422,133 @@ class MockLLMProvider:
 
         r_type = (round_type or "technical").lower()
 
-        if r_type == "system_design":
+        if r_type in ("cultural_fit", "hr", "culture"):
+            questions = [
+                {
+                    "id": "q1_values_ownership",
+                    "category": "Values & Extreme Ownership",
+                    "question": f"Can you share an experience where a critical deliverable or team initiative for '{job_title}' did not go as planned? What role did you personally play in the outcome, and what corrective actions did you take?",
+                    "what_to_look_for": "Demonstrates unprompted ownership without deflecting blame to teammates, leadership, or external circumstances. Look for self-awareness and blameless post-incident improvements.",
+                    "suggested_dimension": "cultural_alignment",
+                    "difficulty": seniority,
+                    "rationale": f"Evaluates personal accountability and alignment with company core values for a {seniority} level hire."
+                },
+                {
+                    "id": "q2_conflict_resolution",
+                    "category": "Collaboration & Conflict Resolution",
+                    "question": "Describe a scenario where you faced significant friction or philosophical disagreement with a cross-functional partner (e.g. Product, Design, or another team). How did you resolve the deadlock while preserving trust?",
+                    "what_to_look_for": "Focuses on empathy, objective data-driven alignment, active listening, and putting collective team goals ahead of personal ego.",
+                    "suggested_dimension": "leadership_potential",
+                    "difficulty": seniority,
+                    "rationale": "Measures interpersonal diplomacy, psychological safety, and mature conflict resolution."
+                },
+                {
+                    "id": "q3_work_ethic_pressure",
+                    "category": "Work Ethic & Operational Resilience",
+                    "question": f"In fast-paced organizations supporting '{job_title}', unexpected fires and shifting deadlines are routine. Walk us through a period where you balanced demanding commitments under high pressure without burning out.",
+                    "what_to_look_for": "Realistic prioritization frameworks, proactive boundary setting, transparent status communication to stakeholders, and dependable delivery ethic.",
+                    "suggested_dimension": "work_ethic",
+                    "difficulty": seniority,
+                    "rationale": "Assesses operational resilience, personal grit, and emotional composure under sustained workload."
+                },
+                {
+                    "id": "q4_communication_empathy",
+                    "category": "Communication & Stakeholder Empathy",
+                    "question": "How do you tailor your communication when conveying complex, nuanced challenges to non-technical stakeholders versus peer team members?",
+                    "what_to_look_for": "Ability to distill business impact, eliminate jargon when appropriate, use concise executive summaries, and confirm mutual comprehension.",
+                    "suggested_dimension": "communication",
+                    "difficulty": seniority,
+                    "rationale": "Tests articulation clarity, active listening, and empathetic stakeholder engagement."
+                },
+                {
+                    "id": "q5_role_motivation",
+                    "category": "Role Motivation & Culture Fit",
+                    "question": f"What specific cultural environment, management style, and team values bring out your highest performance, and why does this '{job_title}' opportunity align with where you want to grow?",
+                    "what_to_look_for": "Genuine enthusiasm grounded in team culture, shared mission, and growth alignment rather than purely compensation or generic titles.",
+                    "suggested_dimension": "role_fit",
+                    "difficulty": seniority,
+                    "rationale": "Validates intrinsic motivation and mutual long-term culture fit."
+                },
+            ]
+        elif r_type == "screening":
+            questions = [
+                {
+                    "id": "q1_career_narrative",
+                    "category": "Career Trajectory & Narrative",
+                    "question": f"Walk us through your professional journey so far. What key milestones led you to your current role, and what makes now the right time to transition into '{job_title}'?",
+                    "what_to_look_for": "Coherent, forward-looking narrative connecting past milestones to future goals; highlights genuine passion for solving domain challenges.",
+                    "suggested_dimension": "role_fit",
+                    "difficulty": seniority,
+                    "rationale": "Establishes baseline motivation, career intentionality, and role relevance."
+                },
+                {
+                    "id": "q2_working_style",
+                    "category": "Working Style & Communication",
+                    "question": "How would your former managers and direct peers describe your day-to-day working style, collaboration rhythm, and responsiveness in distributed teams?",
+                    "what_to_look_for": "Self-awareness, transparency in remote or hybrid coordination, reliable follow-through, and comfort with asynchronous workflows.",
+                    "suggested_dimension": "communication",
+                    "difficulty": seniority,
+                    "rationale": "Assesses communication baseline and operational fit for team coordination."
+                },
+                {
+                    "id": "q3_culture_environment",
+                    "category": "Culture & Workplace Values",
+                    "question": "What team values and cultural practices do you look for in your next workplace, and how do you help foster an inclusive, high-trust environment?",
+                    "what_to_look_for": "Alignment with collaborative high-performance standards, humility, and positive team citizenship.",
+                    "suggested_dimension": "cultural_alignment",
+                    "difficulty": seniority,
+                    "rationale": "Validates core workplace values and cultural expectations."
+                },
+                {
+                    "id": "q4_reliability_ethic",
+                    "category": "Reliability & Accountability",
+                    "question": "Can you give an example of how you manage your commitments and stay self-directed when working with high ambiguity or minimal supervision?",
+                    "what_to_look_for": "Structured self-management, proactive milestone check-ins, and consistent accountability.",
+                    "suggested_dimension": "work_ethic",
+                    "difficulty": seniority,
+                    "rationale": "Tests personal autonomy and reliable work habits."
+                },
+            ]
+        elif r_type == "behavioral":
+            questions = [
+                {
+                    "id": "q1_conflict",
+                    "category": "Interpersonal Conflict & Influence",
+                    "question": "Tell us about a time when you experienced a significant interpersonal disagreement or competing priorities with a colleague. How did you handle the conversation and reach a constructive outcome?",
+                    "what_to_look_for": "Demonstrates empathetic listening, separates personal feelings from professional goals, seeks win-win resolutions, and preserves trust.",
+                    "suggested_dimension": "communication",
+                    "difficulty": seniority,
+                    "rationale": "Assesses mature conflict de-escalation and emotional intelligence."
+                },
+                {
+                    "id": "q2_mentorship",
+                    "category": "Team Culture & Mentorship",
+                    "question": f"As a {seniority} professional, how have you contributed to a positive team culture, supported struggling peers, or helped onboarding newcomers integrate successfully?",
+                    "what_to_look_for": "Generosity with time, proactive knowledge sharing, creating an inclusive atmosphere, and modeling constructive behavior.",
+                    "suggested_dimension": "cultural_alignment",
+                    "difficulty": seniority,
+                    "rationale": "Evaluates cultural contribution and leadership leverage beyond individual deliverables."
+                },
+                {
+                    "id": "q3_incident",
+                    "category": "Accountability & Crisis Management",
+                    "question": "Describe a high-stakes setback or crisis where you had to make tough trade-offs under severe pressure. How did you maintain transparency and guide your stakeholders through it?",
+                    "what_to_look_for": "Honest accountability without finger-pointing, composed demeanor, clear stakeholder updates, and proactive post-incident actions.",
+                    "suggested_dimension": "work_ethic",
+                    "difficulty": seniority,
+                    "rationale": "Tests resilience, professional ethics, and composure during stressful circumstances."
+                },
+                {
+                    "id": "q4_prioritization",
+                    "category": "Adaptability & Stakeholder Management",
+                    "question": f"When project requirements change abruptly or competing stakeholder demands clash for '{job_title}', how do you evaluate priorities and reset expectations constructively?",
+                    "what_to_look_for": "Diplomatic communication, clear trade-off articulation, business acumen, and agile adaptability.",
+                    "suggested_dimension": "role_fit",
+                    "difficulty": seniority,
+                    "rationale": "Tests strategic prioritization, adaptability, and cross-functional alignment."
+                },
+            ]
+        elif r_type == "system_design":
             questions = [
                 {
                     "id": "q1_arch_scale",
@@ -405,45 +585,6 @@ class MockLLMProvider:
                     "suggested_dimension": "technical_depth",
                     "difficulty": seniority,
                     "rationale": "Directly probes verified resume accomplishments to ensure authenticity and technical ownership."
-                },
-            ]
-        elif r_type == "behavioral":
-            questions = [
-                {
-                    "id": "q1_conflict",
-                    "category": "Technical Conflict & Influence",
-                    "question": f"Tell us about a time when you strongly disagreed with an architectural proposal or engineering direction for a {domain} initiative. How did you build consensus without stalling delivery?",
-                    "what_to_look_for": "Looks for constructive debate, evidence-driven prototyping, respectful peer engagement, and commitment to the team once a decision is finalized.",
-                    "suggested_dimension": "communication",
-                    "difficulty": seniority,
-                    "rationale": "Assesses communication maturity and collaborative decision making under uncertainty."
-                },
-                {
-                    "id": "q2_mentorship",
-                    "category": "Mentorship & Engineering Culture",
-                    "question": f"As a {seniority} engineer, how have you mentored junior team members or improved code review standards across your team?",
-                    "what_to_look_for": "Specific examples of pairing, establishing documentation/linting standards, constructive PR reviews, and elevating overall team velocity.",
-                    "suggested_dimension": "cultural_alignment",
-                    "difficulty": seniority,
-                    "rationale": "Evaluates leadership leverage and positive culture propagation."
-                },
-                {
-                    "id": "q3_incident",
-                    "category": "Incident Management & Accountability",
-                    "question": "Describe a high-severity production outage or bug that you had to resolve under pressure. What was the root cause, and what blameless post-mortem actions did you implement?",
-                    "what_to_look_for": "Accountability without blaming others, structured triage methodology, clear stakeholder communication, and prevention through automated tests/runbooks.",
-                    "suggested_dimension": "role_fit",
-                    "difficulty": seniority,
-                    "rationale": "Tests composure, operational hygiene, and systems thinking during emergencies."
-                },
-                {
-                    "id": "q4_prioritization",
-                    "category": "Prioritization & Deadlines",
-                    "question": f"When requirements change mid-sprint on a critical project for '{job_title}', how do you evaluate technical debt versus time-to-market tradeoffs?",
-                    "what_to_look_for": "Clear scope negotiation, transparent risk communication to product management, and intentional debt tracking.",
-                    "suggested_dimension": "communication",
-                    "difficulty": seniority,
-                    "rationale": "Tests practical business acumen and agile engineering judgment."
                 },
             ]
         elif r_type == "executive":
@@ -528,15 +669,26 @@ class MockLLMProvider:
 
         if custom_focus and custom_focus.strip():
             focus_clean = custom_focus.strip()
-            questions.append({
-                "id": "q5_custom_focus",
-                "category": f"Custom Focus: {focus_clean[:30]}",
-                "question": f"Focusing specifically on '{focus_clean}': Walk us through your hands-on approach, edge cases, and design considerations for '{job_title}'.",
-                "what_to_look_for": f"Candidate provides concrete implementation details, tradeoffs, and failure mitigation strategies regarding {focus_clean}.",
-                "suggested_dimension": "technical_depth",
-                "difficulty": seniority,
-                "rationale": f"Interviewer customized focus topic: {focus_clean}."
-            })
+            if _is_hr_round(round_type):
+                questions.append({
+                    "id": "q5_custom_focus",
+                    "category": f"HR Focus: {focus_clean[:30]}",
+                    "question": f"Focusing specifically on '{focus_clean}': Can you share a real-world situation where you encountered this, how you navigated it, and what you learned?",
+                    "what_to_look_for": f"Self-awareness, honest reflection, clear communication, and collaborative behavior regarding {focus_clean}.",
+                    "suggested_dimension": "cultural_alignment",
+                    "difficulty": seniority,
+                    "rationale": f"Interviewer customized HR/culture focus: {focus_clean}.",
+                })
+            else:
+                questions.append({
+                    "id": "q5_custom_focus",
+                    "category": f"Custom Focus: {focus_clean[:30]}",
+                    "question": f"Focusing specifically on '{focus_clean}': Walk us through your hands-on approach, edge cases, and design considerations for '{job_title}'.",
+                    "what_to_look_for": f"Candidate provides concrete implementation details, tradeoffs, and failure mitigation strategies regarding {focus_clean}.",
+                    "suggested_dimension": "technical_depth",
+                    "difficulty": seniority,
+                    "rationale": f"Interviewer customized focus topic: {focus_clean}."
+                })
 
         return questions
 
@@ -637,35 +789,9 @@ CRITICAL DEFENSE REQUIREMENT: You MUST explicitly reference the candidate's seni
         round_type: str = "technical",
         custom_focus: Optional[str] = None,
     ) -> list[dict[str, Any]]:
-        prompt = f"""You are a principal technical interviewer preparing structured, rigorous interview questions for a hiring debrief.
-
-Job Title: {job_title}
-Role Tier: {job_role_tier}
-Job Description: {job_description}
-Interview Round: {round_type}
-Custom Focus: {custom_focus or 'General Core Competency'}
-
-Candidate Profile:
-- Seniority: {candidate_data.get('seniority') or 'Not specified'}
-- Years Experience: {candidate_data.get('years_experience') if candidate_data.get('years_experience') is not None else 'Not specified'}
-- Core Skills: {_format_skill_list(candidate_data.get('core_skills'))}
-- Domain: {candidate_data.get('primary_domain', 'Software Engineering')}
-- Summary: {candidate_data.get('summary', '')}
-- Key Accomplishments: {candidate_data.get('key_accomplishments', [])}
-
-Generate 4 to 5 rigorous, tailored interview questions. Each question must evaluate the candidate's actual background and target role.
-Return ONLY valid JSON matching this exact structure:
-[
-  {{
-    "id": "q1",
-    "category": "System Architecture / Technical Depth / Behavioral / Leadership",
-    "question": "The question to ask candidate",
-    "what_to_look_for": "Specific rubric indicators of what a strong answer contains vs red flags",
-    "suggested_dimension": "technical_depth / system_design / communication / cultural_alignment / role_fit",
-    "difficulty": "Junior / Mid / Senior / Staff",
-    "rationale": "Why this question tests their background against the job requirements"
-  }}
-]"""
+        system_prompt, prompt = _build_interview_prompt_and_system(
+            job_title, job_description, job_role_tier, candidate_data, round_type, custom_focus
+        )
         import httpx
 
         headers = {
@@ -680,7 +806,7 @@ Return ONLY valid JSON matching this exact structure:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a technical interview evaluator. Output strict JSON only without markdown formatting.",
+                    "content": system_prompt,
                 },
                 {"role": "user", "content": prompt},
             ],

@@ -12,7 +12,6 @@ export const Layout: React.FC = () => {
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notifMenuOpen, setNotifMenuOpen] = useState<boolean>(false);
-  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [adminGovernanceOpen, setAdminGovernanceOpen] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,9 +21,8 @@ export const Layout: React.FC = () => {
     // 1. Check health
     try {
       await api.checkHealth();
-      setBackendOnline(true);
     } catch {
-      setBackendOnline(false);
+      // Ignored if offline
     }
 
     // 2. Refresh pending approvals if authenticated (only for roles with approval access)

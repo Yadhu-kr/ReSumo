@@ -53,7 +53,18 @@ def compute_scorecard_summary(
     # Segregate technical vs HR scores
     tech_scores: list[models.InterviewScore] = []
     hr_scores: list[models.InterviewScore] = []
-    hr_dims = {"communication", "cultural_alignment", "role_fit", "leadership_potential", "culture_fit", "work_ethic"}
+    hr_dims = {
+        "communication",
+        "cultural_alignment",
+        "role_fit",
+        "leadership_potential",
+        "culture_fit",
+        "work_ethic",
+        "collaboration",
+        "adaptability",
+        "conflict_resolution",
+        "values_alignment",
+    }
 
     for s in scores:
         itype = getattr(s, "interview_type", None)

@@ -31,6 +31,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ""
       badgeClass = "badge-neutral";
       label = "UPLOADED";
       break;
+    case "sourced":
+      badgeClass = "badge-neutral bg-indigo-900/40 text-indigo-300 border-indigo-700/50";
+      label = "SOURCED PROSPECT";
+      break;
     case "rejected":
       badgeClass = "badge-rejected";
       label = "REJECTED";

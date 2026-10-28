@@ -245,10 +245,28 @@ def action_approval(
     approval.acted_at = now
     approval.acted_by_user_id = current_user.id
 
+    candidate = db.query(models.Candidate).filter(models.Candidate.id == application.candidate_id).first()
+
     if action_req.action == "reject":
         application.status = "rejected"
         db.commit()
         db.refresh(approval)
+        try:
+            from app.services.notifications import notify_approval_decision
+            if candidate and job:
+                notify_approval_decision(
+                    db=db,
+                    approval=approval,
+                    application=application,
+                    candidate=candidate,
+                    job=job,
+                    action="reject",
+                    actor_user=current_user,
+                    next_approval=None,
+                )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to dispatch rejection notification: %s", exc)
         return approval
 
     # For action == "approve", check if there's a subsequent approval tier
@@ -265,6 +283,7 @@ def action_approval(
         .first()
     )
 
+    next_approval = None
     if next_policy:
         # Create next approval in the escalation chain
         next_approval = models.Approval(
@@ -281,6 +300,24 @@ def action_approval(
 
     db.commit()
     db.refresh(approval)
+
+    try:
+        from app.services.notifications import notify_approval_decision
+        if candidate and job:
+            notify_approval_decision(
+                db=db,
+                approval=approval,
+                application=application,
+                candidate=candidate,
+                job=job,
+                action="approve",
+                actor_user=current_user,
+                next_approval=next_approval,
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Failed to dispatch approval decision notification: %s", exc)
+
     return approval
 
 

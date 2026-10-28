@@ -64,6 +64,21 @@ def ensure_schema_compatibility(target_engine):
             if cand_cols and "phone" not in cand_cols:
                 conn.execute(text("ALTER TABLE candidates ADD COLUMN phone VARCHAR"))
                 conn.commit()
+            if cand_cols and "is_passive_lead" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN is_passive_lead BOOLEAN DEFAULT 0"))
+                conn.commit()
+            if cand_cols and "sourcing_channel" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN sourcing_channel VARCHAR DEFAULT 'inbound'"))
+                conn.commit()
+            if cand_cols and "sourcing_status" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN sourcing_status VARCHAR DEFAULT 'sourced'"))
+                conn.commit()
+            if cand_cols and "sourcing_url" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN sourcing_url VARCHAR"))
+                conn.commit()
+            if cand_cols and "claimed_at" not in cand_cols:
+                conn.execute(text("ALTER TABLE candidates ADD COLUMN claimed_at DATETIME"))
+                conn.commit()
 
             # Check users table
             user_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]

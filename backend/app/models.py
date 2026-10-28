@@ -109,6 +109,18 @@ class Candidate(Base):
 
     created_at = Column(DateTime, default=utc_now)
 
+    # Outbound Talent Sourcing Fields
+    # is_passive_lead=True means sourced externally; not yet an active applicant
+    is_passive_lead = Column(Boolean, default=False, nullable=False)
+    # sourcing_channel: "inbound" | "bulk_upload" | "clipper" | "github"
+    sourcing_channel = Column(String, default="inbound", nullable=True)
+    # sourcing_status: "sourced" | "contacted" | "follow_up" | "engaged" | "converted" | "archived"
+    sourcing_status = Column(String, default="sourced", nullable=True)
+    # URL of the original profile (LinkedIn, GitHub, portfolio)
+    sourcing_url = Column(String, nullable=True)
+    # Timestamp when the candidate claimed their profile via magic link
+    claimed_at = Column(DateTime, nullable=True)
+
     user = relationship("User", backref="candidates")
     applications = relationship("Application", back_populates="candidate")
 
@@ -301,6 +313,27 @@ class CandidateNote(Base):
 
     candidate = relationship("Candidate", backref="notes")
     author = relationship("User", foreign_keys=[author_id])
+
+
+class CandidateClaimToken(Base):
+    """
+    One-time secure token sent via outreach email to passive/sourced candidates.
+    Clicking the link allows them to set a password and activate their account,
+    transitioning from the Talent CRM pool into the active ATS pipeline.
+    """
+    __tablename__ = "candidate_claim_tokens"
+
+    id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    candidate_id = Column(UUID_TYPE, ForeignKey("candidates.id"), nullable=False)
+    job_id = Column(UUID_TYPE, ForeignKey("jobs.id"), nullable=True)
+    # Stored as HMAC-SHA256 hex digest — never store the raw token
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    candidate = relationship("Candidate", backref="claim_tokens")
+    job = relationship("Job")
 
 
 class AccountLog(Base):

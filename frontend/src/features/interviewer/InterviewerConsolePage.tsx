@@ -11,6 +11,7 @@ import type {
   InterviewSchedule,
 } from "../../api/types";
 import { getUserDisplayName } from "../../lib/user";
+import { ConsensusReportView } from "../../components/ConsensusReportView";
 import {
   Calendar,
   Clock,
@@ -22,6 +23,7 @@ import {
   Plus,
   Trash2,
   Terminal,
+  Users,
   FileCheck,
   RefreshCw,
 } from "lucide-react";
@@ -34,8 +36,22 @@ const STANDARD_TECH_DIMENSIONS = [
   { key: "debugging_resilience", label: "Operational Resilience & Debugging", desc: "Root cause analysis, observability, profiling, recovery patterns" },
 ];
 
+const STANDARD_HR_DIMENSIONS = [
+  { key: "cultural_alignment", label: "Cultural Alignment & Core Values", desc: "Extreme ownership, humility, velocity, adaptability, and ethical standards" },
+  { key: "communication", label: "Communication & Stakeholder Empathy", desc: "Clarity of articulation, active listening, structured updates, transparent feedback" },
+  { key: "role_fit", label: "Role Motivation & Career Alignment", desc: "Alignment of personal aspirations with role scope, team mission, and expectations" },
+  { key: "leadership_potential", label: "Collaboration & Conflict Resolution", desc: "Managing friction, constructive debate, psychological safety, and teamwork" },
+  { key: "work_ethic", label: "Work Ethic & Operational Resilience", desc: "Accountability under high pressure, delivery dependability, and self-direction" },
+];
+
 export const InterviewerConsolePage: React.FC = () => {
   const { user } = useAuth();
+
+  // Evaluation Track: "technical" vs "hr" (defaults to user's role)
+  const isHrUser = user?.role === "hr";
+  const [evaluationTrack, setEvaluationTrack] = useState<"technical" | "hr">(() => {
+    return isHrUser ? "hr" : "technical";
+  });
 
   // Candidates & Selection
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -50,8 +66,12 @@ export const InterviewerConsolePage: React.FC = () => {
   const [schedules, setSchedules] = useState<InterviewSchedule[]>([]);
   const [loadingSchedules, setLoadingSchedules] = useState<boolean>(false);
   const [showScheduleModal, setShowScheduleModal] = useState<boolean>(false);
-  const [schedTitle, setSchedTitle] = useState<string>("Technical Architecture & Live Coding");
-  const [schedRoundType, setSchedRoundType] = useState<string>("technical");
+  const [schedTitle, setSchedTitle] = useState<string>(
+    isHrUser ? "HR & Cultural Fit Evaluation" : "Technical Architecture & Live Coding"
+  );
+  const [schedRoundType, setSchedRoundType] = useState<string>(
+    isHrUser ? "cultural_fit" : "technical"
+  );
   const [schedDate, setSchedDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -59,29 +79,47 @@ export const InterviewerConsolePage: React.FC = () => {
     return d.toISOString().slice(0, 16);
   });
   const [schedDuration, setSchedDuration] = useState<number>(60);
-  const [schedLink, setSchedLink] = useState<string>("https://meet.google.com/resumo-tech-eval");
+  const [schedLink, setSchedLink] = useState<string>("https://meet.google.com/resumo-eval");
   const [schedNotes, setSchedNotes] = useState<string>("");
   const [schedulingLoading, setSchedulingLoading] = useState<boolean>(false);
   const [schedMessage, setSchedMessage] = useState<string | null>(null);
 
   // AI Questions State
-  const [roundType, setRoundType] = useState<InterviewRoundType>("technical");
-  const [customFocus, setCustomFocus] = useState<string>("Distributed consensus, caching invalidation, and concurrency");
+  const [roundType, setRoundType] = useState<InterviewRoundType>(
+    isHrUser ? "cultural_fit" : "technical"
+  );
+  const [customFocus, setCustomFocus] = useState<string>(
+    isHrUser
+      ? "Core values, conflict resolution, and ownership under pressure"
+      : "Distributed consensus, caching invalidation, and concurrency"
+  );
   const [questions, setQuestions] = useState<InterviewQuestionItem[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState<boolean>(false);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [askedQuestions, setAskedQuestions] = useState<Record<string, boolean>>({});
   const [newQuestionText, setNewQuestionText] = useState<string>("");
-  const [newQuestionCategory, setNewQuestionCategory] = useState<string>("Architecture");
+  const [newQuestionCategory, setNewQuestionCategory] = useState<string>(
+    isHrUser ? "Cultural Fit" : "Architecture"
+  );
 
   // Scorecard Evaluation State
-  const [scores, setScores] = useState<Record<string, number>>({
-    technical_depth: 4.0,
-    system_design: 4.0,
-    problem_solving: 4.0,
-    code_quality: 4.0,
-    debugging_resilience: 4.0,
-  });
+  const [scores, setScores] = useState<Record<string, number>>(() =>
+    isHrUser
+      ? ({
+        cultural_alignment: 4.0,
+        communication: 4.0,
+        role_fit: 4.0,
+        leadership_potential: 4.0,
+        work_ethic: 4.0,
+      } as Record<string, number>)
+      : ({
+        technical_depth: 4.0,
+        system_design: 4.0,
+        problem_solving: 4.0,
+        code_quality: 4.0,
+        debugging_resilience: 4.0,
+      } as Record<string, number>)
+  );
   const [dimensionNotes, setDimensionNotes] = useState<Record<string, string>>({});
   const [overallRecommendation, setOverallRecommendation] = useState<InterviewRecommendation>("hire");
   const [overallNotes, setOverallNotes] = useState<string>("");
@@ -89,6 +127,47 @@ export const InterviewerConsolePage: React.FC = () => {
   const [scorecardSuccess, setScorecardSuccess] = useState<string | null>(null);
   const [scorecardError, setScorecardError] = useState<string | null>(null);
   const [scorecardSummary, setScorecardSummary] = useState<CandidateScorecardSummary | null>(null);
+
+  const handleSwitchTrack = (newTrack: "technical" | "hr") => {
+    setEvaluationTrack(newTrack);
+    setScorecardSuccess(null);
+    setScorecardError(null);
+    if (newTrack === "hr") {
+      setRoundType("cultural_fit");
+      setCustomFocus("Core values, conflict resolution, and ownership under pressure");
+      setSchedTitle("HR & Cultural Fit Evaluation");
+      setSchedRoundType("cultural_fit");
+      setNewQuestionCategory("Cultural Fit");
+      setScores({
+        cultural_alignment: 4.0,
+        communication: 4.0,
+        role_fit: 4.0,
+        leadership_potential: 4.0,
+        work_ethic: 4.0,
+      });
+    } else {
+      setRoundType("technical");
+      setCustomFocus("Distributed consensus, caching invalidation, and concurrency");
+      setSchedTitle("Technical Architecture & Live Coding");
+      setSchedRoundType("technical");
+      setNewQuestionCategory("Architecture");
+      setScores({
+        technical_depth: 4.0,
+        system_design: 4.0,
+        problem_solving: 4.0,
+        code_quality: 4.0,
+        debugging_resilience: 4.0,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role === "hr") {
+      handleSwitchTrack("hr");
+    } else if (user?.role === "interviewer") {
+      handleSwitchTrack("technical");
+    }
+  }, [user?.role]);
 
   const loadCandidates = async () => {
     try {
@@ -235,27 +314,32 @@ export const InterviewerConsolePage: React.FC = () => {
       setScorecardSuccess(null);
       setScorecardError(null);
 
-      const dimensionsPayload: DimensionScoreIn[] = STANDARD_TECH_DIMENSIONS.map((dim) => ({
+      const activeDimensions = evaluationTrack === "hr" ? STANDARD_HR_DIMENSIONS : STANDARD_TECH_DIMENSIONS;
+      const dimensionsPayload: DimensionScoreIn[] = activeDimensions.map((dim) => ({
         dimension: dim.key,
-        score: scores[dim.key] || 3.0,
+        score: scores[dim.key] ?? 4.0,
         notes: dimensionNotes[dim.key] || undefined,
-        interview_type: "technical",
+        interview_type: evaluationTrack,
       }));
 
       const summary = await api.submitInterviewScorecard({
         candidate_id: selectedCandidateId,
         application_id: candidate?.applications?.[0]?.id,
         interviewer_name: getUserDisplayName(user),
-        interview_type: "technical",
+        interview_type: evaluationTrack,
         recommendation: overallRecommendation,
         overall_notes: overallNotes.trim() || undefined,
         dimensions: dimensionsPayload,
       });
 
       setScorecardSummary(summary);
-      setScorecardSuccess("Technical scorecard successfully submitted and linked to Candidate Dossier!");
+      setScorecardSuccess(
+        evaluationTrack === "hr"
+          ? "HR & People evaluation scorecard recorded successfully and linked to Candidate Dossier!"
+          : "Technical evaluation scorecard recorded successfully and linked to Candidate Dossier!"
+      );
     } catch (err: unknown) {
-      const msg = err instanceof ApiError ? err.detail : "Failed to submit technical scorecard";
+      const msg = err instanceof ApiError ? err.detail : "Failed to submit scorecard";
       setScorecardError(msg);
     } finally {
       setSubmittingScorecard(false);
@@ -266,30 +350,37 @@ export const InterviewerConsolePage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "24px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
-      {/* Top Banner */}
+      {/* Top Banner with Dynamic Track Adaptive Theme */}
       <div
         style={{
-          background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
+          background:
+            evaluationTrack === "hr"
+              ? "linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%)"
+              : "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
           borderRadius: "var(--radius-lg)",
           padding: "24px 28px",
           color: "#ffffff",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          boxShadow: "0 10px 25px -5px rgba(30, 27, 75, 0.4)",
+          boxShadow:
+            evaluationTrack === "hr"
+              ? "0 10px 25px -5px rgba(6, 78, 59, 0.4)"
+              : "0 10px 25px -5px rgba(30, 27, 75, 0.4)",
           flexWrap: "wrap",
           gap: "16px",
+          transition: "background 0.3s ease",
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
-                padding: "3px 10px",
+                backgroundColor: "rgba(255, 255, 255, 0.18)",
+                padding: "4px 10px",
                 borderRadius: "9999px",
                 fontSize: "12px",
                 fontWeight: 700,
@@ -297,23 +388,84 @@ export const InterviewerConsolePage: React.FC = () => {
                 textTransform: "uppercase",
               }}
             >
-              <Terminal size={13} />
-              Technical Interview Console
+              {evaluationTrack === "hr" ? <Users size={13} /> : <Terminal size={13} />}
+              {evaluationTrack === "hr" ? "HR & People Evaluation Track" : "Technical Interview Track"}
             </span>
-            <span style={{ fontSize: "12px", opacity: 0.8 }}>
-              Active Session: <strong>{getUserDisplayName(user)}</strong>
+            <span style={{ fontSize: "12px", opacity: 0.85 }}>
+              Active Interviewer: <strong>{getUserDisplayName(user)}</strong>
             </span>
           </div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, margin: "8px 0 4px", letterSpacing: "-0.02em" }}>
-            Real-Time Candidate Engineering Evaluation
+            {evaluationTrack === "hr"
+              ? "Candidate Cultural Fit & STAR Behavioral Evaluation"
+              : "Real-Time Candidate Engineering & Architecture Evaluation"}
           </h1>
-          <p style={{ margin: 0, opacity: 0.85, fontSize: "14px", maxWidth: "600px", lineHeight: 1.5 }}>
-            Synthesize candidate achievements, run AI-assisted architectural questioning, manage calendar schedule slots, and submit technical rubric scores directly into the hiring pipeline.
+          <p style={{ margin: 0, opacity: 0.88, fontSize: "14px", maxWidth: "640px", lineHeight: 1.5 }}>
+            {evaluationTrack === "hr"
+              ? "Assess values alignment, interpersonal communication, and team work ethic. Submitting records directly to the HR & People Evaluation card in the candidate consensus dossier."
+              : "Synthesize candidate achievements, run AI-assisted architectural questioning, manage calendar schedule slots, and submit technical rubric scores directly into the hiring pipeline."}
           </p>
         </div>
 
-        {/* Quick Actions */}
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        {/* Track Switcher & Quick Actions */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
+          {/* Track Segmented Toggle */}
+          <div
+            style={{
+              display: "inline-flex",
+              padding: "4px",
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              borderRadius: "10px",
+              backdropFilter: "blur(8px)",
+              gap: "4px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => handleSwitchTrack("hr")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "12.5px",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: evaluationTrack === "hr" ? "#ffffff" : "transparent",
+                color: evaluationTrack === "hr" ? "#065f46" : "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: evaluationTrack === "hr" ? "0 2px 6px rgba(0,0,0,0.18)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Users size={14} />
+              <span>👥 HR & People Track</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTrack("technical")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "12.5px",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: evaluationTrack === "technical" ? "#ffffff" : "transparent",
+                color: evaluationTrack === "technical" ? "#312e81" : "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: evaluationTrack === "technical" ? "0 2px 6px rgba(0,0,0,0.18)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Terminal size={14} />
+              <span>🛠️ Technical Track</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setShowScheduleModal(true)}
@@ -322,19 +474,19 @@ export const InterviewerConsolePage: React.FC = () => {
               alignItems: "center",
               gap: "8px",
               backgroundColor: "#ffffff",
-              color: "#312e81",
+              color: evaluationTrack === "hr" ? "#065f46" : "#312e81",
               border: "none",
               borderRadius: "var(--radius-md)",
-              padding: "10px 18px",
+              padding: "9px 16px",
               fontWeight: 700,
-              fontSize: "13.5px",
+              fontSize: "13px",
               cursor: "pointer",
               boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
               transition: "transform 0.1s ease",
             }}
           >
-            <Calendar size={16} />
-            <span>Schedule Technical Round</span>
+            <Calendar size={15} />
+            <span>{evaluationTrack === "hr" ? "Schedule HR Round" : "Schedule Technical Round"}</span>
           </button>
         </div>
       </div>
@@ -614,10 +766,12 @@ export const InterviewerConsolePage: React.FC = () => {
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <div style={{ textAlign: "right" }}>
                       <div className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>
-                        TECHNICAL RATING
+                        {evaluationTrack === "hr" ? "HR EVALUATION RATING" : "TECHNICAL RATING"}
                       </div>
-                      <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)" }}>
-                        {scorecardSummary.technical_score ? `${scorecardSummary.technical_score} / 5.0` : `${scorecardSummary.average_score} / 5.0`}
+                      <div style={{ fontSize: "18px", fontWeight: 800, color: evaluationTrack === "hr" ? "#047857" : "var(--text-primary)" }}>
+                        {evaluationTrack === "hr"
+                          ? (scorecardSummary.hr_score ? `${scorecardSummary.hr_score.toFixed(1)} / 5.0` : "Pending HR")
+                          : (scorecardSummary.technical_score ? `${scorecardSummary.technical_score.toFixed(1)} / 5.0` : "Pending Tech")}
                       </div>
                     </div>
                     <span
@@ -665,8 +819,8 @@ export const InterviewerConsolePage: React.FC = () => {
                 padding: "10px 18px",
                 fontSize: "14px",
                 fontWeight: activeTab === "questions" ? 700 : 500,
-                color: activeTab === "questions" ? "var(--accent-purple)" : "var(--text-secondary)",
-                borderBottom: activeTab === "questions" ? "2px solid var(--accent-purple)" : "2px solid transparent",
+                color: activeTab === "questions" ? (evaluationTrack === "hr" ? "#047857" : "var(--accent-purple)") : "var(--text-secondary)",
+                borderBottom: activeTab === "questions" ? `2px solid ${evaluationTrack === "hr" ? "#047857" : "var(--accent-purple)"}` : "2px solid transparent",
                 background: "none",
                 borderTop: "none",
                 borderLeft: "none",
@@ -676,7 +830,7 @@ export const InterviewerConsolePage: React.FC = () => {
               }}
             >
               <Sparkles size={16} />
-              <span>AI Dynamic Questions & Rubric</span>
+              <span>{evaluationTrack === "hr" ? "HR Behavioral & Culture Questions" : "AI Technical Questions & Rubric"}</span>
             </button>
 
             <button
@@ -689,8 +843,8 @@ export const InterviewerConsolePage: React.FC = () => {
                 padding: "10px 18px",
                 fontSize: "14px",
                 fontWeight: activeTab === "scoreboard" ? 700 : 500,
-                color: activeTab === "scoreboard" ? "var(--accent-purple)" : "var(--text-secondary)",
-                borderBottom: activeTab === "scoreboard" ? "2px solid var(--accent-purple)" : "2px solid transparent",
+                color: activeTab === "scoreboard" ? (evaluationTrack === "hr" ? "#047857" : "var(--accent-purple)") : "var(--text-secondary)",
+                borderBottom: activeTab === "scoreboard" ? `2px solid ${evaluationTrack === "hr" ? "#047857" : "var(--accent-purple)"}` : "2px solid transparent",
                 background: "none",
                 borderTop: "none",
                 borderLeft: "none",
@@ -700,7 +854,7 @@ export const InterviewerConsolePage: React.FC = () => {
               }}
             >
               <Award size={16} />
-              <span>Technical Scoreboard & Submission</span>
+              <span>{evaluationTrack === "hr" ? "HR & People Scoreboard & Submission" : "Technical Scoreboard & Submission"}</span>
             </button>
 
             <button
@@ -734,10 +888,14 @@ export const InterviewerConsolePage: React.FC = () => {
               {/* Question Generator Controls Panel */}
               <div className="panel" style={{ padding: "18px 20px" }}>
                 <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
-                  AI Tailored Interview Question Generator
+                  {evaluationTrack === "hr"
+                    ? "👥 HR & Cultural Fit AI Question Generator"
+                    : "🛠️ Technical & Architecture AI Question Generator"}
                 </div>
                 <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "0 0 16px", lineHeight: 1.5 }}>
-                  Synthesizes candidate experience with targeted architectural challenges. Specify your custom technical domain focus below.
+                  {evaluationTrack === "hr"
+                    ? "Synthesizes candidate background into STAR behavioral inquiries, probing values alignment, team collaboration, and work ethic without asking technical coding questions."
+                    : "Synthesizes candidate experience with targeted architectural challenges. Specify your custom technical domain focus below."}
                 </p>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "10px", alignItems: "end" }}>
@@ -759,17 +917,26 @@ export const InterviewerConsolePage: React.FC = () => {
                         color: "var(--text-primary)",
                       }}
                     >
-                      <option value="technical">Technical Depth & Coding</option>
-                      <option value="system_design">System Architecture & Scaling</option>
-                      <option value="behavioral">Behavioral & Culture</option>
-                      <option value="screening">Initial Screening</option>
-                      <option value="executive">Executive & Leadership</option>
+                      {evaluationTrack === "hr" ? (
+                        <>
+                          <option value="cultural_fit">Cultural Alignment & Core Values</option>
+                          <option value="behavioral">STAR Behavioral & Conflict Resolution</option>
+                          <option value="screening">Initial Recruiter Screening</option>
+                          <option value="executive">Leadership & Team Culture</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="technical">Technical Depth & Coding</option>
+                          <option value="system_design">System Architecture & Scaling</option>
+                          <option value="executive">Executive & Engineering Bar</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
                   <div>
                     <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }} className="mono">
-                      CUSTOM TECHNICAL FOCUS
+                      {evaluationTrack === "hr" ? "CUSTOM HR & CULTURE FOCUS" : "CUSTOM TECHNICAL FOCUS"}
                     </label>
                     <input
                       type="text"
@@ -791,135 +958,180 @@ export const InterviewerConsolePage: React.FC = () => {
                           handleGenerateQuestions();
                         }
                       }}
-                      placeholder="e.g. Distributed caching, Raft consensus, Go concurrency..."
+                      placeholder={
+                        evaluationTrack === "hr"
+                          ? "e.g. Extreme ownership, psychological safety, handling failure, cross-team conflict..."
+                          : "e.g. Distributed caching, Raft consensus, Go concurrency..."
+                      }
                     />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateQuestions()}
-                    disabled={loadingQuestions || !selectedCandidateId}
-                    className="btn btn-purple"
-                    style={{
-                      height: "36px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "0 14px",
-                      fontSize: "12.5px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <Sparkles size={14} />
-                    <span>{loadingQuestions ? "Generating..." : "Generate Questions"}</span>
-                  </button>
-                </div>
-
-                {questionError && (
-                  <div style={{ marginTop: "12px", padding: "10px", borderRadius: "var(--radius-sm)", backgroundColor: "#fef2f2", color: "#b91c1c", fontSize: "13px" }}>
-                    {questionError}
-                  </div>
-                )}
-              </div>
-
-              {/* Add Custom Question Form */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                  backgroundColor: "#ffffff",
-                  padding: "12px 16px",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px dashed var(--border-subtle)",
-                }}
-              >
-                <input
-                  type="text"
-                  placeholder="Have a custom technical problem to evaluate? Type here..."
-                  value={newQuestionText}
-                  onChange={(e) => setNewQuestionText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddCustomQuestion();
-                  }}
-                  style={{
-                    flex: 1,
-                    border: "none",
-                    outline: "none",
-                    fontSize: "13.5px",
-                    color: "var(--text-primary)",
-                  }}
-                />
-                <select
-                  value={newQuestionCategory}
-                  onChange={(e) => setNewQuestionCategory(e.target.value)}
-                  style={{ fontSize: "12.5px", padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border-subtle)" }}
-                >
-                  <option value="Coding">Coding</option>
-                  <option value="Architecture">Architecture</option>
-                  <option value="Concurrency">Concurrency</option>
-                  <option value="Databases">Databases</option>
-                  <option value="System Resilience">System Resilience</option>
-                </select>
                 <button
                   type="button"
-                  onClick={handleAddCustomQuestion}
-                  disabled={!newQuestionText.trim()}
+                  onClick={() => handleGenerateQuestions()}
+                  disabled={loadingQuestions || !selectedCandidateId}
+                  className="btn btn-purple"
                   style={{
+                    height: "36px",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "4px",
-                    backgroundColor: "var(--accent-purple)",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "6px 14px",
-                    borderRadius: "4px",
+                    gap: "6px",
+                    padding: "0 14px",
                     fontSize: "12.5px",
-                    fontWeight: 600,
-                    cursor: newQuestionText.trim() ? "pointer" : "not-allowed",
-                    opacity: newQuestionText.trim() ? 1 : 0.6,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  <Plus size={14} />
-                  <span>Add</span>
+                  <Sparkles size={14} />
+                  <span>{loadingQuestions ? "Generating..." : "Generate Questions"}</span>
                 </button>
               </div>
 
-              {/* Generated Questions List */}
-              {loadingQuestions ? (
-                <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
-                  Generating personalized interview questions using candidate accomplishments...
+              {questionError && (
+                <div style={{ marginTop: "12px", padding: "10px", borderRadius: "var(--radius-sm)", backgroundColor: "#fef2f2", color: "#b91c1c", fontSize: "13px" }}>
+                  {questionError}
                 </div>
-              ) : questions.length === 0 ? (
-                <div className="panel" style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)" }}>
-                  <Sparkles size={28} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
-                  <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
-                    No Questions Generated Yet
-                  </div>
-                  <div style={{ fontSize: "13px", maxWidth: "440px", margin: "0 auto 16px" }}>
-                    Click &quot;Generate Questions&quot; above to produce AI-tailored questions and evaluation rubrics based on this candidate&apos;s background.
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={() => handleGenerateQuestions()}
-                      disabled={loadingQuestions || !selectedCandidateId}
-                      className="btn btn-purple"
-                      style={{
-                        height: "36px",
-                        padding: "0 16px",
-                        fontSize: "12.5px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        margin: "0 auto",
-                      }}
-                    >
-                      <Sparkles size={14} />
-                      <span>{loadingQuestions ? "Generating..." : "Generate AI Questions"}</span>
-                    </button>
+              )}
+            </div>
 
-                    <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+              {/* Add Custom Question Form */}
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              backgroundColor: "#ffffff",
+              padding: "12px 16px",
+              borderRadius: "var(--radius-md)",
+              border: "1px dashed var(--border-subtle)",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Have a custom technical problem to evaluate? Type here..."
+              value={newQuestionText}
+              onChange={(e) => setNewQuestionText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddCustomQuestion();
+              }}
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                fontSize: "13.5px",
+                color: "var(--text-primary)",
+              }}
+            />
+            <select
+              value={newQuestionCategory}
+              onChange={(e) => setNewQuestionCategory(e.target.value)}
+              style={{ fontSize: "12.5px", padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border-subtle)" }}
+            >
+              <option value="Coding">Coding</option>
+              <option value="Architecture">Architecture</option>
+              <option value="Concurrency">Concurrency</option>
+              <option value="Databases">Databases</option>
+              <option value="System Resilience">System Resilience</option>
+            </select>
+            <button
+              type="button"
+              onClick={handleAddCustomQuestion}
+              disabled={!newQuestionText.trim()}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                backgroundColor: "var(--accent-purple)",
+                color: "#ffffff",
+                border: "none",
+                padding: "6px 14px",
+                borderRadius: "4px",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: newQuestionText.trim() ? "pointer" : "not-allowed",
+                opacity: newQuestionText.trim() ? 1 : 0.6,
+              }}
+            >
+              <Plus size={14} />
+              <span>Add</span>
+            </button>
+          </div>
+
+          {/* Generated Questions List */}
+          {loadingQuestions ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
+              Generating personalized interview questions using candidate accomplishments...
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="panel" style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)" }}>
+              <Sparkles size={28} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+              <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
+                No Questions Generated Yet
+              </div>
+              <div style={{ fontSize: "13px", maxWidth: "440px", margin: "0 auto 16px" }}>
+                Click &quot;Generate Questions&quot; above to produce AI-tailored questions and evaluation rubrics based on this candidate&apos;s background.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateQuestions()}
+                  disabled={loadingQuestions || !selectedCandidateId}
+                  className="btn btn-purple"
+                  style={{
+                    height: "36px",
+                    padding: "0 16px",
+                    fontSize: "12.5px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    margin: "0 auto",
+                  }}
+                >
+                  <Sparkles size={14} />
+                  <span>{loadingQuestions ? "Generating..." : "Generate AI Questions"}</span>
+                </button>
+
+                <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                  {evaluationTrack === "hr" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("cultural_fit")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        🌟 Cultural Alignment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("behavioral")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        🤝 STAR Behavioral
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("screening")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        📋 Initial Screening
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuestions("executive")}
+                        disabled={loadingQuestions || !selectedCandidateId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
+                      >
+                        👑 Leadership & Culture
+                      </button>
+                    </>
+                  ) : (
+                    <>
                       <button
                         type="button"
                         onClick={() => handleGenerateQuestions("technical")}
@@ -940,561 +1152,611 @@ export const InterviewerConsolePage: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleGenerateQuestions("behavioral")}
+                        onClick={() => handleGenerateQuestions("executive")}
                         disabled={loadingQuestions || !selectedCandidateId}
                         className="btn btn-secondary btn-sm"
                         style={{ height: "30px", padding: "0 10px", fontSize: "11.5px" }}
                       >
-                        🤝 Behavioral & Culture
+                        👑 Executive Bar
                       </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {questions.map((q, idx) => {
+                const isAsked = !!askedQuestions[q.id];
+                return (
+                  <div
+                    key={q.id || idx}
+                    className="panel"
+                    style={{
+                      padding: "16px 20px",
+                      borderLeft: `4px solid ${isAsked ? "#10b981" : "var(--accent-purple)"}`,
+                      opacity: isAsked ? 0.75 : 1,
+                      transition: "opacity 0.2s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            backgroundColor: "var(--accent-purple-subtle)",
+                            color: "var(--accent-purple)",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {q.category}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            backgroundColor: q.difficulty === "Advanced" ? "#fef3c7" : "#ecfdf5",
+                            color: q.difficulty === "Advanced" ? "#b45309" : "#047857",
+                          }}
+                        >
+                          {q.difficulty}
+                        </span>
+                        <span className="mono text-muted" style={{ fontSize: "11px" }}>
+                          Suggested: {q.suggested_dimension.replace("_", " ")}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleAsked(q.id)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "4px 10px",
+                            borderRadius: "4px",
+                            border: isAsked ? "1px solid #10b981" : "1px solid var(--border-subtle)",
+                            backgroundColor: isAsked ? "#ecfdf5" : "transparent",
+                            color: isAsked ? "#047857" : "var(--text-secondary)",
+                            fontSize: "11.5px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>{isAsked ? "Asked" : "Mark Asked"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                          title="Remove Question"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Question Text */}
+                    <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: "10px 0 8px", lineHeight: 1.5 }}>
+                      {q.question}
+                    </div>
+
+                    {/* Rubric: What to Look For */}
+                    <div
+                      style={{
+                        backgroundColor: "#f8fafc",
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "12.5px",
+                        color: "var(--text-secondary)",
+                        border: "1px solid var(--border-subtle)",
+                      }}
+                    >
+                      <strong style={{ color: "var(--text-primary)" }}>What to Look For: </strong>
+                      {q.what_to_look_for}
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {questions.map((q, idx) => {
-                    const isAsked = !!askedQuestions[q.id];
-                    return (
-                      <div
-                        key={q.id || idx}
-                        className="panel"
-                        style={{
-                          padding: "16px 20px",
-                          borderLeft: `4px solid ${isAsked ? "#10b981" : "var(--accent-purple)"}`,
-                          opacity: isAsked ? 0.75 : 1,
-                          transition: "opacity 0.2s ease",
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: "4px",
-                                backgroundColor: "var(--accent-purple-subtle)",
-                                color: "var(--accent-purple)",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {q.category}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: "4px",
-                                backgroundColor: q.difficulty === "Advanced" ? "#fef3c7" : "#ecfdf5",
-                                color: q.difficulty === "Advanced" ? "#b45309" : "#047857",
-                              }}
-                            >
-                              {q.difficulty}
-                            </span>
-                            <span className="mono text-muted" style={{ fontSize: "11px" }}>
-                              Suggested: {q.suggested_dimension.replace("_", " ")}
-                            </span>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <button
-                              type="button"
-                              onClick={() => toggleAsked(q.id)}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 10px",
-                                borderRadius: "4px",
-                                border: isAsked ? "1px solid #10b981" : "1px solid var(--border-subtle)",
-                                backgroundColor: isAsked ? "#ecfdf5" : "transparent",
-                                color: isAsked ? "#047857" : "var(--text-secondary)",
-                                fontSize: "11.5px",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                              }}
-                            >
-                              <CheckCircle2 size={13} />
-                              <span>{isAsked ? "Asked" : "Mark Asked"}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteQuestion(q.id)}
-                              style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
-                              title="Remove Question"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Question Text */}
-                        <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: "10px 0 8px", lineHeight: 1.5 }}>
-                          {q.question}
-                        </div>
-
-                        {/* Rubric: What to Look For */}
-                        <div
-                          style={{
-                            backgroundColor: "#f8fafc",
-                            padding: "10px 14px",
-                            borderRadius: "var(--radius-sm)",
-                            fontSize: "12.5px",
-                            color: "var(--text-secondary)",
-                            border: "1px solid var(--border-subtle)",
-                          }}
-                        >
-                          <strong style={{ color: "var(--text-primary)" }}>What to Look For: </strong>
-                          {q.what_to_look_for}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab 2: Technical Scoreboard & Submission Form */}
-          {activeTab === "scoreboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <form onSubmit={handleSubmitScorecard} className="panel" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "20px" }}>
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 4px", color: "var(--text-primary)" }}>
-                    Submit Technical Evaluation Scorecard
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
-                    Evaluate candidate engineering competencies. Each rating is saved under the <strong>Technical Interview</strong> stream for side-by-side consensus analysis.
-                  </p>
-                </div>
-
-                {scorecardSuccess && (
-                  <div style={{ padding: "12px", borderRadius: "var(--radius-sm)", backgroundColor: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", fontSize: "13.5px" }}>
-                    {scorecardSuccess}
-                  </div>
-                )}
-                {scorecardError && (
-                  <div style={{ padding: "12px", borderRadius: "var(--radius-sm)", backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", fontSize: "13.5px" }}>
-                    {scorecardError}
-                  </div>
-                )}
-
-                {/* Rubric Dimensions Grid */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {STANDARD_TECH_DIMENSIONS.map((dim) => {
-                    const currentScore = scores[dim.key] || 3.0;
-                    return (
-                      <div
-                        key={dim.key}
-                        style={{
-                          backgroundColor: "#f8fafc",
-                          padding: "16px",
-                          borderRadius: "var(--radius-md)",
-                          border: "1px solid var(--border-subtle)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px",
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div>
-                            <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
-                              {dim.label}
-                            </span>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                              {dim.desc}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            {[1, 2, 3, 4, 5].map((val) => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => setScores((prev) => ({ ...prev, [dim.key]: val }))}
-                                style={{
-                                  width: "34px",
-                                  height: "34px",
-                                  borderRadius: "6px",
-                                  border: currentScore === val ? "2px solid var(--accent-purple)" : "1px solid var(--border-subtle)",
-                                  backgroundColor: currentScore === val ? "var(--accent-purple)" : "#ffffff",
-                                  color: currentScore === val ? "#ffffff" : "var(--text-primary)",
-                                  fontWeight: 700,
-                                  fontSize: "13px",
-                                  cursor: "pointer",
-                                  transition: "all 0.1s ease",
-                                }}
-                              >
-                                {val}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <input
-                          type="text"
-                          placeholder={`Dimension notes: Specific code observations or architectural trade-offs...`}
-                          value={dimensionNotes[dim.key] || ""}
-                          onChange={(e) => setDimensionNotes({ ...dimensionNotes, [dim.key]: e.target.value })}
-                          style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            borderRadius: "var(--radius-sm)",
-                            border: "1px solid var(--border-subtle)",
-                            fontSize: "12.5px",
-                            backgroundColor: "#ffffff",
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Overall Recommendation Selector */}
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
-                    Overall Technical Recommendation
-                  </label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
-                    {[
-                      { key: "strong_hire", label: "Strong Hire", color: "#047857", bg: "#ecfdf5" },
-                      { key: "hire", label: "Hire", color: "#059669", bg: "#f0fdf4" },
-                      { key: "lean_hire", label: "Lean Hire", color: "#d97706", bg: "#fffbeb" },
-                      { key: "lean_no_hire", label: "Lean No Hire", color: "#ea580c", bg: "#fff7ed" },
-                      { key: "no_hire", label: "No Hire", color: "#dc2626", bg: "#fef2f2" },
-                    ].map((opt) => {
-                      const isSelected = overallRecommendation === opt.key;
-                      return (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          onClick={() => setOverallRecommendation(opt.key as InterviewRecommendation)}
-                          style={{
-                            padding: "10px",
-                            borderRadius: "var(--radius-md)",
-                            border: isSelected ? `2px solid ${opt.color}` : "1px solid var(--border-subtle)",
-                            backgroundColor: isSelected ? opt.bg : "#ffffff",
-                            color: isSelected ? opt.color : "var(--text-secondary)",
-                            fontWeight: isSelected ? 800 : 600,
-                            fontSize: "13px",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Overall Evaluation Notes */}
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
-                    Detailed Technical Synthesis & Feedback
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={overallNotes}
-                    onChange={(e) => setOverallNotes(e.target.value)}
-                    placeholder="Provide a technical summary of the candidate's coding demonstration, architectural justifications, depth of reasoning, and areas of growth..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "var(--radius-md)",
-                      border: "1px solid var(--border-subtle)",
-                      fontSize: "13px",
-                      lineHeight: 1.5,
-                      fontFamily: "inherit",
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button
-                    type="submit"
-                    disabled={submittingScorecard}
-                    className="btn btn-primary"
-                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "38px", padding: "0 18px", fontSize: "13px" }}
-                  >
-                    <FileCheck size={16} />
-                    <span>{submittingScorecard ? "Submitting Evaluation..." : "Submit Technical Scorecard"}</span>
-                  </button>
-                </div>
-              </form>
-
-              {/* Scoreboard Breakdown Card */}
-              {scorecardSummary && (
-                <div className="panel" style={{ padding: "20px 24px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                    <h4 style={{ fontSize: "15px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                      Live Candidate Scoreboard
-                    </h4>
-                    <span className="mono" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      Evaluations: {scorecardSummary.total_evaluations}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                    {Object.entries(scorecardSummary.dimension_averages).map(([dim, avg]) => (
-                      <div key={dim} style={{ backgroundColor: "#f8fafc", padding: "12px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)" }}>
-                        <div style={{ fontSize: "12px", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-                          {dim.replace("_", " ")}
-                        </div>
-                        <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", marginTop: "4px" }}>
-                          {avg.toFixed(1)} <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-muted)" }}>/ 5.0</span>
-                        </div>
-                        <div style={{ width: "100%", height: "4px", backgroundColor: "#e2e8f0", borderRadius: "9999px", marginTop: "6px", overflow: "hidden" }}>
-                          <div style={{ width: `${(avg / 5.0) * 100}%`, height: "100%", backgroundColor: "var(--accent-purple)", borderRadius: "9999px" }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab 3: Calendar & Schedule Slots */}
-          {activeTab === "calendar" && (
-            <div className="panel" style={{ padding: "20px 24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 4px", color: "var(--text-primary)" }}>
-                    Integrated Technical Interview Calendar
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
-                    Coordinate slots with candidates, launch virtual meeting rooms, and dispatch calendar invites.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowScheduleModal(true)}
-                  className="btn btn-primary"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", fontSize: "12.5px" }}
-                >
-                  <Plus size={14} />
-                  <span>Schedule Slot</span>
-                </button>
-              </div>
-
-              {schedules.length === 0 ? (
-                <div style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13.5px" }}>
-                  No interview sessions currently scheduled. Click &quot;Schedule Slot&quot; to coordinate an interview.
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {schedules.map((s) => {
-                    const sDate = new Date(s.start_time);
-                    return (
-                      <div
-                        key={s.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "16px 18px",
-                          borderRadius: "var(--radius-md)",
-                          border: "1px solid var(--border-subtle)",
-                          backgroundColor: "#f8fafc",
-                          flexWrap: "wrap",
-                          gap: "12px",
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)" }}>
-                            {s.title}
-                          </div>
-                          <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                            {sDate.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at{" "}
-                            {sDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ({s.duration_minutes} mins)
-                          </div>
-                          {s.notes && (
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                              Note: {s.notes}
-                            </div>
-                          )}
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {s.meeting_link && (
-                            <a
-                              href={s.meeting_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary btn-sm"
-                              style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
-                            >
-                              <Video size={13} />
-                              <span>Join Call</span>
-                            </a>
-                          )}
-                          <a
-                            href={api.getIcsDownloadUrl(s.id)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
-                          >
-                            <Calendar size={13} />
-                            <span>Download .ics</span>
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
+          )}
 
-      {/* Modal: Schedule Technical Interview */}
-      {showScheduleModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            className="panel"
-            style={{
-              width: "100%",
-              maxWidth: "520px",
-              padding: "24px 28px",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "17px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
-                Schedule Technical Interview Round
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowScheduleModal(false)}
-                style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "var(--text-muted)" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleScheduleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                  Round Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="as-input"
-                  value={schedTitle}
-                  onChange={(e) => setSchedTitle(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        {/* Tab 2: Scoreboard & Submission Form (Track Adaptive) */}
+        {activeTab === "scoreboard" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <form onSubmit={handleSubmitScorecard} className="panel" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                    Round Type
-                  </label>
-                  <select
-                    value={schedRoundType}
-                    onChange={(e) => setSchedRoundType(e.target.value)}
-                    className="as-input"
+                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 4px", color: "var(--text-primary)" }}>
+                    {evaluationTrack === "hr"
+                      ? "Submit HR & People Evaluation Scorecard"
+                      : "Submit Technical Evaluation Scorecard"}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
+                    {evaluationTrack === "hr"
+                      ? "Evaluate cultural alignment, interpersonal impact, and work ethic. Ratings are recorded under the HR & People Evaluation stream in the hiring dossier."
+                      : "Evaluate candidate engineering competencies. Each rating is saved under the Technical Interview stream for side-by-side consensus analysis."}
+                  </p>
+                </div>
+
+                <div style={{ display: "inline-flex", padding: "3px", backgroundColor: "#f1f5f9", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchTrack("hr")}
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: evaluationTrack === "hr" ? "#ffffff" : "transparent",
+                      color: evaluationTrack === "hr" ? "#065f46" : "var(--text-secondary)",
+                      boxShadow: evaluationTrack === "hr" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    }}
                   >
-                    <option value="technical">Technical Architecture & Coding</option>
-                    <option value="system_design">System Design</option>
-                    <option value="behavioral">Culture Alignment</option>
-                    <option value="screening">Screening</option>
-                  </select>
+                    👥 HR Track
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchTrack("technical")}
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: evaluationTrack === "technical" ? "#ffffff" : "transparent",
+                      color: evaluationTrack === "technical" ? "#312e81" : "var(--text-secondary)",
+                      boxShadow: evaluationTrack === "technical" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    }}
+                  >
+                    🛠️ Technical Track
+                  </button>
                 </div>
+              </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                    Duration (Minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min={15}
-                    max={180}
-                    step={15}
-                    className="as-input"
-                    value={schedDuration}
-                    onChange={(e) => setSchedDuration(Number(e.target.value))}
-                  />
+              {scorecardSuccess && (
+                <div style={{ padding: "12px", borderRadius: "var(--radius-sm)", backgroundColor: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", fontSize: "13.5px" }}>
+                  {scorecardSuccess}
+                </div>
+              )}
+              {scorecardError && (
+                <div style={{ padding: "12px", borderRadius: "var(--radius-sm)", backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", fontSize: "13.5px" }}>
+                  {scorecardError}
+                </div>
+              )}
+
+              {/* Rubric Dimensions Grid */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {(evaluationTrack === "hr" ? STANDARD_HR_DIMENSIONS : STANDARD_TECH_DIMENSIONS).map((dim) => {
+                  const currentScore = scores[dim.key] ?? 4.0;
+                  return (
+                    <div
+                      key={dim.key}
+                      style={{
+                        backgroundColor: "#f8fafc",
+                        padding: "16px",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border-subtle)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                            {dim.label}
+                          </span>
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                            {dim.desc}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          {[1, 2, 3, 4, 5].map((val) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setScores((prev) => ({ ...prev, [dim.key]: val }))}
+                              style={{
+                                width: "34px",
+                                height: "34px",
+                                borderRadius: "6px",
+                                border: currentScore === val
+                                  ? `2px solid ${evaluationTrack === "hr" ? "#059669" : "var(--accent-purple)"}`
+                                  : "1px solid var(--border-subtle)",
+                                backgroundColor: currentScore === val
+                                  ? (evaluationTrack === "hr" ? "#059669" : "var(--accent-purple)")
+                                  : "#ffffff",
+                                color: currentScore === val ? "#ffffff" : "var(--text-primary)",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                                cursor: "pointer",
+                                transition: "all 0.1s ease",
+                              }}
+                            >
+                              {val}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder={
+                          evaluationTrack === "hr"
+                            ? "Dimension notes: Observations regarding core values, communication style, or STAR answers..."
+                            : "Dimension notes: Specific code observations or architectural trade-offs..."
+                        }
+                        value={dimensionNotes[dim.key] || ""}
+                        onChange={(e) => setDimensionNotes({ ...dimensionNotes, [dim.key]: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--border-subtle)",
+                          fontSize: "12.5px",
+                          backgroundColor: "#ffffff",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Overall Recommendation Selector */}
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>
+                  {evaluationTrack === "hr" ? "Overall HR & People Recommendation" : "Overall Technical Recommendation"}
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
+                  {[
+                    { key: "strong_hire", label: "Strong Hire", color: "#047857", bg: "#ecfdf5" },
+                    { key: "hire", label: "Hire", color: "#059669", bg: "#f0fdf4" },
+                    { key: "lean_hire", label: "Lean Hire", color: "#d97706", bg: "#fffbeb" },
+                    { key: "lean_no_hire", label: "Lean No Hire", color: "#ea580c", bg: "#fff7ed" },
+                    { key: "no_hire", label: "No Hire", color: "#dc2626", bg: "#fef2f2" },
+                  ].map((opt) => {
+                    const isSelected = overallRecommendation === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setOverallRecommendation(opt.key as InterviewRecommendation)}
+                        style={{
+                          padding: "10px",
+                          borderRadius: "var(--radius-md)",
+                          border: isSelected ? `2px solid ${opt.color}` : "1px solid var(--border-subtle)",
+                          backgroundColor: isSelected ? opt.bg : "#ffffff",
+                          color: isSelected ? opt.color : "var(--text-secondary)",
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Overall Evaluation Notes */}
               <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                  Start Date & Time
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  className="as-input"
-                  value={schedDate}
-                  onChange={(e) => setSchedDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                  Virtual Video Meeting Link
-                </label>
-                <input
-                  type="url"
-                  className="as-input"
-                  value={schedLink}
-                  onChange={(e) => setSchedLink(e.target.value)}
-                  placeholder="https://meet.google.com/..."
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
-                  Notes for Candidate & Team
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
+                  {evaluationTrack === "hr" ? "Detailed Behavioral Synthesis & People Notes" : "Detailed Technical Synthesis & Feedback"}
                 </label>
                 <textarea
-                  rows={2}
-                  className="as-input"
-                  style={{ height: "auto", padding: "8px 12px" }}
-                  value={schedNotes}
-                  onChange={(e) => setSchedNotes(e.target.value)}
-                  placeholder="Focus areas: data pipelines, distributed transactions..."
+                  rows={4}
+                  value={overallNotes}
+                  onChange={(e) => setOverallNotes(e.target.value)}
+                  placeholder={
+                    evaluationTrack === "hr"
+                      ? "Provide an HR summary of the candidate's interpersonal demeanor, cultural alignment, work ethic, and long-term role fit..."
+                      : "Provide a technical summary of the candidate's coding demonstration, architectural justifications, depth of reasoning, and areas of growth..."
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                    fontFamily: "inherit",
+                  }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowScheduleModal(false)}
-                  className="btn btn-secondary"
-                  style={{ height: "36px", padding: "0 14px", fontSize: "13px" }}
-                >
-                  Cancel
-                </button>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button
                   type="submit"
-                  disabled={schedulingLoading}
+                  disabled={submittingScorecard}
                   className="btn btn-primary"
-                  style={{ height: "36px", padding: "0 16px", fontSize: "13px" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    height: "38px",
+                    padding: "0 18px",
+                    fontSize: "13px",
+                    backgroundColor: evaluationTrack === "hr" ? "#059669" : undefined,
+                  }}
                 >
-                  {schedulingLoading ? "Scheduling..." : "Confirm & Send Invites"}
+                  <FileCheck size={16} />
+                  <span>
+                    {submittingScorecard
+                      ? "Submitting Evaluation..."
+                      : evaluationTrack === "hr"
+                        ? "Submit HR & People Scorecard"
+                        : "Submit Technical Scorecard"}
+                  </span>
                 </button>
               </div>
             </form>
+
+            {/* Side-by-Side Consensus Report View */}
+            {scorecardSummary && (
+              <div style={{ marginTop: "4px" }}>
+                <ConsensusReportView scorecard={scorecardSummary} candidateName={candidate?.name} />
+              </div>
+            )}
           </div>
+        )}
+
+      {/* Tab 3: Calendar & Schedule Slots */}
+      {activeTab === "calendar" && (
+        <div className="panel" style={{ padding: "20px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 4px", color: "var(--text-primary)" }}>
+                Integrated Technical Interview Calendar
+              </h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)" }}>
+                Coordinate slots with candidates, launch virtual meeting rooms, and dispatch calendar invites.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowScheduleModal(true)}
+              className="btn btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", fontSize: "12.5px" }}
+            >
+              <Plus size={14} />
+              <span>Schedule Slot</span>
+            </button>
+          </div>
+
+          {schedules.length === 0 ? (
+            <div style={{ padding: "36px", textAlign: "center", color: "var(--text-muted)", fontSize: "13.5px" }}>
+              No interview sessions currently scheduled. Click &quot;Schedule Slot&quot; to coordinate an interview.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {schedules.map((s) => {
+                const sDate = new Date(s.start_time);
+                return (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "16px 18px",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--border-subtle)",
+                      backgroundColor: "#f8fafc",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {s.title}
+                      </div>
+                      <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        {sDate.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at{" "}
+                        {sDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ({s.duration_minutes} mins)
+                      </div>
+                      {s.notes && (
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                          Note: {s.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {s.meeting_link && (
+                        <a
+                          href={s.meeting_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
+                        >
+                          <Video size={13} />
+                          <span>Join Call</span>
+                        </a>
+                      )}
+                      <a
+                        href={api.getIcsDownloadUrl(s.id)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", fontSize: "12px", textDecoration: "none" }}
+                      >
+                        <Calendar size={13} />
+                        <span>Download .ics</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
+      </div >
+
+  {/* Modal: Schedule Technical Interview */ }
+{
+  showScheduleModal && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "20px",
+      }}
+    >
+      <div
+        className="panel"
+        style={{
+          width: "100%",
+          maxWidth: "520px",
+          padding: "24px 28px",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <h3 style={{ fontSize: "17px", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+            Schedule Technical Interview Round
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowScheduleModal(false)}
+            style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "var(--text-muted)" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleScheduleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+              Round Title
+            </label>
+            <input
+              type="text"
+              required
+              className="as-input"
+              value={schedTitle}
+              onChange={(e) => setSchedTitle(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                Round Type
+              </label>
+              <select
+                value={schedRoundType}
+                onChange={(e) => setSchedRoundType(e.target.value)}
+                className="as-input"
+              >
+                <option value="technical">Technical Architecture & Coding</option>
+                <option value="system_design">System Design</option>
+                <option value="behavioral">Culture Alignment</option>
+                <option value="screening">Screening</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+                Duration (Minutes)
+              </label>
+              <input
+                type="number"
+                min={15}
+                max={180}
+                step={15}
+                className="as-input"
+                value={schedDuration}
+                onChange={(e) => setSchedDuration(Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+              Start Date & Time
+            </label>
+            <input
+              type="datetime-local"
+              required
+              className="as-input"
+              value={schedDate}
+              onChange={(e) => setSchedDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+              Virtual Video Meeting Link
+            </label>
+            <input
+              type="url"
+              className="as-input"
+              value={schedLink}
+              onChange={(e) => setSchedLink(e.target.value)}
+              placeholder="https://meet.google.com/..."
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "4px" }}>
+              Notes for Candidate & Team
+            </label>
+            <textarea
+              rows={2}
+              className="as-input"
+              style={{ height: "auto", padding: "8px 12px" }}
+              value={schedNotes}
+              onChange={(e) => setSchedNotes(e.target.value)}
+              placeholder="Focus areas: data pipelines, distributed transactions..."
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+            <button
+              type="button"
+              onClick={() => setShowScheduleModal(false)}
+              className="btn btn-secondary"
+              style={{ height: "36px", padding: "0 14px", fontSize: "13px" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={schedulingLoading}
+              className="btn btn-primary"
+              style={{ height: "36px", padding: "0 16px", fontSize: "13px" }}
+            >
+              {schedulingLoading ? "Scheduling..." : "Confirm & Send Invites"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+    </div >
   );
 };
 

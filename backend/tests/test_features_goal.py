@@ -223,3 +223,123 @@ def test_offer_generation_and_acceptance_lifecycle(client, hr_auth, candidate_au
     # Confirm application transitioned to 'hired'
     db_session.refresh(application)
     assert application.status == "hired"
+
+
+def test_manual_candidate_approval_and_notifications_pipeline(client, hr_auth, candidate_auth, approver_auth, db_session):
+    """
+    Tests the complete end-to-end flow for manually created / unassigned candidates:
+    1. Unassigned candidate created in talent pool (no job).
+    2. Recruiter sends direct in-app notification & email via /candidates/{id}/notify.
+    3. Recruiter assigns candidate to an open requisition via /candidates/{id}/assign-job.
+    4. Recruiter submits candidate for approval -> approver receives real-time notification.
+    5. Approver approves candidate -> candidate and HR receive real-time notifications.
+    6. HR generates and extends offer -> candidate receives offer_extended notification.
+    """
+    hr_headers, hr_user = hr_auth
+    cand_headers, cand_user = candidate_auth
+    appr_headers, appr_user = approver_auth
+
+    company_id = hr_user["company_id"]
+    # Ensure approver belongs to the same company
+    approver_db = db_session.query(models.User).filter(models.User.id == appr_user["id"]).first()
+    approver_db.company_id = company_id
+    db_session.commit()
+
+    # Create job requisition
+    job = models.Job(company_id=company_id, title="Lead Cloud Architect", description="AWS, GCP, Terraform", role_tier="junior")
+    db_session.add(job)
+    db_session.flush()
+
+    # 1. Unassigned candidate created with candidate user's email
+    candidate = models.Candidate(
+        user_id=cand_user["id"],
+        name="Febin Abey",
+        email=cand_user["email"],
+        raw_resume_filename="Febin_Abey.pdf",
+        raw_text="Cloud architect with deep distributed systems expertise.",
+    )
+    db_session.add(candidate)
+    db_session.commit()
+
+    # 2. Recruiter sends direct notification
+    notify_res = client.post(
+        f"/candidates/{candidate.id}/notify",
+        headers=hr_headers,
+        json={
+            "subject": "Exciting Opportunity at ReSumo",
+            "message": "We reviewed your portfolio and would like to connect.",
+            "notification_type": "general",
+        },
+    )
+    assert notify_res.status_code == 200
+    notif_data = notify_res.json()
+    assert notif_data["user_id"] == cand_user["id"]
+    assert notif_data["subject"] == "Exciting Opportunity at ReSumo"
+
+    # Candidate verifies notification received in their portal
+    cand_notifs = client.get("/notifications/me", headers=cand_headers).json()
+    assert any(n["subject"] == "Exciting Opportunity at ReSumo" for n in cand_notifs)
+
+    # 3. Recruiter assigns candidate to job opening
+    assign_res = client.post(
+        f"/candidates/{candidate.id}/assign-job",
+        headers=hr_headers,
+        json={"job_id": job.id, "initial_status": "shortlisted"},
+    )
+    assert assign_res.status_code == 201
+    app_id = assign_res.json()["id"]
+
+    # 4. Submit application for approval
+    submit_res = client.post(
+        f"/candidates/{candidate.id}/submit-for-approval",
+        headers=hr_headers,
+    )
+    assert submit_res.status_code == 200
+
+    # Approver checks their notifications
+    appr_notifs = client.get("/notifications/me", headers=appr_headers).json()
+    assert any("Approval Required" in n["subject"] or "Lead Cloud Architect" in n["subject"] for n in appr_notifs)
+
+    # Find the pending approval
+    approval_rec = db_session.query(models.Approval).filter(models.Approval.application_id == app_id).first()
+    assert approval_rec is not None
+    assert approval_rec.action == "pending"
+
+    # 5. Approver approves the candidate
+    action_res = client.post(
+        f"/approvals/{approval_rec.id}/action",
+        headers=appr_headers,
+        json={"action": "approve", "notes": "Candidate demonstrates exceptional competencies."},
+    )
+    assert action_res.status_code == 200
+    assert action_res.json()["action"] == "approved"
+
+    # Verify notifications generated for candidate and HR
+    cand_notifs_after = client.get("/notifications/me", headers=cand_headers).json()
+    assert any("Application Approved" in n["subject"] or "Hiring Authorized" in n["subject"] for n in cand_notifs_after)
+
+    hr_notifs_after = client.get("/notifications/me", headers=hr_headers).json()
+    assert any("Final Approval Granted" in n["subject"] or "Lead Cloud Architect" in n["subject"] for n in hr_notifs_after)
+
+    # 6. HR generates offer and sends it
+    gen_offer = client.post(
+        "/offers/generate",
+        headers=hr_headers,
+        json={
+            "application_id": app_id,
+            "salary": 160000,
+            "currency": "USD",
+            "start_date": "2026-11-15",
+            "notes": "Full health coverage, flexible PTO.",
+        },
+    )
+    assert gen_offer.status_code == 201
+    offer_id = gen_offer.json()["id"]
+
+    send_offer = client.post(f"/offers/{offer_id}/send", headers=hr_headers)
+    assert send_offer.status_code == 200
+
+    # Verify candidate receives offer notification
+    cand_notifs_final = client.get("/notifications/me", headers=cand_headers).json()
+    assert any("Offer" in n["subject"] for n in cand_notifs_final)
+

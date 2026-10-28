@@ -10,6 +10,7 @@ import type {
   Offer,
   CandidateScorecardSummary,
   InterviewScorecardCreate,
+  DimensionScoreIn,
   OnboardingSummary,
   InterviewSchedule,
   InterviewScheduleCreate,
@@ -51,6 +52,8 @@ import {
   Trash2,
   BookOpen,
   PlusCircle,
+  Briefcase,
+  Edit3,
 } from "lucide-react";
 
 interface OutletContextType {
@@ -123,9 +126,14 @@ export const CandidateDossierPage: React.FC = () => {
     overall_notes: string;
     technical_depth: number;
     system_design: number;
-    communication: number;
+    problem_solving: number;
+    code_quality: number;
+    debugging_resilience: number;
     cultural_alignment: number;
+    communication: number;
     role_fit: number;
+    leadership_potential: number;
+    work_ethic: number;
   }>({
     interviewer_name: "",
     interview_type: "hr",
@@ -133,9 +141,14 @@ export const CandidateDossierPage: React.FC = () => {
     overall_notes: "",
     technical_depth: 4.0,
     system_design: 4.0,
-    communication: 4.0,
+    problem_solving: 4.0,
+    code_quality: 4.0,
+    debugging_resilience: 4.0,
     cultural_alignment: 4.0,
+    communication: 4.0,
     role_fit: 4.0,
+    leadership_potential: 4.0,
+    work_ethic: 4.0,
   });
 
   // Dynamic AI Interview Questions State
@@ -176,13 +189,43 @@ export const CandidateDossierPage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Job Assignment State
+  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
+  const [showAssignJobModal, setShowAssignJobModal] = useState<boolean>(false);
+  const [selectedAssignJobId, setSelectedAssignJobId] = useState<string>("");
+  const [assigningJob, setAssigningJob] = useState<boolean>(false);
+  const [assignJobError, setAssignJobError] = useState<string | null>(null);
+
+  // Direct Candidate Notification Modal State
+  const [showNotifyModal, setShowNotifyModal] = useState<boolean>(false);
+  const [notifySubject, setNotifySubject] = useState<string>("Application Update: Next Steps with ReSumo");
+  const [notifyMessage, setNotifyMessage] = useState<string>("");
+  const [notifyType, setNotifyType] = useState<string>("general");
+  const [sendingNotification, setSendingNotification] = useState<boolean>(false);
+  const [notifySuccess, setNotifySuccess] = useState<string | null>(null);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+
+  // Edit Contact Modal State
+  const [showEditContactModal, setShowEditContactModal] = useState<boolean>(false);
+  const [editName, setEditName] = useState<string>("");
+  const [editEmail, setEditEmail] = useState<string>("");
+  const [editPhone, setEditPhone] = useState<string>("");
+  const [savingContact, setSavingContact] = useState<boolean>(false);
+
   const loadCandidateDetails = async () => {
     if (!id) return;
     try {
       setLoading(true);
       setError(null);
-      const cand = await api.getCandidate(id);
+      const [cand, allJobsList] = await Promise.all([
+        api.getCandidate(id),
+        api.listJobs().catch(() => [] as Job[]),
+      ]);
       setCandidate(cand);
+      setAvailableJobs(allJobsList);
+      if (allJobsList.length > 0 && !selectedAssignJobId) {
+        setSelectedAssignJobId(allJobsList[0].id);
+      }
 
       let appsList: Application[] = [];
       try {
@@ -389,6 +432,24 @@ export const CandidateDossierPage: React.FC = () => {
       setScorecardError(null);
       setScorecardSuccess(null);
       const activeApp = applications.length > 0 ? applications[0] : undefined;
+
+      const isHr = scorecardForm.interview_type === "hr";
+      const dimensionsPayload: DimensionScoreIn[] = isHr
+        ? [
+          { dimension: "cultural_alignment", score: Number(scorecardForm.cultural_alignment), interview_type: "hr" },
+          { dimension: "communication", score: Number(scorecardForm.communication), interview_type: "hr" },
+          { dimension: "role_fit", score: Number(scorecardForm.role_fit), interview_type: "hr" },
+          { dimension: "leadership_potential", score: Number(scorecardForm.leadership_potential), interview_type: "hr" },
+          { dimension: "work_ethic", score: Number(scorecardForm.work_ethic), interview_type: "hr" },
+        ]
+        : [
+          { dimension: "technical_depth", score: Number(scorecardForm.technical_depth), interview_type: "technical" },
+          { dimension: "system_design", score: Number(scorecardForm.system_design), interview_type: "technical" },
+          { dimension: "problem_solving", score: Number(scorecardForm.problem_solving), interview_type: "technical" },
+          { dimension: "code_quality", score: Number(scorecardForm.code_quality), interview_type: "technical" },
+          { dimension: "debugging_resilience", score: Number(scorecardForm.debugging_resilience), interview_type: "technical" },
+        ];
+
       const payload: InterviewScorecardCreate = {
         candidate_id: id,
         application_id: activeApp?.id,
@@ -396,17 +457,15 @@ export const CandidateDossierPage: React.FC = () => {
         interview_type: scorecardForm.interview_type,
         recommendation: scorecardForm.recommendation,
         overall_notes: scorecardForm.overall_notes || undefined,
-        dimensions: [
-          { dimension: "technical_depth", score: Number(scorecardForm.technical_depth), interview_type: scorecardForm.interview_type },
-          { dimension: "system_design", score: Number(scorecardForm.system_design), interview_type: scorecardForm.interview_type },
-          { dimension: "communication", score: Number(scorecardForm.communication), interview_type: scorecardForm.interview_type },
-          { dimension: "cultural_alignment", score: Number(scorecardForm.cultural_alignment), interview_type: scorecardForm.interview_type },
-          { dimension: "role_fit", score: Number(scorecardForm.role_fit), interview_type: scorecardForm.interview_type },
-        ],
+        dimensions: dimensionsPayload,
       };
       const updated = await api.submitInterviewScorecard(payload);
       setScorecard(updated);
-      setScorecardSuccess("Interview rubric scorecard recorded successfully!");
+      setScorecardSuccess(
+        isHr
+          ? "HR & People evaluation recorded successfully in Candidate Dossier!"
+          : "Technical interview rubric recorded successfully in Candidate Dossier!"
+      );
     } catch (err: unknown) {
       setScorecardError(err instanceof ApiError ? err.detail : "Failed to record interview scorecard");
     } finally {
@@ -563,6 +622,67 @@ export const CandidateDossierPage: React.FC = () => {
     }
   };
 
+  const handleAssignJob = async (jobIdToAssign: string) => {
+    if (!id || !jobIdToAssign) return;
+    try {
+      setAssigningJob(true);
+      setAssignJobError(null);
+      await api.assignCandidateJob(id, jobIdToAssign);
+      setShowAssignJobModal(false);
+      await loadCandidateDetails();
+      if (refreshPendingCount) refreshPendingCount();
+    } catch (err: unknown) {
+      setAssignJobError(err instanceof ApiError ? err.detail : "Failed to assign candidate to job");
+    } finally {
+      setAssigningJob(false);
+    }
+  };
+
+  const handleSendDirectNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !notifySubject.trim() || !notifyMessage.trim()) return;
+    try {
+      setSendingNotification(true);
+      setNotifyError(null);
+      setNotifySuccess(null);
+      await api.notifyCandidate(id, {
+        subject: notifySubject.trim(),
+        message: notifyMessage.trim(),
+        notification_type: notifyType,
+      });
+      setNotifySuccess("Notification and email dispatch logged successfully!");
+      setTimeout(() => {
+        setShowNotifyModal(false);
+        setNotifySuccess(null);
+        setNotifyMessage("");
+      }, 1600);
+      await loadCandidateDetails();
+    } catch (err: unknown) {
+      setNotifyError(err instanceof ApiError ? err.detail : "Failed to send notification");
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    try {
+      setSavingContact(true);
+      const updated = await api.patchCandidate(id, {
+        name: editName.trim() || undefined,
+        email: editEmail.trim() || undefined,
+        phone: editPhone.trim() || undefined,
+      });
+      setCandidate(updated);
+      setShowEditContactModal(false);
+    } catch (err: unknown) {
+      alert(err instanceof ApiError ? err.detail : "Failed to update contact info");
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: "60px", textAlign: "center", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: "12px" }}>
@@ -635,12 +755,62 @@ export const CandidateDossierPage: React.FC = () => {
                 <span style={{ fontWeight: 500 }}>{candidate.parsed_data.location}</span>
               </span>
             )}
+            {isHRorAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditName(candidate.name || "");
+                  setEditEmail(candidate.email || "");
+                  setEditPhone(candidate.phone || "");
+                  setShowEditContactModal(true);
+                }}
+                className="btn btn-subtle btn-sm"
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 8px", fontSize: "11.5px" }}
+                title="Edit candidate name, email, or phone number"
+              >
+                <Edit3 size={12} />
+                <span>Edit Contact</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Quick Actions (Primary & Secondary) */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-          {isHRorAdmin && ["shortlisted", "parsed"].includes(effectiveStatus) && effectiveJobId && (
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {isHRorAdmin && (
+            <button
+              type="button"
+              className={!effectiveJobId ? "btn btn-primary" : "btn btn-secondary"}
+              style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 16px", fontSize: "13.5px" }}
+              onClick={() => {
+                setAssignJobError(null);
+                setShowAssignJobModal(true);
+              }}
+            >
+              <Briefcase size={15} color={!effectiveJobId ? "#ffffff" : "var(--accent-purple)"} />
+              <span>{!effectiveJobId ? "Assign to Job Opening" : "Reassign Requisition"}</span>
+            </button>
+          )}
+
+          {isHRorAdmin && (
+            <button
+              type="button"
+              className="btn btn-purple"
+              style={{ display: "inline-flex", alignItems: "center", gap: "7px", padding: "9px 16px", fontSize: "13.5px" }}
+              onClick={() => {
+                setNotifyError(null);
+                setNotifySuccess(null);
+                setNotifySubject(`Application Update: ${job?.title || "ReSumo Recruitment"}`);
+                setNotifyMessage(`Hello ${candidate.name || "Candidate"},\n\nWe have an update regarding your application for ${job?.title || "our engineering team"}. Please check your Candidate Portal for the latest status and next steps.`);
+                setShowNotifyModal(true);
+              }}
+            >
+              <Send size={15} />
+              <span>Send Notification</span>
+            </button>
+          )}
+
+          {isHRorAdmin && ["shortlisted", "parsed"].includes(effectiveStatus) && (
             <button
               className="btn btn-primary"
               disabled={submitting}
@@ -670,6 +840,45 @@ export const CandidateDossierPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {!effectiveJobId && (
+        <div
+          style={{
+            padding: "16px 20px",
+            borderRadius: "12px",
+            backgroundColor: "#fffbeb",
+            border: "1px solid #fef3c7",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <AlertCircle size={20} color="#d97706" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "14px", color: "#92400e" }}>
+                Unassigned Candidate Profile (No Active Requisition)
+              </div>
+              <div style={{ fontSize: "13px", color: "#b45309", marginTop: "2px" }}>
+                This profile was ingested without a target job opening. Assign an open requisition to enable approval governance, interview scheduling, and offer letter generation.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ fontSize: "13px", padding: "8px 18px", whiteSpace: "nowrap" }}
+            onClick={() => {
+              setAssignJobError(null);
+              setShowAssignJobModal(true);
+            }}
+          >
+            Assign to Job Opening →
+          </button>
+        </div>
+      )}
 
       {submitError && (
         <div
@@ -1281,18 +1490,18 @@ export const CandidateDossierPage: React.FC = () => {
                                 activeOffer.status === "accepted"
                                   ? "var(--status-approved-bg)"
                                   : activeOffer.status === "declined"
-                                  ? "var(--status-rejected-bg)"
-                                  : activeOffer.status === "sent"
-                                  ? "var(--accent-purple-subtle)"
-                                  : "#fef3c7",
+                                    ? "var(--status-rejected-bg)"
+                                    : activeOffer.status === "sent"
+                                      ? "var(--accent-purple-subtle)"
+                                      : "#fef3c7",
                               color:
                                 activeOffer.status === "accepted"
                                   ? "var(--status-approved-text)"
                                   : activeOffer.status === "declined"
-                                  ? "var(--status-rejected-text)"
-                                  : activeOffer.status === "sent"
-                                  ? "var(--accent-purple)"
-                                  : "#d97706",
+                                    ? "var(--status-rejected-text)"
+                                    : activeOffer.status === "sent"
+                                      ? "var(--accent-purple)"
+                                      : "#d97706",
                               fontWeight: 700,
                               textTransform: "uppercase",
                               padding: "4px 10px",
@@ -1713,11 +1922,12 @@ export const CandidateDossierPage: React.FC = () => {
                       </label>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                         {[
-                          { id: "technical", label: "Technical Coding" },
-                          { id: "system_design", label: "System Design & Architecture" },
-                          { id: "behavioral", label: "Behavioral & Leadership" },
-                          { id: "screening", label: "Initial Screening" },
-                          { id: "executive", label: "Executive Consensus" },
+                          { id: "cultural_fit", label: "🌟 Cultural & Values Fit" },
+                          { id: "behavioral", label: "🤝 STAR Behavioral" },
+                          { id: "screening", label: "📋 Initial Screening" },
+                          { id: "technical", label: "⚡ Technical Coding" },
+                          { id: "system_design", label: "🏗️ System Design" },
+                          { id: "executive", label: "👑 Executive Consensus" },
                         ].map((r) => {
                           const isSelected = questionRoundType === r.id;
                           return (
@@ -1840,8 +2050,8 @@ export const CandidateDossierPage: React.FC = () => {
                           diffLower === "advanced"
                             ? { bg: "#fef2f2", text: "#b91c1c", border: "#fecaca" }
                             : diffLower === "intermediate"
-                            ? { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" }
-                            : { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" };
+                              ? { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" }
+                              : { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" };
 
                         return (
                           <div
@@ -2127,16 +2337,27 @@ export const CandidateDossierPage: React.FC = () => {
                   {/* Rubric Dimension Sliders */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <span className="mono" style={{ fontSize: "10.5px", color: "var(--text-muted)" }}>
-                      RUBRIC DIMENSION EVALUATION (1.0 - 5.0)
+                      {scorecardForm.interview_type === "hr"
+                        ? "HR & BEHAVIORAL DIMENSION EVALUATION (1.0 - 5.0)"
+                        : "TECHNICAL RUBRIC DIMENSION EVALUATION (1.0 - 5.0)"}
                     </span>
 
-                    {[
-                      { key: "technical_depth", label: "Technical Depth & Mastery", desc: "Core algorithms, data structures, and engineering rigor" },
-                      { key: "system_design", label: "System Design & Architecture", desc: "Scalability, fault tolerance, API design, and trade-offs" },
-                      { key: "communication", label: "Communication & Articulation", desc: "Clarity, active listening, and technical storytelling" },
-                      { key: "cultural_alignment", label: "Cultural & Values Alignment", desc: "Ownership, collaboration, humility, and velocity" },
-                      { key: "role_fit", label: "Role & Experience Alignment", desc: "Relevance of past domain work to target job requisition" },
-                    ].map(({ key, label, desc }) => (
+                    {(scorecardForm.interview_type === "hr"
+                      ? [
+                        { key: "cultural_alignment", label: "Cultural Alignment & Core Values", desc: "Extreme ownership, humility, velocity, adaptability, and ethical standards" },
+                        { key: "communication", label: "Communication & Stakeholder Empathy", desc: "Clarity of articulation, active listening, transparent feedback" },
+                        { key: "role_fit", label: "Role Motivation & Career Alignment", desc: "Alignment of personal aspirations with position scope and growth expectations" },
+                        { key: "leadership_potential", label: "Collaboration & Conflict Resolution", desc: "Constructive pushback, psychological safety, and teamwork" },
+                        { key: "work_ethic", label: "Work Ethic & Operational Resilience", desc: "Accountability under high pressure, dependability, and self-direction" },
+                      ]
+                      : [
+                        { key: "technical_depth", label: "Technical Depth & Mastery", desc: "Core algorithms, data structures, and engineering rigor" },
+                        { key: "system_design", label: "System Design & Architecture", desc: "Scalability, fault tolerance, API design, and trade-offs" },
+                        { key: "problem_solving", label: "Problem Solving & Live Coding", desc: "Edge-case handling, speed of execution, algorithmic structuring" },
+                        { key: "code_quality", label: "Code Cleanliness & Patterns", desc: "Maintainability, testability, idiomatic code, error handling" },
+                        { key: "debugging_resilience", label: "Operational Resilience & Debugging", desc: "Root cause analysis, observability, profiling, recovery patterns" },
+                      ]
+                    ).map(({ key, label, desc }) => (
                       <div
                         key={key}
                         style={{
@@ -2501,14 +2722,14 @@ export const CandidateDossierPage: React.FC = () => {
                                     sched.status === "completed"
                                       ? "var(--status-approved-bg)"
                                       : sched.status === "cancelled"
-                                      ? "var(--status-rejected-bg)"
-                                      : "#eff6ff",
+                                        ? "var(--status-rejected-bg)"
+                                        : "#eff6ff",
                                   color:
                                     sched.status === "completed"
                                       ? "var(--status-approved-text)"
                                       : sched.status === "cancelled"
-                                      ? "var(--status-rejected-text)"
-                                      : "#1d4ed8",
+                                        ? "var(--status-rejected-text)"
+                                        : "#1d4ed8",
                                 }}
                               >
                                 {sched.status}
@@ -2685,16 +2906,16 @@ export const CandidateDossierPage: React.FC = () => {
                                   backgroundColor: isVerified
                                     ? "#dcfce7"
                                     : isComplete
-                                    ? "rgba(100, 82, 206, 0.12)"
-                                    : "#f1f5f9",
+                                      ? "rgba(100, 82, 206, 0.12)"
+                                      : "#f1f5f9",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
                                   color: isVerified
                                     ? "var(--accent-green)"
                                     : isComplete
-                                    ? "var(--accent-purple)"
-                                    : "var(--text-muted)",
+                                      ? "var(--accent-purple)"
+                                      : "var(--text-muted)",
                                 }}
                               >
                                 {isVerified ? <ShieldCheck size={14} /> : isComplete ? <CheckCircle2 size={14} /> : <Clock size={14} />}
@@ -3154,6 +3375,383 @@ export const CandidateDossierPage: React.FC = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign / Reassign Job Modal */}
+      {showAssignJobModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "560px" }}>
+            <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Briefcase size={16} color="var(--accent-purple)" />
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {job ? "Reassign Candidate Requisition" : "Assign Candidate to Job Opening"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-subtle btn-sm"
+                onClick={() => setShowAssignJobModal(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                Associating <strong>{candidate.name || "this candidate"}</strong> with an active job requisition unlocks
+                automated tier-based approval routing, structured evaluation scorecards, and formal offer generation.
+              </p>
+
+              {assignJobError && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--status-rejected-bg)",
+                    border: "1px solid var(--status-rejected-border)",
+                    color: "var(--status-rejected-text)",
+                    fontSize: "13px",
+                  }}
+                >
+                  {assignJobError}
+                </div>
+              )}
+
+              {availableJobs.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", backgroundColor: "var(--bg-subtle)", borderRadius: "8px" }}>
+                  <p style={{ margin: "0 0 12px 0", fontSize: "13.5px", color: "var(--text-secondary)" }}>
+                    No open requisitions found. Please create an active job in the Jobs portal first.
+                  </p>
+                  <Link to="/jobs" className="btn btn-secondary btn-sm">
+                    Manage Jobs →
+                  </Link>
+                </div>
+              ) : (
+                <div>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "6px" }}>
+                    Select Open Requisition
+                  </label>
+                  <select
+                    className="form-control"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13.5px" }}
+                    value={selectedAssignJobId}
+                    onChange={(e) => setSelectedAssignJobId(e.target.value)}
+                  >
+                    <option value="" disabled>-- Choose an open job --</option>
+                    {availableJobs.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.title} ({j.role_tier?.toUpperCase() || "JUNIOR"})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Selected Job Details Preview */}
+                  {selectedAssignJobId && (() => {
+                    const selectedJob = availableJobs.find((j) => j.id === selectedAssignJobId);
+                    if (!selectedJob) return null;
+                    return (
+                      <div
+                        style={{
+                          marginTop: "14px",
+                          padding: "14px",
+                          borderRadius: "8px",
+                          backgroundColor: "#f8fafc",
+                          border: "1px solid var(--border-subtle)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                          <span style={{ fontWeight: 700, fontSize: "13.5px", color: "var(--text-primary)" }}>{selectedJob.title}</span>
+                          <span className="badge badge-subtle" style={{ fontSize: "11px" }}>{selectedJob.role_tier?.toUpperCase() || "STANDARD"}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          Role Level: <strong>{selectedJob.role_tier?.toUpperCase()}</strong>
+                        </div>
+                        {selectedJob.description && (
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)", lineClamp: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                            {selectedJob.description}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowAssignJobModal(false)}
+                disabled={assigningJob}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={assigningJob || !selectedAssignJobId}
+                onClick={() => handleAssignJob(selectedAssignJobId)}
+              >
+                {assigningJob ? "Assigning..." : "Confirm Requisition Assignment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Candidate Notification Modal */}
+      {showNotifyModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "600px" }}>
+            <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Mail size={16} color="var(--accent-purple)" />
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Dispatch Candidate Notification & Email
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-subtle btn-sm"
+                onClick={() => setShowNotifyModal(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSendDirectNotification} style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Recipient summary banner */}
+              <div style={{ padding: "10px 14px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                  Recipient: <strong style={{ color: "var(--text-primary)" }}>{candidate.name || "Candidate"}</strong>
+                </span>
+                <span style={{ fontSize: "12px", color: candidate.email ? "var(--accent-purple)" : "#dc2626", fontWeight: 600 }}>
+                  {candidate.email ? `✉ ${candidate.email}` : "⚠ No email configured"}
+                </span>
+              </div>
+
+              {notifySuccess && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--status-approved-bg)",
+                    border: "1px solid var(--status-approved-border)",
+                    color: "var(--status-approved-text)",
+                    fontSize: "13px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>{notifySuccess}</span>
+                </div>
+              )}
+
+              {notifyError && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--status-rejected-bg)",
+                    border: "1px solid var(--status-rejected-border)",
+                    color: "var(--status-rejected-text)",
+                    fontSize: "13px",
+                  }}
+                >
+                  {notifyError}
+                </div>
+              )}
+
+              {/* Quick Template Fillers */}
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                  Quick Fill Templates:
+                </label>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="btn btn-subtle btn-sm"
+                    style={{ fontSize: "11.5px", padding: "4px 8px" }}
+                    onClick={() => {
+                      setNotifySubject(`Interview Invitation: Next Steps for ${job?.title || "ReSumo"}`);
+                      setNotifyMessage(`Hello ${candidate.name || "Candidate"},\n\nWe were impressed by your background and would like to invite you for an interview regarding the ${job?.title || "open position"}.\n\nPlease check your Candidate Portal to view the scheduled session or select an available slot.\n\nBest regards,\nRecruitment Team`);
+                      setNotifyType("interview");
+                    }}
+                  >
+                    + Interview Next Steps
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-subtle btn-sm"
+                    style={{ fontSize: "11.5px", padding: "4px 8px" }}
+                    onClick={() => {
+                      setNotifySubject(`Formal Offer Extended: ${job?.title || "Role"} at ReSumo`);
+                      setNotifyMessage(`Hello ${candidate.name || "Candidate"},\n\nWe are delighted to extend a formal offer of employment to join our team as ${job?.title || "our new team member"}!\n\nPlease review the complete offer terms and digital signature link in your Candidate Portal.\n\nBest regards,\nHiring Committee`);
+                      setNotifyType("offer");
+                    }}
+                  >
+                    + Offer Extended
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-subtle btn-sm"
+                    style={{ fontSize: "11.5px", padding: "4px 8px" }}
+                    onClick={() => {
+                      setNotifySubject(`Application Status Update: ${job?.title || "Position"}`);
+                      setNotifyMessage(`Hello ${candidate.name || "Candidate"},\n\nThank you for taking the time to speak with our team. We are currently finalizing evaluations for the ${job?.title || "position"} and will provide our final decision shortly.\n\nBest regards,\nTalent Acquisition`);
+                      setNotifyType("status_update");
+                    }}
+                  >
+                    + Status Update
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                  Notification Subject
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13.5px" }}
+                  value={notifySubject}
+                  onChange={(e) => setNotifySubject(e.target.value)}
+                  placeholder="e.g. Next steps in your application..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                  Message Body
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={5}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13px", lineHeight: "1.5", resize: "vertical" }}
+                  value={notifyMessage}
+                  onChange={(e) => setNotifyMessage(e.target.value)}
+                  placeholder="Type candidate message here..."
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowNotifyModal(false)}
+                  disabled={sendingNotification}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={sendingNotification || !notifySubject.trim() || !notifyMessage.trim()}
+                >
+                  {sendingNotification ? "Dispatching..." : "Send Notification"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Candidate Contact Modal */}
+      {showEditContactModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "480px" }}>
+            <div className="panel-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Edit3 size={16} color="var(--accent-purple)" />
+                <span style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Edit Candidate Profile & Contact
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-subtle btn-sm"
+                onClick={() => setShowEditContactModal(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveContact} style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13.5px" }}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Candidate full name"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  className="form-control"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13.5px" }}
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="candidate@example.com"
+                />
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+                  Note: Email links candidate in-app notifications to their candidate portal login.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "13.5px" }}
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowEditContactModal(false)}
+                  disabled={savingContact}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={savingContact}
+                >
+                  {savingContact ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import type {
   OnboardingTaskOut,
   InterviewSchedule,
   AppNotification,
+  Job,
 } from "../../api/types";
 import { getUserDisplayName } from "../../lib/user";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -68,6 +69,11 @@ export const CandidatePortalPage: React.FC = () => {
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
   const [responseError, setResponseError] = useState<string | null>(null);
 
+  // Open Jobs & 1-Click Apply State
+  const [openJobs, setOpenJobs] = useState<Job[]>([]);
+  const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
+  const [applyMessage, setApplyMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   // Upload State
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadStatus, setUploadStatus] = useState<{ success?: string; error?: string } | null>(null);
@@ -78,18 +84,20 @@ export const CandidatePortalPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [cands, apps, onbSummary, mySchedules, myNotifs] = await Promise.all([
+      const [cands, apps, onbSummary, mySchedules, myNotifs, allJobs] = await Promise.all([
         api.listCandidates(),
         api.getMyApplications().catch(() => [] as Application[]),
         api.getMyOnboarding().catch(() => null),
         api.getMySchedules().catch(() => [] as InterviewSchedule[]),
         api.getMyNotifications().catch(() => [] as AppNotification[]),
+        api.listJobs().catch(() => [] as Job[]),
       ]);
       setCandidates(cands);
       setApplications(apps);
       setOnboardingSummary(onbSummary);
       setSchedules(mySchedules);
       setNotifications(myNotifs);
+      setOpenJobs(allJobs);
 
       if (cands.length > 0) {
         try {
@@ -108,6 +116,26 @@ export const CandidatePortalPage: React.FC = () => {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOneClickApply = async (jobId: string) => {
+    try {
+      setApplyingJobId(jobId);
+      setApplyMessage(null);
+      await api.applyForJob(jobId);
+      setApplyMessage({
+        type: "success",
+        text: "Application submitted successfully! Automated semantic match scoring and recruiter review initiated.",
+      });
+      await loadCandidateProfile();
+    } catch (err: unknown) {
+      setApplyMessage({
+        type: "error",
+        text: err instanceof ApiError ? err.detail : "Failed to submit application for this requisition",
+      });
+    } finally {
+      setApplyingJobId(null);
     }
   };
 
@@ -1405,6 +1433,26 @@ export const CandidatePortalPage: React.FC = () => {
           </Link>
         </div>
 
+        {applyMessage && (
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "10px",
+              backgroundColor: applyMessage.type === "success" ? "var(--status-approved-bg)" : "var(--status-rejected-bg)",
+              border: `1px solid ${applyMessage.type === "success" ? "var(--status-approved-border)" : "var(--status-rejected-border)"}`,
+              color: applyMessage.type === "success" ? "var(--status-approved-text)" : "var(--status-rejected-text)",
+              fontSize: "13.5px",
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            {applyMessage.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>{applyMessage.text}</span>
+          </div>
+        )}
+
         {applications.length === 0 && candidates.length === 0 ? (
           <EmptyState
             title="No Applications Found"
@@ -1513,8 +1561,8 @@ export const CandidatePortalPage: React.FC = () => {
             })}
           </div>
         ) : (
-          /* Fallback candidate upload records */
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          /* Candidate has uploaded profile but no linked applications yet */
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {candidates.map((cand) => (
               <div
                 key={cand.id}
@@ -1547,19 +1595,78 @@ export const CandidatePortalPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 style={{ fontSize: "15.5px", fontWeight: 700, margin: "0 0 3px 0", color: "var(--text-primary)" }}>
-                      {cand.parsed_data?.current_title || "General Application"}
+                      {cand.parsed_data?.current_title || "General Candidate Profile"}
                     </h3>
                     <div className="mono" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      Record ID: {cand.id.slice(0, 8)} · Uploaded {new Date(cand.created_at).toLocaleDateString()}
+                      Profile ID: {cand.id.slice(0, 8)} · Uploaded {new Date(cand.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <StatusBadge status={cand.status} />
+                  <span className="badge badge-subtle" style={{ fontSize: "12px" }}>Profile Active</span>
                 </div>
               </div>
             ))}
+
+            {/* 1-Click Apply to Available Requisitions Card */}
+            {openJobs.length > 0 && (
+              <div
+                style={{
+                  padding: "20px 24px",
+                  backgroundColor: "#faf5ff",
+                  borderRadius: "14px",
+                  border: "1px solid #f3e8ff",
+                  marginTop: "8px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                  <Sparkles size={18} color="var(--accent-purple)" />
+                  <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Ready to Apply? Match Your Profile with Open Openings
+                  </h4>
+                </div>
+                <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                  Click below to submit your parsed resume profile for any open requisition. Automated semantic vector matching and evaluation will trigger immediately.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {openJobs.map((j) => (
+                    <div
+                      key={j.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 18px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "10px",
+                        border: "1px solid #e9d5ff",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>{j.title}</div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                          Role Tier: {j.role_tier ? j.role_tier.toUpperCase() : "GENERAL"}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={applyingJobId === j.id}
+                        onClick={() => handleOneClickApply(j.id)}
+                        style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", padding: "6px 14px" }}
+                      >
+                        <ArrowRight size={14} />
+                        <span>{applyingJobId === j.id ? "Applying..." : "1-Click Apply"}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

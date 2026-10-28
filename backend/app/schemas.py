@@ -251,6 +251,12 @@ class CandidateOut(BaseModel):
     applications: list[ApplicationOut] = []
     job_id: Optional[str] = None
     status: Optional[str] = None
+    # Sourcing metadata
+    is_passive_lead: bool = False
+    sourcing_channel: Optional[str] = "inbound"
+    sourcing_status: Optional[str] = "sourced"
+    sourcing_url: Optional[str] = None
+    claimed_at: Optional[datetime] = None
 
 
 class UploadResumeResponse(BaseModel):
@@ -425,6 +431,7 @@ InterviewRoundType = Literal[
     "behavioral",
     "screening",
     "executive",
+    "cultural_fit",
 ]
 
 
@@ -612,4 +619,84 @@ class CandidateTimelineResponse(BaseModel):
 
 class UnreadCountResponse(BaseModel):
     unread_count: int
+
+
+class CandidateDirectNotifyRequest(BaseModel):
+    subject: str = Field(..., min_length=3, max_length=200)
+    message: str = Field(..., min_length=3, max_length=3000)
+    notification_type: str = "general"
+
+
+# ---------------------------------------------------------------------------
+# Talent Sourcing & Passive Prospect Schemas
+# ---------------------------------------------------------------------------
+
+class CandidateClipRequest(BaseModel):
+    """Payload for recruiter quick-clip from LinkedIn/GitHub profile page."""
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    current_title: Optional[str] = None
+    title: Optional[str] = None
+    current_company: Optional[str] = None
+    company: Optional[str] = None
+    years_experience: Optional[float] = None
+    core_skills: list[str] = []
+    skills: list[str] = []
+    summary: Optional[str] = None
+    sourcing_url: Optional[str] = None  # LinkedIn or GitHub profile URL
+    job_id: Optional[str] = None  # optional target requisition
+    notes: Optional[str] = None  # Recruiter freetext notes
+
+
+class BulkResumeUploadResult(BaseModel):
+    filename: str
+    candidate_id: Optional[str] = None
+    status: str  # "parsed" | "uploaded" | "failed"
+    name: Optional[str] = None
+    email: Optional[str] = None
+    match_score: Optional[float] = None
+    error: Optional[str] = None
+
+
+class BulkResumeUploadResponse(BaseModel):
+    total: int
+    succeeded: int
+    failed: int
+    results: list[BulkResumeUploadResult]
+
+
+class OutreachRequest(BaseModel):
+    """Sent by HR to invite a passive prospect via email."""
+    message: Optional[str] = None  # Personalized message from recruiter
+    job_id: Optional[str] = None   # Override job if not already linked
+
+
+class CandidateSourcingStatusUpdate(BaseModel):
+    sourcing_status: str
+
+
+class ClaimProfileVerificationResponse(BaseModel):
+    """Returned when a candidate visits their magic claim link."""
+    candidate_id: str
+    name: Optional[str] = None
+    current_title: Optional[str] = None
+    core_skills: list[str] = []
+    years_experience: Optional[float] = None
+    job_title: Optional[str] = None
+    job_id: Optional[str] = None
+    company_name: Optional[str] = None
+    role_tier: Optional[str] = None
+    match_score: Optional[float] = None
+    is_expired: bool = False
+
+
+class ClaimProfileActivationRequest(BaseModel):
+    """Candidate sets their password when accepting an outreach invite."""
+    token: str
+    password: str = Field(..., min_length=8)
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    consent: bool = True  # GDPR consent
 
