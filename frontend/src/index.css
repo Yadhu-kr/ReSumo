@@ -484,3 +484,52 @@ select {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ==========================================================================
+   Navigation Segmented Control & Tab Pills
+   ========================================================================== */
+.nav-pill-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-surface-elevated);
+  padding: 4px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.nav-pill {
+  padding: 7px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-pill:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background-color: #ffffff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.07);
+  transform: translateY(-1px);
+}
+
+.nav-pill.active {
+  font-weight: 600;
+  color: var(--accent-purple);
+  background-color: var(--accent-purple-subtle);
+  border: 1.5px solid var(--accent-purple);
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.14);
+  transform: none;
+}
+

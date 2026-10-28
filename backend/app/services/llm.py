@@ -553,7 +553,7 @@ class BionicLLMProvider:
         self,
         base_url: str | None = None,
         model: str | None = None,
-        timeout: float = 60.0,
+        timeout: float | None = None,
     ):
         self.base_url = (
             base_url
@@ -565,7 +565,7 @@ class BionicLLMProvider:
             or os.getenv("LLM_MODEL")
             or os.getenv("EXTRACTION_QWEN_MODEL", "resume-parser-qwen7b")
         )
-        self.timeout = timeout
+        self.timeout = timeout if timeout is not None else float(os.getenv("LLM_TIMEOUT_SECONDS", "30.0"))
 
     def generate_match_rationale(
         self,

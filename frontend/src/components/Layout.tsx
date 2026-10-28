@@ -208,26 +208,13 @@ export const Layout: React.FC = () => {
           </Link>
 
           {/* Navigation Tabs (Role Scoped) */}
-          <nav style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <nav className="nav-pill-container">
             {isCandidate ? (
               // Candidate Navigation
               <>
                 <NavLink
                   to="/portal"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <FileText size={15} />
                   <span>My Career Profile</span>
@@ -235,20 +222,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/jobs"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Compass size={15} />
                   <span>Browse Open Requisitions</span>
@@ -259,20 +233,7 @@ export const Layout: React.FC = () => {
               <>
                 <NavLink
                   to="/approvals"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <ShieldCheck size={15} />
                   <span>Executive Approval Queue</span>
@@ -293,20 +254,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/jobs"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Briefcase size={15} />
                   <span>Job Requisitions</span>
@@ -317,20 +265,7 @@ export const Layout: React.FC = () => {
               <>
                 <NavLink
                   to="/interviewer"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Terminal size={15} />
                   <span>Technical Interview Console</span>
@@ -338,20 +273,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/jobs"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Briefcase size={15} />
                   <span>Job Requisitions</span>
@@ -362,20 +284,7 @@ export const Layout: React.FC = () => {
               <>
                 <NavLink
                   to="/admin"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Shield size={15} />
                   <span>Admin Console</span>
@@ -383,20 +292,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/jobs"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Briefcase size={15} />
                   <span>Job Requisitions</span>
@@ -407,20 +303,7 @@ export const Layout: React.FC = () => {
               <>
                 <NavLink
                   to="/"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Layers size={15} />
                   <span>Talent Pipeline</span>
@@ -428,20 +311,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/jobs"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Briefcase size={15} />
                   <span>Requisitions & Matching</span>
@@ -449,20 +319,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/interviewer"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <Terminal size={15} />
                   <span>Interview Console</span>
@@ -470,20 +327,7 @@ export const Layout: React.FC = () => {
 
                 <NavLink
                   to="/approvals"
-                  style={({ isActive }) => ({
-                    padding: "8px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "13.5px",
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? "var(--accent-purple)" : "var(--text-secondary)",
-                    backgroundColor: isActive ? "var(--accent-purple-subtle)" : "transparent",
-                    border: isActive ? "1px solid var(--accent-purple-border)" : "1px solid transparent",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transition: "all 0.15s ease",
-                  })}
+                  className={({ isActive }) => `nav-pill ${isActive ? "active" : ""}`}
                 >
                   <ShieldCheck size={15} />
                   <span>Approvals Tracking</span>
@@ -532,36 +376,6 @@ export const Layout: React.FC = () => {
               <span>Admin Console</span>
             </Link>
           )}
-
-          {/* API Health */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "7px",
-              padding: "5px 12px",
-              borderRadius: "var(--radius-pill)",
-              backgroundColor: "var(--bg-surface-elevated)",
-              border: "1px solid var(--border-subtle)",
-            }}
-          >
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor:
-                  backendOnline === true
-                    ? "var(--status-approved-text)"
-                    : backendOnline === false
-                    ? "var(--status-rejected-text)"
-                    : "var(--text-muted)",
-              }}
-            />
-            <span className="mono" style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
-              {backendOnline === true ? "API Active" : backendOnline === false ? "Offline" : "Connecting"}
-            </span>
-          </div>
 
           {/* Global Notification Bell & Dropdown */}
           {user && (

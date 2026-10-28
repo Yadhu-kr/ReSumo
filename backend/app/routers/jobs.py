@@ -237,13 +237,17 @@ def match_candidates_for_job(
         }
 
         # Generate defensible LLM match rationale citing seniority, core_skills, years_experience
-        rationale = llm.generate_match_rationale(
-            job_title=job.title,
-            job_description=job.description,
-            job_role_tier=job.role_tier,
-            candidate_data=cand_data,
-            similarity_score=sim,
-        )
+        try:
+            rationale = llm.generate_match_rationale(
+                job_title=job.title,
+                job_description=job.description,
+                job_role_tier=job.role_tier,
+                candidate_data=cand_data,
+                similarity_score=sim,
+            )
+        except Exception as exc:
+            logger.warning("Match rationale generation failed (%s). Falling back.", exc)
+            rationale = f"Candidate matches '{job.title}' with {round(sim * 100, 1)}% semantic similarity."
 
         # Determine application status based on threshold
         app_status = "shortlisted" if sim >= threshold else "parsed"
@@ -360,13 +364,17 @@ def apply_for_job(
         "core_skills": ["Software Engineering"],
         "summary": "Candidate applied directly through the Career Portal.",
     }
-    rationale = llm.generate_match_rationale(
-        job_title=job.title,
-        job_description=job.description,
-        job_role_tier=job.role_tier,
-        candidate_data=cand_dict,
-        similarity_score=sim,
-    )
+    try:
+        rationale = llm.generate_match_rationale(
+            job_title=job.title,
+            job_description=job.description,
+            job_role_tier=job.role_tier,
+            candidate_data=cand_dict,
+            similarity_score=sim,
+        )
+    except Exception as exc:
+        logger.warning("Match rationale generation failed in apply (%s). Falling back.", exc)
+        rationale = f"Candidate matches '{job.title}' with {round(sim * 100, 1)}% semantic similarity."
 
     application = models.Application(
         candidate_id=candidate.id,

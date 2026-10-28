@@ -142,7 +142,7 @@ export const RecruiterJobsPage: React.FC = () => {
             Job Requisitions & Semantic Matching
           </h1>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
-            Define role requisitions, compute vector embeddings in Chroma, and evaluate candidate similarity with LLM rationales.
+            Define role requisitions, compute vector embeddings in Chroma, and evaluate candidate similarity with Explainable AI (XAI) defensible rationales.
           </p>
         </div>
 
@@ -458,23 +458,43 @@ export const RecruiterJobsPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Rationale Quote */}
+                          {/* Explainable AI (XAI) Rationale Quote */}
                           <div
                             style={{
                               backgroundColor: "var(--bg-canvas)",
-                              padding: "14px 18px",
-                              borderRadius: "10px",
-                              borderLeft: "3px solid var(--accent-purple)",
+                              padding: "16px 20px",
+                              borderRadius: "12px",
+                              borderLeft: "3.5px solid var(--accent-purple)",
+                              border: "1px solid var(--border-subtle)",
+                              borderLeftColor: "var(--accent-purple)",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)" }}>
-                                LLM MATCH RATIONALE
-                              </span>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                                <Sparkles size={13} style={{ color: "var(--accent-purple)" }} />
+                                <span className="mono" style={{ fontSize: "11px", fontWeight: 700, color: "var(--accent-purple)", letterSpacing: "0.03em" }}>
+                                  EXPLAINABLE AI (XAI) MATCH RATIONALE
+                                </span>
+                                <span
+                                  className="mono"
+                                  style={{
+                                    fontSize: "9.5px",
+                                    fontWeight: 700,
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                    backgroundColor: "var(--accent-purple-subtle)",
+                                    color: "var(--accent-purple)",
+                                    border: "1px solid var(--accent-purple-border)",
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  Defensible Analysis
+                                </span>
+                              </div>
                               <RationaleSourceBadge source={match.rationale_source} />
                             </div>
 
-                            <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>
+                            <p style={{ fontSize: "13.5px", color: "var(--text-secondary)", lineHeight: "1.65", margin: 0 }}>
                               {match.rationale}
                             </p>
                           </div>

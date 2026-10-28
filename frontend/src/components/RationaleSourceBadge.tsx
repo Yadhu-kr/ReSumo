@@ -8,17 +8,17 @@ export const RationaleSourceBadge: React.FC<RationaleSourceBadgeProps> = ({ sour
   const normalized = (source || "mock").toLowerCase();
 
   let badgeClass = "badge-source-mock";
-  let displayLabel = "SRC: MOCK";
+  let displayLabel = "XAI SRC: MOCK";
 
   if (normalized === "groq") {
     badgeClass = "badge-source-groq";
-    displayLabel = "SRC: GROQ (LLAMA-3.1-8B)";
+    displayLabel = "XAI SRC: GROQ (LLAMA-3.1-8B)";
   } else if (normalized === "claude") {
     badgeClass = "badge-source-claude";
-    displayLabel = "SRC: CLAUDE";
+    displayLabel = "XAI SRC: CLAUDE";
   } else if (normalized === "bionic" || normalized === "local" || normalized === "qwen") {
     badgeClass = "badge-source-bionic";
-    displayLabel = "SRC: BIONIC LOCAL";
+    displayLabel = "XAI SRC: BIONIC LOCAL";
   }
 
   return (
